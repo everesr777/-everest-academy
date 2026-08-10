@@ -289,5 +289,6 @@ initDb().then(async () => {
   startWeeklyCommissionScheduler();
 }).catch(err => {
   console.error("Failed to initialize database:", err);
+  process.exit(1);
 });
 

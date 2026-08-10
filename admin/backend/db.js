@@ -22,14 +22,24 @@ let isTurso = !!(process.env.TURSO_URL && process.env.TURSO_TOKEN);
 
 export async function initDb() {
   if (isTurso) {
-    try {
-      turso = createClient({ url: process.env.TURSO_URL, authToken: process.env.TURSO_TOKEN });
-      await createSchema(turso, true);
-      return turso;
-    } catch (e) {
-      console.warn("Turso connection failed, falling back to local sql.js:", e.message);
-      isTurso = false;
+    const maxAttempts = 5;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        turso = createClient({ url: process.env.TURSO_URL, authToken: process.env.TURSO_TOKEN });
+        await createSchema(turso, true);
+        console.log("✅ Connected to Turso database");
+        return turso;
+      } catch (e) {
+        console.error(`❌ Turso connection attempt ${attempt}/${maxAttempts} failed:`, e.message);
+        if (attempt < maxAttempts) {
+          const delayMs = attempt * 3000;
+          console.log(`   Retrying in ${delayMs / 1000}s...`);
+          await new Promise(r => setTimeout(r, delayMs));
+        }
+      }
     }
+    console.error("❌ TURSO IS CONFIGURED BUT UNAVAILABLE. Aborting startup instead of serving an empty local DB. Your accounts are NOT deleted - they are safe in Turso. Fix TURSO_URL/TURSO_TOKEN or check Turso status, then redeploy.");
+    throw new Error("Turso database unavailable after retries");
   }
 
   const SQL = await initSqlJs();
