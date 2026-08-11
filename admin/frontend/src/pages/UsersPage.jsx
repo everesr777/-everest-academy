@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, BACKEND_URL, uploadApi } from "../api.js";
+import LoadingIndicator from "../components/LoadingIndicator";
 
 export default function UsersPage() {
   const { t } = useLang();
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [teamTab, setTeamTab] = useState(1);
   const [profileTab, setProfileTab] = useState("details");
@@ -26,7 +28,10 @@ export default function UsersPage() {
   const [showDirectDetail, setShowDirectDetail] = useState(false);
   const [userCards, setUserCards] = useState(null);
 
-  const loadUsers = () => api("/api/users").then(setUsers);
+  const loadUsers = () => {
+    setLoading(true);
+    api("/api/users").then(setUsers).catch(() => {}).finally(() => setLoading(false));
+  };
   useEffect(() => { loadUsers(); api("/api/ranks").then(d => setDbRanks(Array.isArray(d) ? d : [])).catch(() => {}); }, []);
 
   const openProfile = (user) => {
@@ -207,6 +212,7 @@ export default function UsersPage() {
             className="w-full max-w-md px-4 py-2 border rounded-lg text-sm"
           />
         </div>
+        {loading ? <LoadingIndicator /> : (
         <table className="w-full table-data mobile-card-table">
           <thead>
             <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
@@ -276,6 +282,7 @@ export default function UsersPage() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Send E-Money modal */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
+import LoadingIndicator from "../components/LoadingIndicator";
 
 export default function AccountsBySourcePage({ source }) {
   const { lang, t: tFn } = useLang();
@@ -69,7 +70,7 @@ export default function AccountsBySourcePage({ source }) {
       </div>
 
       {loading ? (
-        <p className="text-gray-500">{t("جارٍ التحميل...", "Loading...")}</p>
+        <LoadingIndicator full />
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
           <p className="text-4xl mb-3">📭</p>
