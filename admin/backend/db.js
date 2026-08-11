@@ -762,6 +762,31 @@ export async function resetAllRanksOnce() {
   }
 }
 
+// One-time migration: accounts created before bcrypt was introduced have their
+// password stored as plaintext, which makes bcrypt.compare() fail at login.
+// Re-hash whatever is stored (the original plaintext) so the existing password
+// keeps working and the database no longer contains plaintext passwords.
+export async function migrateLegacyPasswords() {
+  try {
+    const rows = await query("SELECT id, email, password FROM users");
+    const isBcrypt = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+    let fixed = 0;
+    for (const u of rows) {
+      const pw = u.password || "";
+      if (!pw || isBcrypt.test(pw)) continue;
+      const hashed = await bcrypt.hash(pw, 10);
+      await execute("UPDATE users SET password = ? WHERE id = ?", [hashed, u.id]);
+      fixed++;
+      console.log(`🔑 Re-hashed legacy plaintext password for ${u.email}`);
+    }
+    if (fixed > 0) console.log(`✅ Migrated ${fixed} legacy plaintext password(s) to bcrypt`);
+    return { fixed };
+  } catch (e) {
+    console.error("migrateLegacyPasswords error:", e.message);
+    return { fixed: 0, error: e.message };
+  }
+}
+
 export async function query(sql, params = []) {
   if (isTurso) {
     const safeParams = params.map(p => p === undefined ? null : p);

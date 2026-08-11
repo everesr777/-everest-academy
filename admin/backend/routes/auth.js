@@ -36,7 +36,15 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   const user = await queryOne("SELECT * FROM users WHERE email = ?", [email]);
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
-  const valid = await bcrypt.compare(password, user.password || "");
+  let valid = await bcrypt.compare(password, user.password || "");
+  // Legacy fallback: pre-bcrypt accounts stored the password as plaintext.
+  // If it matches exactly, re-hash it so bcrypt works from now on.
+  if (!valid && user.password && !user.password.startsWith("$2") && user.password === password) {
+    const hashed = await bcrypt.hash(user.password, 10);
+    await execute("UPDATE users SET password = ? WHERE id = ?", [hashed, user.id]);
+    valid = true;
+    console.log(`🔑 Re-hashed legacy plaintext password on login for ${user.email}`);
+  }
   if (!valid) return res.status(401).json({ error: "Invalid credentials" });
   if (user.blocked) return res.status(403).json({ error: "تم حظر حسابك. يرجى التواصل مع الإدارة." });
   if (user.status === 'pending') return res.status(403).json({ error: "حسابك قيد المراجعة. يرجى الانتظار حتى يتم تفعيله من الإدارة." });

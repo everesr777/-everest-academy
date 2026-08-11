@@ -4,6 +4,7 @@ import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import NotificationBell from "./NotificationBell";
+import WhatsAppNavIcon from "./WhatsAppNavIcon";
 
 const useIsMobile = () => {
   const [m, setM] = useState(window.innerWidth <= 768);
@@ -89,6 +90,7 @@ export default function AppNavbar() {
             <img src="/image/logo-navbar.png" alt="Logo" style={{ height: 52, objectFit:"contain" }} />
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {user && <WhatsAppNavIcon />}
             {user && <NotificationBell userId={user.id} />}
             {user && (
               <div style={{ cursor: "pointer" }} onClick={() => nav("/profile")}>

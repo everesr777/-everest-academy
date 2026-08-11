@@ -8,7 +8,7 @@ import { dirname, join } from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import multer from "multer";
-import { initDb, execute, query, queryOne, resetAllRanksOnce } from "./db.js";
+import { initDb, execute, query, queryOne, resetAllRanksOnce, migrateLegacyPasswords } from "./db.js";
 import { pool as geminiPool } from "./geminiKeys.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -253,6 +253,8 @@ function startWeeklyCommissionScheduler() {
 initDb().then(async () => {
   await seedAdmins();
   console.log("✅ Admin accounts seeded");
+  const pwMigrate = await migrateLegacyPasswords();
+  if (pwMigrate.fixed > 0) console.log(`✅ Migrated ${pwMigrate.fixed} legacy plaintext password(s)`);
   await ensureSettlementSettings();
   console.log("✅ Weekly settlement settings ensured");
   // One-time rank reset: everyone with a rank goes back to the beginning

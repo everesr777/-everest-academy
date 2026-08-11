@@ -39,7 +39,14 @@ router.post("/login", async (req, res) => {
 
   const user = await queryOne("SELECT * FROM users WHERE email = ? AND (role = 'admin' OR role = 'manager')", [email]);
   if (!user) return res.status(401).json({ error: "Invalid admin credentials" });
-  const valid = await bcrypt.compare(password, user.password || "");
+  let valid = await bcrypt.compare(password, user.password || "");
+  // Legacy fallback: pre-bcrypt accounts stored the password as plaintext.
+  if (!valid && user.password && !user.password.startsWith("$2") && user.password === password) {
+    const hashed = await bcrypt.hash(user.password, 10);
+    await execute("UPDATE users SET password = ? WHERE id = ?", [hashed, user.id]);
+    valid = true;
+    console.log(`🔑 Re-hashed legacy plaintext admin password on login for ${user.email}`);
+  }
   if (!valid) return res.status(401).json({ error: "Invalid admin credentials" });
 
   const session_token = uuidv4() + "-" + Date.now();
