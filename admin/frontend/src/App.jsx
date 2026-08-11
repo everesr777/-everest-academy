@@ -60,7 +60,8 @@ function AppInner() {
 
   const navItems = [
     { id: "dashboard", label: lang === "ar" ? "الإحصائيات" : "Dashboard", icon: "📊" },
-    { id: "approvals", label: lang === "ar" ? "تفعيل الحسابات" : "Account Approvals", icon: "🔐" },
+    { id: "approvals-external", label: lang === "ar" ? "تفعيل الحسابات التسجيل الخارجى" : "External Sign-up Approvals", icon: "🔐" },
+    { id: "approvals-created", label: lang === "ar" ? "تفعيل الحسابات انشاء حساب للاخر" : "Created Account Approvals", icon: "🔐" },
     { id: "users", label: lang === "ar" ? "إدارة المستخدمين" : "User Management", icon: "👤" },
     { id: "role-mgmt", label: lang === "ar" ? "إدارة الصلاحيات" : "Role Management", icon: "🔐" },
     { id: "external-accounts", label: lang === "ar" ? "حسابات التسجيل الخارجي" : "External Sign-up Accounts", icon: "📝" },
@@ -108,7 +109,8 @@ function AppInner() {
             </div>
           </div>
           {page === "dashboard" && <DashboardPage stats={stats} />}
-          {page === "approvals" && <RegistrationApprovalsPage />}
+          {page === "approvals-external" && <RegistrationApprovalsPage source="external" />}
+          {page === "approvals-created" && <RegistrationApprovalsPage source="created" />}
           {page === "users" && <UsersPage />}
           {page === "role-mgmt" && <RoleManagementPage />}
           {page === "external-accounts" && <AccountsBySourcePage source="external" />}

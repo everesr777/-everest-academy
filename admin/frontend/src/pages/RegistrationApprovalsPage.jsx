@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, BACKEND_URL } from "../api.js";
 
-export default function RegistrationApprovalsPage() {
+export default function RegistrationApprovalsPage({ source }) {
   const { lang, t: tFn } = useLang();
   const t = (ar, en) => tFn(ar, en);
+  const isCreated = source === "created";
+  const endpoint = `/api/users/pending-registrations${source ? `?source=${source}` : ""}`;
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewUser, setViewUser] = useState(null);
@@ -20,13 +22,13 @@ export default function RegistrationApprovalsPage() {
 
   const load = () => {
     setLoading(true);
-    api("/api/users/pending-registrations")
+    api(endpoint)
       .then(setPending)
       .catch((e) => alert(e.message))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [endpoint]);
 
   const handleApprove = async (userId, account_type) => {
     try {
@@ -83,7 +85,11 @@ export default function RegistrationApprovalsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">{t("🔐 تفعيل الحسابات الجديدة", "🔐 New Account Approvals")}</h2>
+        <h2 className="text-2xl font-bold">
+          {isCreated
+            ? t("🔐 تفعيل الحسابات انشاء حساب للاخر", "🔐 Created Account Approvals")
+            : t("🔐 تفعيل الحسابات التسجيل الخارجى", "🔐 External Sign-up Approvals")}
+        </h2>
         <span className="text-sm text-gray-400 bg-white px-3 py-1.5 rounded-lg border">
           {pending.length} {pending.length === 1 ? t("مستخدم", "user") : t("مستخدمين", "users")} {t("بانتظار التفعيل", "pending approval")}
         </span>
