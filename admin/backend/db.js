@@ -780,6 +780,13 @@ export async function migrateLegacyPasswords() {
       console.log(`🔑 Re-hashed legacy plaintext password for ${u.email}`);
     }
     if (fixed > 0) console.log(`✅ Migrated ${fixed} legacy plaintext password(s) to bcrypt`);
+    else console.log(`✅ Password check: all ${rows.length} users already have bcrypt hashes`);
+
+    // Detect duplicate emails: login reads the first row, but admin resets may target a different row.
+    const dupRows = await query("SELECT email, COUNT(*) c FROM users GROUP BY email HAVING c > 1");
+    if (dupRows.length) {
+      console.warn(`⚠️ DUPLICATE EMAILS FOUND (${dupRows.length}): ${dupRows.map(d => `${d.email} (${d.c})`).join(", ")} — login may hit the wrong row`);
+    }
     return { fixed };
   } catch (e) {
     console.error("migrateLegacyPasswords error:", e.message);

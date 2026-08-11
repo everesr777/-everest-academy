@@ -45,7 +45,10 @@ router.post("/login", async (req, res) => {
     valid = true;
     console.log(`🔑 Re-hashed legacy plaintext password on login for ${user.email}`);
   }
-  if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+  if (!valid) {
+    console.log(`🔑 LOGIN_FAIL email=${email} storedPrefix=${(user.password || "").slice(0, 7)} storedLen=${(user.password || "").length} isBcrypt=${(user.password || "").startsWith("$2")}`);
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
   if (user.blocked) return res.status(403).json({ error: "تم حظر حسابك. يرجى التواصل مع الإدارة." });
   if (user.status === 'pending') return res.status(403).json({ error: "حسابك قيد المراجعة. يرجى الانتظار حتى يتم تفعيله من الإدارة." });
   const deviceType = detectDeviceType(req.headers["user-agent"]);

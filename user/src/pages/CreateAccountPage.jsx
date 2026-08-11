@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -33,6 +33,20 @@ export default function CreateAccountPage() {
   const [uploadingImg, setUploadingImg] = useState(null);
   const [createdUsers, setCreatedUsers] = useState([]);
   const [profile, setProfile] = useState(null);
+  const passRef = useRef(null);
+  const confirmRef = useRef(null);
+
+  // Defeat browser password-manager autofill: fields start readOnly and are
+  // cleared + unlocked after mount so Chrome can't inject a saved password
+  // into the "create account" form (which would store the WRONG password).
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (passRef.current) { passRef.current.value = ""; passRef.current.removeAttribute("readOnly"); }
+      if (confirmRef.current) { confirmRef.current.value = ""; confirmRef.current.removeAttribute("readOnly"); }
+      setForm(prev => ({ ...prev, password: "", confirm: "" }));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -202,13 +216,13 @@ export default function CreateAccountPage() {
               <div>
                 <label style={{ display: "block", marginBottom: 5, fontSize: 12, fontWeight: 700, color: c.text }}>{t("كلمة المرور", "Password")}</label>
                 <div style={{ position: "relative" }}>
-                  <input type={showPass ? "text" : "password"} required placeholder="••••••••" value={form.password} onChange={e => setField("password", e.target.value)} style={{ ...inputS, paddingRight: 44 }} onFocus={onFocus} onBlur={onBlur} />
+                  <input type={showPass ? "text" : "password"} required placeholder="••••••••" ref={passRef} readOnly autoComplete="new-password" value={form.password} onChange={e => setField("password", e.target.value)} style={{ ...inputS, paddingRight: 44 }} onFocus={onFocus} onBlur={onBlur} />
                   <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16, color: c.textMuted }}>{showPass ? "🙈" : "👁"}</button>
                 </div>
               </div>
               <div>
                 <label style={{ display: "block", marginBottom: 5, fontSize: 12, fontWeight: 700, color: c.text }}>{t("تأكيد كلمة المرور", "Confirm Password")}</label>
-                <input type={showPass ? "text" : "password"} required placeholder="••••••••" value={form.confirm} onChange={e => setField("confirm", e.target.value)} style={inputS} onFocus={onFocus} onBlur={onBlur} />
+                <input type={showPass ? "text" : "password"} required placeholder="••••••••" ref={confirmRef} readOnly autoComplete="new-password" value={form.confirm} onChange={e => setField("confirm", e.target.value)} style={inputS} onFocus={onFocus} onBlur={onBlur} />
               </div>
             </div>
 
