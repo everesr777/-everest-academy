@@ -17,15 +17,6 @@ const __dirname = dirname(__filename);
 
 const app = express();
 app.set("trust proxy", 1);
-app.get("/api/diag", (req, res) =>
-  res.json({
-    isTurso: !!(process.env.TURSO_URL && process.env.TURSO_TOKEN),
-    tursoUrlSet: !!process.env.TURSO_URL,
-    tursoTokenSet: !!process.env.TURSO_TOKEN,
-    nodeEnv: process.env.NODE_ENV || "unset",
-    mockFallback: !!global.MOCK_FALLBACK,
-  })
-);
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
