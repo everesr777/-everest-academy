@@ -34,6 +34,13 @@ const adminDist = join(__dirname, "../frontend/dist");
 if (fs.existsSync(adminDist)) {
   app.use("/admin", express.static(adminDist, { maxAge: 0, etag: false, lastModified: false, index: false }));
   const serveAdmin = (req, res) => {
+    if (req.path.startsWith("/admin/assets/")) {
+      const fParam = req.query.f;
+      if (fParam) {
+        const filePath = join(adminDist, "assets", fParam);
+        if (fs.existsSync(filePath)) return res.sendFile(filePath);
+      }
+    }
     const indexPath = join(adminDist, "index.html");
     let html = fs.readFileSync(indexPath, "utf8");
     const buildVersion = Date.now().toString(36);
