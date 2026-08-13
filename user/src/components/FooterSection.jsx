@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://steadfast-energy-production-a9d1.up.railway.app";
+const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');

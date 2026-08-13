@@ -5,7 +5,7 @@ import { useTheme } from "../ThemeContext";
 import PublicNavbar from "../components/PublicNavbar";
 import FooterSection from "../components/FooterSection";
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://steadfast-energy-production-a9d1.up.railway.app";
+const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
 const pscStyles = `
 @keyframes pscFadeUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }

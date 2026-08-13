@@ -1,4 +1,4 @@
-export const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://steadfast-energy-production-a9d1.up.railway.app";
+export const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
 export function getAdminSession() {
   try { return JSON.parse(localStorage.getItem("admin_session") || "{}"); } catch { return {}; }

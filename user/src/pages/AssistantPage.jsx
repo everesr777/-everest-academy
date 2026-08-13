@@ -4,7 +4,7 @@ import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import { useNavigate } from "react-router-dom";
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://steadfast-energy-production-a9d1.up.railway.app";
+const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
 const useIsMobile = () => {
   const [m, setM] = useState(window.innerWidth <= 768);

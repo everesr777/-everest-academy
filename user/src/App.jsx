@@ -38,7 +38,7 @@ import PurchaseAllPage from "./pages/PurchaseAllPage";
 import MembershipExpiredOverlay from "./components/MembershipExpiredOverlay";
 import WhatsAppFloat from "./components/WhatsAppFloat";
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://steadfast-energy-production-a9d1.up.railway.app";
+const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
 const api = async (path, opts = {}) => {
   const headers = { "Content-Type": "application/json" };

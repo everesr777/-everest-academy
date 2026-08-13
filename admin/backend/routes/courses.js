@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { advanceUserRank } from "./ranks.js";
 import { recordWeeklySales } from "../services/weeklySettlement.js";
 
-const BACKEND = "https://steadfast-energy-production-a9d1.up.railway.app";
+const BACKEND = "https://everest-academy-production.up.railway.app";
 function fixImg(url) {
   if (!url) return url;
   if (url.startsWith("data:")) return null;

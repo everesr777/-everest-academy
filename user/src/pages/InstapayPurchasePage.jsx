@@ -5,7 +5,7 @@ import { useTheme } from "../ThemeContext";
 import { useLang } from "../LangContext";
 import { uploadApi } from "../App";
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://steadfast-energy-production-a9d1.up.railway.app";
+const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
 const api2 = async (path, opts = {}) => {
   const headers = { "Content-Type": "application/json" };

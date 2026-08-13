@@ -40,7 +40,7 @@ const router = express.Router();
 router.post("/", upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   try {
-    const host = req.headers["x-forwarded-host"] || req.get("host") || "steadfast-energy-production-a9d1.up.railway.app";
+    const host = req.headers["x-forwarded-host"] || req.get("host") || "everest-academy-production.up.railway.app";
     const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
     res.json({ url: `${proto}://${host}/uploads/${req.file.filename}`, filename: req.file.filename });
   } catch (e) {
