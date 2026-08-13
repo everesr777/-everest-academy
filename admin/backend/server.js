@@ -1,4 +1,5 @@
 import "dotenv/config";
+console.log(`[DB-CONFIG] TURSO_URL=${process.env.TURSO_URL ? `SET(${process.env.TURSO_URL.slice(0, 30)}...)` : "MISSING"} | TURSO_TOKEN=${process.env.TURSO_TOKEN ? `SET(len=${process.env.TURSO_TOKEN.length})` : "MISSING"} | NODE_ENV=${process.env.NODE_ENV || "unset"}`);
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
