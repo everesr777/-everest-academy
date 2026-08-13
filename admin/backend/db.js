@@ -43,6 +43,8 @@ export async function initDb() {
   }
 
   const SQL = await initSqlJs();
+  global.MOCK_FALLBACK = true;
+  console.log("⚠️  TURSO vars NOT set - running LOCAL mock SQLite (this is NOT production data)");
   if (fs.existsSync(DB_PATH)) {
     const buffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(buffer);
