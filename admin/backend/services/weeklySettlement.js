@@ -163,6 +163,54 @@ export async function recordWeeklySales(enrollmentUserId, enrollmentId) {
 const sReq = (r) => r.sales_required !== undefined ? r.sales_required : r.min_direct;
 const bVal = (r) => r.bonus !== undefined ? r.bonus : r.weekly_bonus;
 
+// ─── "Our Leaders" homepage snapshot ───
+// Rebuilds the stored top-10 leaders list shown on the user homepage.
+// Called automatically at the end of every successful weekly settlement,
+// and by the leaders routes when a manual/periodic refresh is due.
+export const LEADER_RANK_ICONS = { "Star":"⭐","Executive":"🚀","Executive Star":"💎","Team Leader":"🏆","Senior Leader":"🌍","Regional Leader":"⚡","Everest Elite":"🔱","Everest Master":"🔥","Everest Legend":"🌟","Everest Ambassador":"👑" };
+
+const LEADER_RANK_ORDER_SQL = `CASE rank
+  WHEN 'Everest Ambassador' THEN 10
+  WHEN 'Everest Legend' THEN 9
+  WHEN 'Everest Master' THEN 8
+  WHEN 'Everest Elite' THEN 7
+  WHEN 'Regional Leader' THEN 6
+  WHEN 'Senior Leader' THEN 5
+  WHEN 'Team Leader' THEN 4
+  WHEN 'Executive Star' THEN 3
+  WHEN 'Executive' THEN 2
+  WHEN 'Star' THEN 1
+  ELSE 0
+END DESC`;
+
+export async function refreshLeadersSnapshot() {
+  const excluded = await query("SELECT user_id FROM excluded_leaders");
+  const excludedIds = excluded.map(e => e.user_id);
+  let excludeClause = "";
+  const params = [];
+  if (excludedIds.length > 0) {
+    excludeClause = `AND id NOT IN (${excludedIds.map(() => "?").join(",")})`;
+    params.push(...excludedIds);
+  }
+  const topUsers = await query(`
+    SELECT id, full_name as name, avatar, rank, e_money, direct_count
+    FROM users
+    WHERE role NOT IN ('admin', 'manager') AND rank IS NOT NULL AND rank != '' ${excludeClause}
+    ORDER BY ${LEADER_RANK_ORDER_SQL}, direct_count DESC
+    LIMIT 10
+  `, params);
+  await execute("DELETE FROM leaders");
+  for (const u of topUsers) {
+    await execute(
+      "INSERT INTO leaders (id, name, rank, avatar, icon) VALUES (?, ?, ?, ?, ?)",
+      [u.id, u.name, u.rank, u.avatar, LEADER_RANK_ICONS[u.rank] || "🏆"]
+    );
+  }
+  await execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('leaders_last_refresh', datetime('now','localtime'))");
+  console.log(`🏆 Leaders refreshed: ${topUsers.length} users`);
+  return topUsers.length;
+}
+
 export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: forcedWeekStart = null, force = false } = {}) {
   const settings = await getSettlementSettings();
   if (settings.settlement_enabled !== "true" && triggeredBy !== "manual") {
@@ -384,6 +432,10 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       [`${weekStart}|${weekEnd}|${new Date().toISOString()}|${triggeredBy}|${totalAwarded}`]);
 
     console.log(`🏆 [SETTLEMENT] Week ${weekStart} - ${weekEnd} (${triggeredBy}): ${totalAwarded} awarded out of ${users.length}, ${totalCommissions} EM total`);
+
+    // STEP 9: Refresh "Our Leaders" homepage snapshot so new promotions appear immediately.
+    try { await refreshLeadersSnapshot(); } catch (e) { console.error("Leaders snapshot refresh failed:", e.message); }
+
     return { success: true, weekStart, weekEnd, triggeredBy, total_users: users.length, awarded: totalAwarded, totalCommissions, results, top10: top.length };
   } catch (e) {
     try { await execute("UPDATE weekly_settlements SET status = 'failed', completed_at = datetime('now','localtime') WHERE id = ?", [claimId]); } catch (_) {}

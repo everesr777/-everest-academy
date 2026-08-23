@@ -1,11 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
 import express from "express";
 import { query, queryOne, execute } from "../db.js";
-import { getCurrentWeek } from "../services/weeklySettlement.js";
+import { getCurrentWeek, refreshLeadersSnapshot, LEADER_RANK_ICONS } from "../services/weeklySettlement.js";
 
 const router = express.Router();
-
-const RANK_ICONS = { "Star":"⭐","Executive":"🚀","Executive Star":"💎","Team Leader":"🏆","Senior Leader":"🌍","Regional Leader":"⚡","Everest Elite":"🔱","Everest Master":"🔥","Everest Legend":"🌟","Everest Ambassador":"👑" };
 
 const RANK_ORDER = `CASE rank
   WHEN 'Everest Ambassador' THEN 10
@@ -21,33 +19,8 @@ const RANK_ORDER = `CASE rank
   ELSE 0
 END DESC`;
 
-async function refreshLeaders() {
-  const excluded = await query("SELECT user_id FROM excluded_leaders");
-  const excludedIds = excluded.map(e => e.user_id);
-  let excludeClause = "";
-  const params = [];
-  if (excludedIds.length > 0) {
-    excludeClause = `AND id NOT IN (${excludedIds.map(() => "?").join(",")})`;
-    params.push(...excludedIds);
-  }
-  const topUsers = await query(`
-    SELECT id, full_name as name, avatar, rank, e_money, direct_count
-    FROM users
-    WHERE role NOT IN ('admin', 'manager') AND rank IS NOT NULL AND rank != '' ${excludeClause}
-    ORDER BY ${RANK_ORDER}, direct_count DESC
-    LIMIT 10
-  `, params);
-  await execute("DELETE FROM leaders");
-  for (const u of topUsers) {
-    await execute(
-      "INSERT INTO leaders (id, name, rank, avatar, icon) VALUES (?, ?, ?, ?, ?)",
-      [u.id, u.name, u.rank, u.avatar, RANK_ICONS[u.rank] || "🏆"]
-    );
-  }
-  await execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('leaders_last_refresh', datetime('now','localtime'))");
-  console.log(`🏆 Leaders refreshed: ${topUsers.length} users`);
-  return topUsers.length;
-}
+// refreshLeadersSnapshot() lives in services/weeklySettlement.js so the
+// weekly settlement can rebuild the homepage leaders list automatically.
 
 router.get("/", async (req, res) => {
   try {
@@ -61,7 +34,7 @@ router.get("/", async (req, res) => {
       const daysSince = (now - last) / (1000 * 60 * 60 * 24);
       if (daysSince >= 7) shouldRefresh = true;
     }
-    if (shouldRefresh) await refreshLeaders();
+    if (shouldRefresh) await refreshLeadersSnapshot();
 
     const leaders = await query(`SELECT * FROM leaders ORDER BY ${RANK_ORDER}, created_at ASC`);
     res.json(leaders);
@@ -73,7 +46,7 @@ router.get("/", async (req, res) => {
 
 router.post("/refresh", async (req, res) => {
   try {
-    const count = await refreshLeaders();
+    const count = await refreshLeadersSnapshot();
     res.json({ success: true, count });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -98,7 +71,7 @@ router.post("/add", async (req, res) => {
 
     await execute(
       "INSERT INTO leaders (id, name, rank, avatar, icon) VALUES (?, ?, ?, ?, ?)",
-      [userId, user.full_name, user.rank, user.avatar, RANK_ICONS[user.rank] || "🏆"]
+      [userId, user.full_name, user.rank, user.avatar, LEADER_RANK_ICONS[user.rank] || "🏆"]
     );
     const leader = await queryOne("SELECT * FROM leaders WHERE id = ?", [userId]);
     res.json(leader);
