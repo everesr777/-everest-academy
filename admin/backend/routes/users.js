@@ -1,7 +1,6 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import { query, queryOne, execute } from "../db.js";
-import { advanceUserRank } from "./ranks.js";
 import { v4 as uuidv4 } from "uuid";
 import { sendOTPEmail, sendRejectionEmail } from "../services/emailService.js";
 
@@ -292,14 +291,6 @@ router.put("/:id/approve-registration", async (req, res) => {
           await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [COMMISSION, directReferrer.id]);
           await execute("UPDATE users SET direct_count = direct_count + 1 WHERE id = ?", [directReferrer.id]);
           const nid2 = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'commission')", [nid2, directReferrer.id, "💰 عمولة جديدة", `ربحت ${COMMISSION} E-Money كمكافأة عن تسجيل عضو جديد`]);
-        }
-        try {
-          const rankResult = await advanceUserRank(directReferrer.id);
-          if (rankResult && rankResult.promoted) {
-            console.log("[approve-registration] Referrer", directReferrer.id, "rank advanced to", rankResult.newRank, "- bonus:", rankResult.bonus);
-          }
-        } catch (rankErr) {
-          console.error("[approve-registration] advanceUserRank error for referrer", directReferrer.id, rankErr);
         }
       }
     }

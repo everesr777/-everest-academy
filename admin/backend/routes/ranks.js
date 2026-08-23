@@ -230,7 +230,7 @@ router.post("/update", async (req, res) => {
 
 router.get("/progress/:userId", async (req, res) => {
   try {
-    await advanceUserRank(req.params.userId);
+    // READ-ONLY: rank changes happen ONLY during the Friday weekly settlement.
     const user = await queryOne("SELECT id, rank, rank_progress, e_money, account_type FROM users WHERE id = ?", [req.params.userId]);
     if (!user) return res.status(404).json({ error: "User not found" });
     const allRanks = await query("SELECT * FROM ranks WHERE is_active = 1 ORDER BY sort_order ASC");
@@ -308,7 +308,7 @@ router.post("/pay-sale", async (req, res) => {
     await execute("INSERT INTO commissions (id, from_user_id, to_user_id, level, amount) VALUES (?, ?, ?, 0, ?)",
       [comId, userId, userId, comAmount]);
 
-    await advanceUserRank(userId);
+    // Rank changes happen ONLY during the Friday weekly settlement.
 
     res.json({ success: true, commission: comAmount });
   } catch (err) {
