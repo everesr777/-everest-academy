@@ -56,6 +56,10 @@ export default function CreateAccountPage() {
   }, [user]);
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+  // Emails must never contain spaces or invisible bidi/control characters
+  // (common after paste or typing with an Arabic keyboard) — strip them live
+  // so the browser's native type=email validation accepts the value.
+  const setEmail = (val) => setField("email", val.replace(/[\s\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, ""));
   const onFocus = (e) => e.target.style.borderColor = gold;
   const onBlur = (e) => e.target.style.borderColor = c.border;
 
@@ -207,7 +211,7 @@ export default function CreateAccountPage() {
               </div>
               <div>
                 <label style={{ display: "block", marginBottom: 5, fontSize: 12, fontWeight: 700, color: c.text }}>{t("البريد الإلكتروني", "Email")}</label>
-                <input type="email" required placeholder="mail@example.com" value={form.email} onChange={e => setField("email", e.target.value)} style={inputS} onFocus={onFocus} onBlur={onBlur} />
+                <input type="email" required placeholder="mail@example.com" value={form.email} onChange={e => setEmail(e.target.value)} style={inputS} onFocus={onFocus} onBlur={onBlur} />
               </div>
             </div>
 

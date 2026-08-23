@@ -472,12 +472,13 @@ router.post("/create-for-others", async (req, res) => {
     }
 
     const { full_name, email, phone, password, governorate, country, address, id_card, id_card_front, id_card_back } = req.body;
+    const cleanEmail = String(email || "").trim().replace(/\s+/g, "");
     const singleIdCard = id_card || id_card_front || null;
-    if (!full_name || !email || !phone || !password) {
+    if (!full_name || !cleanEmail || !phone || !password) {
       return res.status(400).json({ error: "Full name, email, phone and password are required" });
     }
 
-    const existing = await queryOne("SELECT id FROM users WHERE email = ? AND status != 'rejected'", [email]);
+    const existing = await queryOne("SELECT id FROM users WHERE email = ? AND status != 'rejected'", [cleanEmail]);
     if (existing) return res.status(400).json({ error: "Email already exists" });
     const existingPhone = await queryOne("SELECT id FROM users WHERE phone = ? AND status != 'rejected'", [phone]);
     if (existingPhone) return res.status(400).json({ error: "Phone number is already registered", error_ar: "رقم الهاتف مسجل بالفعل" });
@@ -489,7 +490,7 @@ router.post("/create-for-others", async (req, res) => {
     // Create user as pending — creator is tracked via created_by_user, NOT referred_by (prevents double commission)
     await execute(
       "INSERT INTO users (id, full_name, email, phone, address, password, referral_code, referred_by, status, role, account_type, rank, governorate, country, id_card_front, id_card_back, created_by_user, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'registration', 'registration_free', '', ?, ?, ?, ?, ?, 0)",
-      [id, full_name, email, phone, address || null, hashedPassword, code, null, governorate || null, country || null, singleIdCard, singleIdCard, userId]
+      [id, full_name, cleanEmail, phone, address || null, hashedPassword, code, null, governorate || null, country || null, singleIdCard, singleIdCard, userId]
     );
 
     // Populate closure table
