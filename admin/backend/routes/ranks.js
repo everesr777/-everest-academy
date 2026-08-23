@@ -94,11 +94,12 @@ router.delete("/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Count qualified team members: Student + Reg Free accounts, status = active
+// Count qualified team members: active STUDENT accounts only
+// (registration_free never counts toward rank/team)
 // Excludes: pending, rejected, suspended, inactive, and members with higher rank
 async function getQualifiedTeamCount(userId, currentRankSortOrder) {
   const allMembers = await query(
-    "SELECT u.id, u.rank, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
+    "SELECT u.id, u.rank, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
     [userId, userId]
   );
   // Filter to active only
@@ -119,10 +120,10 @@ async function getQualifiedTeamCount(userId, currentRankSortOrder) {
   return count;
 }
 
-// Get full breakdown of qualified team for weekly history
+// Get full breakdown of qualified team for weekly history (students only)
 async function getQualifiedTeamBreakdown(userId, currentRankSortOrder) {
   const allMembers = await query(
-    "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
+    "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
     [userId, userId]
   );
   const allRanks = await query("SELECT name, sort_order FROM ranks WHERE is_active = 1 ORDER BY sort_order ASC");

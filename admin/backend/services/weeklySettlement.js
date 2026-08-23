@@ -289,10 +289,10 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       }
 
       // STEP 3: Qualified team (exclude higher-ranked / inactive members)
-      // Team progression counts ALL active members (students + registration_free),
-      // matching the Aug-7 behavior. The qualification gate (STEP 2) stays students-only.
+      // Team progression counts active STUDENT members only.
+      // registration_free never counts anywhere: not in the gate, not in the team.
       const allTeamMembers = await query(
-        "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
+        "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
         [user.id, user.id]
       );
       let qualifiedTeamCount = 0;

@@ -11,6 +11,7 @@ function createDb() {
     id TEXT PRIMARY KEY, full_name TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
     phone TEXT, address TEXT, password TEXT NOT NULL, role TEXT DEFAULT 'registration',
     avatar TEXT, bio TEXT, referral_code TEXT UNIQUE, referred_by TEXT,
+    created_by_user TEXT,
     rank TEXT DEFAULT '', e_money REAL DEFAULT 0, academic_points REAL DEFAULT 0,
     total_team_sales REAL DEFAULT 0, direct_count INTEGER DEFAULT 0,
     blocked INTEGER DEFAULT 0, status TEXT DEFAULT 'active',

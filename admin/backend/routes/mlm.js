@@ -256,7 +256,7 @@ router.post("/weekly-commission", adminAuth, async (req, res) => {
 
       // STEP 4: Recalculate qualified network (exclude higher-ranked members)
       const allTeamMembers = await query(
-        "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
+        "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
         [user.id, user.id]
       );
 
@@ -568,9 +568,9 @@ router.get("/rank-progress/:userId", async (req, res) => {
     const totalDirectSales = studentDirectSales + registrationDirectSales;
     const qualifiedDirectSales = studentDirectSales;
 
-    // Qualified team (students + reg-free count toward rank progression)
+    // Qualified team (active students only — registration_free counts nowhere)
     const allTeam = await query(
-      "SELECT u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
+      "SELECT u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
       [user.id, user.id]
     );
 

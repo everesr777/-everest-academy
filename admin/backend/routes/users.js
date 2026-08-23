@@ -253,6 +253,47 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Pay the one-time student-approval commissions (referrer + creator).
+// Used on initial approval AND on any later registration_free → student
+// upgrade, so an account approved as free by mistake still rewards its
+// sponsor once it becomes a student. Dedup checks prevent double payment.
+async function awardStudentCommissions(user) {
+  if (!user || user.account_type !== "student" || user.status !== "active") return;
+  const commRow = await queryOne("SELECT value FROM settings WHERE key = 'referral_commission'");
+  const COMMISSION = parseInt(commRow?.value) || 1000;
+
+  // Commission to the direct referrer ONLY (Level 1)
+  if (user.referred_by) {
+    const directReferrer = await queryOne("SELECT id, account_type FROM users WHERE id = ?", [user.referred_by]);
+    if (directReferrer && directReferrer.account_type === "student") {
+      const existingCommission = await queryOne("SELECT id FROM commissions WHERE from_user_id = ? AND level = 1 AND description IS NULL", [user.id]);
+      if (!existingCommission) {
+        const comId = uuidv4();
+        await execute("INSERT INTO commissions (id, from_user_id, to_user_id, level, amount) VALUES (?, ?, ?, 1, ?)",
+          [comId, user.id, directReferrer.id, COMMISSION]);
+        await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [COMMISSION, directReferrer.id]);
+        await execute("UPDATE users SET direct_count = direct_count + 1 WHERE id = ?", [directReferrer.id]);
+        const nid2 = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'commission')", [nid2, directReferrer.id, "💰 عمولة جديدة", `ربحت ${COMMISSION} E-Money كمكافأة عن تسجيل عضو جديد`]);
+      }
+    }
+  }
+
+  // Commission to the creator (created-for-others flow)
+  if (user.created_by_user) {
+    const creatorUser = await queryOne("SELECT id, account_type FROM users WHERE id = ?", [user.created_by_user]);
+    if (creatorUser) {
+      const existingCreatorComm = await queryOne("SELECT id FROM commissions WHERE from_user_id = ? AND description LIKE 'create-account%'", [user.id]);
+      if (!existingCreatorComm) {
+        const comId = uuidv4();
+        await execute("INSERT INTO commissions (id, from_user_id, to_user_id, level, amount, description) VALUES (?, ?, ?, 1, ?, 'create-account')", [comId, user.id, creatorUser.id, COMMISSION]);
+        await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [COMMISSION, creatorUser.id]);
+        await execute("UPDATE users SET direct_count = direct_count + 1 WHERE id = ?", [creatorUser.id]);
+        const nid3 = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'commission')", [nid3, creatorUser.id, "💰 عمولة إنشاء حساب", `ربحت ${COMMISSION} E-Money كمكافأة عن تفعيل حساب أنشأته لـ ${user.full_name}`]);
+      }
+    }
+  }
+}
+
 router.put("/:id/approve-registration", async (req, res) => {
   try {
     const user = await queryOne("SELECT id, full_name, email, status, referred_by, created_by_user FROM users WHERE id = ?", [req.params.id]);
@@ -275,39 +316,10 @@ router.put("/:id/approve-registration", async (req, res) => {
     await execute("UPDATE users SET status = 'active', role = ?, account_type = ?, membership_expires_at = ?, updated_at = datetime('now','localtime') WHERE id = ?", [role, accountType, expiresStr, req.params.id]);
     console.log("[approve-registration] Updated:", req.params.id, "role:", role, "account_type:", accountType);
 
-    // Get commission amount from settings
-    const commRow = await queryOne("SELECT value FROM settings WHERE key = 'referral_commission'");
-    const COMMISSION = parseInt(commRow?.value) || 1000;
-
-    // If approved as student AND has a sponsor → pay commission to direct referrer ONLY (Level 1)
-    if (accountType === "student" && user.referred_by) {
-      const directReferrer = await queryOne("SELECT id, account_type FROM users WHERE id = ?", [user.referred_by]);
-      if (directReferrer && directReferrer.account_type === "student") {
-        const existingCommission = await queryOne("SELECT id FROM commissions WHERE from_user_id = ? AND level = 1", [req.params.id]);
-        if (!existingCommission) {
-          const comId = uuidv4();
-          await execute("INSERT INTO commissions (id, from_user_id, to_user_id, level, amount) VALUES (?, ?, ?, 1, ?)",
-            [comId, req.params.id, directReferrer.id, COMMISSION]);
-          await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [COMMISSION, directReferrer.id]);
-          await execute("UPDATE users SET direct_count = direct_count + 1 WHERE id = ?", [directReferrer.id]);
-          const nid2 = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'commission')", [nid2, directReferrer.id, "💰 عمولة جديدة", `ربحت ${COMMISSION} E-Money كمكافأة عن تسجيل عضو جديد`]);
-        }
-      }
-    }
-
-    // Commission to the creator (created_by_user) when account is approved as Student
-    if (accountType === "student" && user.created_by_user) {
-      const creatorUser = await queryOne("SELECT id, account_type FROM users WHERE id = ?", [user.created_by_user]);
-      if (creatorUser) {
-        const existingCreatorComm = await queryOne("SELECT id FROM commissions WHERE from_user_id = ? AND description LIKE 'create-account%'", [req.params.id]);
-        if (!existingCreatorComm) {
-          const comId = uuidv4();
-          await execute("INSERT INTO commissions (id, from_user_id, to_user_id, level, amount, description) VALUES (?, ?, ?, 1, ?, 'create-account')", [comId, req.params.id, creatorUser.id, COMMISSION]);
-          await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [COMMISSION, creatorUser.id]);
-          await execute("UPDATE users SET direct_count = direct_count + 1 WHERE id = ?", [creatorUser.id]);
-          const nid3 = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'commission')", [nid3, creatorUser.id, "💰 عمولة إنشاء حساب", `ربحت ${COMMISSION} E-Money كمكافأة عن تفعيل حساب أنشأته لـ ${user.full_name}`]);
-        }
-      }
+    // Pay one-time approval commissions to referrer/creator (students only)
+    if (accountType === "student") {
+      const approved = await queryOne("SELECT id, full_name, status, account_type, referred_by, created_by_user FROM users WHERE id = ?", [req.params.id]);
+      await awardStudentCommissions(approved);
     }
 
     await logAdminAction(req, `approve as ${accountType} (membership ${days}d)`, req.params.id, user.full_name, null);
@@ -382,7 +394,11 @@ router.put("/upgrade-requests/:id/approve", async (req, res) => {
     const req2 = await queryOne("SELECT * FROM upgrade_requests WHERE id = ?", [req.params.id]);
     if (!req2) return res.status(404).json({ error: "Request not found" });
     await execute("UPDATE upgrade_requests SET status = 'approved', reviewed_at = datetime('now','localtime') WHERE id = ?", [req.params.id]);
-    await execute("UPDATE users SET role = 'student', account_type = 'student', updated_at = datetime('now','localtime') WHERE id = ?", [req2.user_id]);
+    await execute("UPDATE users SET role = 'student', account_type = 'student', status = 'active', updated_at = datetime('now','localtime') WHERE id = ?", [req2.user_id]);
+    // Upgraded registration_free → student now counts for rank AND pays the
+    // one-time commissions (same as a normal student approval).
+    const upgraded = await queryOne("SELECT id, full_name, status, account_type, referred_by, created_by_user FROM users WHERE id = ?", [req2.user_id]);
+    await awardStudentCommissions(upgraded);
     const nid = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')", [nid, req2.user_id, "🎓 تم ترقية الحساب", "تم ترقية حسابك إلى Student Account! يمكنك الآن شراء الكورسات"]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -403,9 +419,13 @@ router.post("/:id/upgrade-account", async (req, res) => {
   try {
     const user = await queryOne("SELECT * FROM users WHERE id = ?", [req.params.id]);
     if (!user) return res.status(404).json({ error: "User not found" });
-    if (user.account_type === "student") return res.status(400).json({ error: "Already a student account" });
-    await execute("UPDATE users SET role = 'student', account_type = 'student', status = 'active', updated_at = datetime('now','localtime') WHERE id = ?", [req.params.id]);
-    const nid = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')", [nid, req.params.id, "🎓 تم ترقية الحساب", "تم ترقية حسابك إلى Student Account! يمكنك الآن شراء الكورسات والمشاركة في نظام الرتب والعمولات والتسويق."]);
+  if (user.account_type === "student") return res.status(400).json({ error: "Already a student account" });
+  await execute("UPDATE users SET role = 'student', account_type = 'student', status = 'active', updated_at = datetime('now','localtime') WHERE id = ?", [req.params.id]);
+  // Self-upgrade registration_free → student: counts for rank AND pays the
+  // one-time commissions (same as a normal student approval).
+  const upgraded = await queryOne("SELECT id, full_name, status, account_type, referred_by, created_by_user FROM users WHERE id = ?", [req.params.id]);
+  await awardStudentCommissions(upgraded);
+  const nid = uuidv4(); await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')", [nid, req.params.id, "🎓 تم ترقية الحساب", "تم ترقية حسابك إلى Student Account! يمكنك الآن شراء الكورسات والمشاركة في نظام الرتب والعمولات والتسويق."]);
     await logAdminAction(req, `self-upgrade to student`, req.params.id, user.full_name, null);
     res.json({ success: true, account_type: "student" });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -425,7 +445,12 @@ router.put("/:id/account-type", async (req, res) => {
     // No notification sent when admin changes account type
     await logAdminAction(req, `change account_type to ${account_type}`, req.params.id, user.full_name, JSON.stringify({ from: user.account_type, to: account_type }));
 
-    // No commission paid when admin changes account type — commissions only on initial approve-registration
+    // Admin fixing a wrong registration_free approval by switching to student:
+    // pay the one-time commissions and let it count for rank like any student.
+    if (account_type === "student" && user.account_type !== "student") {
+      const changed = await queryOne("SELECT id, full_name, status, account_type, referred_by, created_by_user FROM users WHERE id = ?", [req.params.id]);
+      await awardStudentCommissions(changed);
+    }
 
     res.json({ success: true, account_type, role });
   } catch (err) { res.status(500).json({ error: err.message }); }
