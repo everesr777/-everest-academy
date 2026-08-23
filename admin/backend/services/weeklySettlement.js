@@ -215,7 +215,9 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       // STEP 1: Direct sales (Level 1, active only)
       // Only approved STUDENT accounts count toward the referrer's rank.
       // registration_free approvals are recorded for info but never count.
-      const directs = await query("SELECT u.id, u.account_type, u.status FROM users u WHERE u.referred_by = ?", [user.id]);
+      // A direct sale = referred via link OR created & paid for by this user
+      // (created_by_user) when the account has no referral link of its own.
+      const directs = await query("SELECT u.id, u.account_type, u.status FROM users u WHERE u.referred_by = ? OR (u.created_by_user = ? AND u.referred_by IS NULL)", [user.id, user.id]);
       const activeDirects = directs.filter(d => d.status === 'active');
       const studentDirectSales = activeDirects.filter(d => d.account_type === 'student').length;
       const registrationDirectSales = activeDirects.filter(d => d.account_type === 'registration_free').length;
@@ -239,9 +241,10 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       }
 
       // STEP 3: Qualified team (exclude higher-ranked / inactive members)
-      // Only approved STUDENT accounts count toward the team; registration_free never counts.
+      // Team progression counts ALL active members (students + registration_free),
+      // matching the Aug-7 behavior. The qualification gate (STEP 2) stays students-only.
       const allTeamMembers = await query(
-        "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
+        "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
         [user.id, user.id]
       );
       let qualifiedTeamCount = 0;

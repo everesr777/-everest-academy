@@ -98,7 +98,7 @@ router.delete("/:id", async (req, res) => {
 // Excludes: pending, rejected, suspended, inactive, and members with higher rank
 async function getQualifiedTeamCount(userId, currentRankSortOrder) {
   const allMembers = await query(
-    "SELECT u.id, u.rank, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
+    "SELECT u.id, u.rank, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
     [userId, userId]
   );
   // Filter to active only
@@ -122,7 +122,7 @@ async function getQualifiedTeamCount(userId, currentRankSortOrder) {
 // Get full breakdown of qualified team for weekly history
 async function getQualifiedTeamBreakdown(userId, currentRankSortOrder) {
   const allMembers = await query(
-    "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
+    "SELECT u.id, u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
     [userId, userId]
   );
   const allRanks = await query("SELECT name, sort_order FROM ranks WHERE is_active = 1 ORDER BY sort_order ASC");
@@ -251,9 +251,10 @@ router.get("/progress/:userId", async (req, res) => {
     }
 
     // Direct sales breakdown (only approved students count toward rank)
+    // Direct = referred via link OR created & paid for by this user (no own referrer)
     const directs = await query(
-      "SELECT u.id, u.account_type, u.status FROM users u WHERE u.referred_by = ?",
-      [req.params.userId]
+      "SELECT u.id, u.account_type, u.status FROM users u WHERE u.referred_by = ? OR (u.created_by_user = ? AND u.referred_by IS NULL)",
+      [req.params.userId, req.params.userId]
     );
     const studentDirectSales = directs.filter(d => d.account_type === 'student' && d.status === 'active').length;
     const registrationDirectSales = directs.filter(d => d.account_type === 'registration_free' && d.status === 'active').length;

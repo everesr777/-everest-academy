@@ -225,19 +225,20 @@ router.post("/weekly-commission", adminAuth, async (req, res) => {
       const userRank = rankMap[user.rank];
 
       // STEP 1: Count all Direct Sales (Level 1 only — both Student + Reg Free, active only)
+      // Direct = referred via link OR created & paid for by this user (no own referrer)
       const directs = await query(
-        "SELECT u.id, u.account_type, u.status FROM users u WHERE u.referred_by = ?",
-        [user.id]
+        "SELECT u.id, u.account_type, u.status FROM users u WHERE u.referred_by = ? OR (u.created_by_user = ? AND u.referred_by IS NULL)",
+        [user.id, user.id]
       );
       const activeDirects = directs.filter(d => d.status === 'active');
       const totalDirectSales = activeDirects.length;
       const studentDirectSales = activeDirects.filter(d => d.account_type === 'student').length;
       const registrationDirectSales = activeDirects.filter(d => d.account_type === 'registration_free').length;
 
-      // STEP 2: Determine Qualified Direct Sales (= total active directs for eligibility)
-      const qualifiedDirectSales = totalDirectSales;
+      // STEP 2: Determine Qualified Direct Sales (only approved STUDENT directs qualify)
+      const qualifiedDirectSales = studentDirectSales;
 
-      // STEP 3: Verify minimum weekly requirement (2 Direct Sales)
+      // STEP 3: Verify minimum weekly requirement (2 qualified direct sales)
       if (qualifiedDirectSales < 2) {
         const whId = uuidv4();
         await execute(`INSERT INTO weekly_history (id, user_id, week_start, week_end, calculation_date,
@@ -556,10 +557,10 @@ router.get("/rank-progress/:userId", async (req, res) => {
 
     const userSortOrder = currentRank ? currentRank.sort_order : null;
 
-    // Direct sales breakdown
+    // Direct sales breakdown (Direct = referred OR created & paid for by this user)
     const directs = await query(
-      "SELECT u.id, u.full_name, u.email, u.phone, u.avatar, u.account_type, u.rank, u.e_money, u.status, u.created_at FROM users u WHERE u.referred_by = ?",
-      [user.id]
+      "SELECT u.id, u.full_name, u.email, u.phone, u.avatar, u.account_type, u.rank, u.e_money, u.status, u.created_at FROM users u WHERE u.referred_by = ? OR (u.created_by_user = ? AND u.referred_by IS NULL)",
+      [user.id, user.id]
     );
     const activeDirects = directs.filter(d => d.status === 'active');
     const studentDirectSales = activeDirects.filter(d => d.account_type === 'student').length;
@@ -567,9 +568,9 @@ router.get("/rank-progress/:userId", async (req, res) => {
     const totalDirectSales = studentDirectSales + registrationDirectSales;
     const qualifiedDirectSales = studentDirectSales;
 
-    // Qualified team (only approved students count toward rank)
+    // Qualified team (students + reg-free count toward rank progression)
     const allTeam = await query(
-      "SELECT u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
+      "SELECT u.rank, u.status, u.account_type FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type IN ('student','registration_free')",
       [user.id, user.id]
     );
 
