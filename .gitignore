@@ -12,3 +12,8 @@ pro/
 *.log
 
 hostinger-upload/
+
+hostinger-server-ready/
+hostinger-update/
+*.zip
+admin/backend/_*.mjs
