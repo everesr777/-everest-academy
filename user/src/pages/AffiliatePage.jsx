@@ -130,6 +130,9 @@ export default function AffiliatePage() {
     api(`/api/mlm/upline/${user.id}`).then((u) => setUpline(u[0] || null)).catch(() => {});
     api("/api/ranks").then((d) => Array.isArray(d) ? setDbRanks(d) : null).catch(() => {});
     api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
+    api(`/api/users/${user.id}`).then((u) => {
+      if (u) setProfileData(u);
+    }).catch(() => {});
   };
 
   useEffect(() => { loadData(); }, [user]);
@@ -161,7 +164,6 @@ export default function AffiliatePage() {
   };
 
   const eMoney = profileData?.e_money ?? user?.e_money ?? 0;
-  const totalCommissions = commissions.reduce((s, item) => s + item.amount, 0);
   const uniqueLevels = [...new Set(commissions.map((c) => c.level))].sort((a, b) => a - b);
 
   const countTeam = (nodes) => {
@@ -332,8 +334,8 @@ export default function AffiliatePage() {
                   border: "#3b82f622",
                 },
                 {
-                  label: t("إجمالي العمولات", "Total Commissions"),
-                  value: totalCommissions + " E",
+                  label: t("رصيدك الحالي", "Your Balance"),
+                  value: eMoney + " E",
                   icon: "💰",
                   bg: "linear-gradient(135deg, #22c55e12, #22c55e06)",
                   border: "#22c55e22",
