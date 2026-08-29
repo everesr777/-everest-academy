@@ -261,12 +261,13 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       const userRank = rankMap[user.rank];
 
       // STEP 1: Direct sales (Level 1, active only)
-      // Only approved STUDENT accounts count toward the referrer's rank.
-      // registration_free approvals are recorded for info but never count.
-      // A direct sale = referred via link OR created & paid for by this user
-      // (created_by_user) when the account has no referral link of its own.
-      const directs = await query("SELECT u.id, u.account_type, u.status FROM users u WHERE u.referred_by = ? OR (u.created_by_user = ? AND u.referred_by IS NULL)", [user.id, user.id]);
-      const activeDirects = directs.filter(d => d.status === 'active');
+      // Use user_closure depth=1 to count direct students (reliable, matches what admin UI shows).
+      // referred_by may be stale or mismatched — closure is the source of truth.
+      const directMembers = await query(
+        "SELECT u.id, u.account_type, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.depth = 1",
+        [user.id]
+      );
+      const activeDirects = directMembers.filter(d => d.status === 'active');
       const studentDirectSales = activeDirects.filter(d => d.account_type === 'student').length;
       const registrationDirectSales = activeDirects.filter(d => d.account_type === 'registration_free').length;
       const totalDirectSales = studentDirectSales + registrationDirectSales;
@@ -321,7 +322,9 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       }
       const qualifiedNetworkCount = allTeamMembers.filter(m => m.status === 'active').length;
 
-      // STEP 4: Recalculate rank (identical conditions to the previous system)
+      // STEP 4: Recalculate rank based on DIRECT student count (depth 1 only).
+      // Gate (STEP 2) already ensures qualifiedDirectSales >= minDirectSales.
+      // 2 direct students → Star, 5 → Executive, 10 → Executive Star, etc.
       const previousRank = user.rank;
       let promotionStatus = 'no_change';
       let newRank = user.rank;
@@ -329,7 +332,7 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
         const rankIdx = allRanks.findIndex(r => r.name === user.rank);
         for (let i = (rankIdx >= 0 ? rankIdx + 1 : 0); i < allRanks.length; i++) {
           const next = allRanks[i];
-          if (qualifiedTeamCount >= sReq(next)) {
+          if (qualifiedDirectSales >= sReq(next)) {
             newRank = next.name;
             await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')",
               [uuidv4(), user.id, "🎉 Rank Up!", `You reached ${next.name} rank! Your bonus is included in the weekly commission.`]);
@@ -337,7 +340,7 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
         }
       } else {
         for (const next of allRanks) {
-          if (qualifiedTeamCount >= sReq(next)) { newRank = next.name; } else { break; }
+          if (qualifiedDirectSales >= sReq(next)) { newRank = next.name; } else { break; }
         }
       }
       if (newRank !== previousRank) {
