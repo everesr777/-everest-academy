@@ -377,6 +377,8 @@ function createSchema(driver, isTursoDb) {
       try { await driver.execute("UPDATE ranks SET sales_required = 2 WHERE name = 'Star' AND sales_required = 0"); } catch(e) {}
       try { await driver.execute("UPDATE courses SET featured_image = 'https://everest-academy-production.up.railway.app' || featured_image WHERE featured_image LIKE '/uploads/%'"); } catch(e) {}
       try { await driver.execute("UPDATE courses SET featured_image = REPLACE(featured_image, 'https://steadfast-energy-production-a9d1.up.railway.app', 'https://everest-academy-production.up.railway.app') WHERE featured_image LIKE 'https://steadfast-energy-production-a9d1.up.railway.app/%'"); } catch(e) {}
+      // Prevent double commission: at most one weekly rank commission per user per week (Requirement 12).
+      try { await driver.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_weekly_commissions_user_week ON weekly_commissions (user_id, week_start)"); } catch(e) { console.log("⚠️ unique index on weekly_commissions skipped:", e.message); }
       await seedDataTurso(driver, exec);
     })();
   }
@@ -428,6 +430,8 @@ function createSchema(driver, isTursoDb) {
   try { driver.run("UPDATE ranks SET sales_required = 2 WHERE name = 'Star' AND sales_required = 0"); } catch(e) {}
   try { driver.run("UPDATE courses SET featured_image = 'https://everest-academy-production.up.railway.app' || featured_image WHERE featured_image LIKE '/uploads/%'"); } catch(e) {}
   try { driver.run("UPDATE courses SET featured_image = REPLACE(featured_image, 'https://steadfast-energy-production-a9d1.up.railway.app', 'https://everest-academy-production.up.railway.app') WHERE featured_image LIKE 'https://steadfast-energy-production-a9d1.up.railway.app/%'"); } catch(e) {}
+  // Prevent double commission: at most one weekly rank commission per user per week (Requirement 12).
+  try { driver.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_weekly_commissions_user_week ON weekly_commissions (user_id, week_start)"); } catch(e) { console.log("⚠️ unique index on weekly_commissions skipped:", e.message); }
   seedDataLocal(driver);
 }
 

@@ -192,13 +192,22 @@ export async function refreshLeadersSnapshot() {
     excludeClause = `AND id NOT IN (${excludedIds.map(() => "?").join(",")})`;
     params.push(...excludedIds);
   }
+  const week = await getCurrentWeek();
+  // Top 10 Leaders (Requirement 7):
+  //  - Exclude Star (Start from ranks above Star)
+  //  - Order: 1) highest rank 2) highest weekly sales 3) deterministic (user id)
+  //  - Called at the end of settlement so the snapshot reflects post-settlement ranks.
   const topUsers = await query(`
-    SELECT id, full_name as name, avatar, rank, e_money, direct_count
-    FROM users
-    WHERE role NOT IN ('admin', 'manager') AND rank IS NOT NULL AND rank != '' ${excludeClause}
-    ORDER BY ${LEADER_RANK_ORDER_SQL}, direct_count DESC
+    SELECT u.id, u.full_name as name, u.avatar, u.rank, u.e_money,
+           COALESCE(ws.sales, 0) as weekly_sales
+    FROM users u
+    LEFT JOIN weekly_sales ws ON ws.user_id = u.id AND ws.week_start = ?
+    WHERE u.role NOT IN ('admin', 'manager')
+      AND u.rank IS NOT NULL AND u.rank != '' AND u.rank != 'Star'
+      ${excludeClause}
+    ORDER BY ${LEADER_RANK_ORDER_SQL}, weekly_sales DESC, u.id ASC
     LIMIT 10
-  `, params);
+  `, [week.weekStart, ...params]);
   await execute("DELETE FROM leaders");
   for (const u of topUsers) {
     await execute(
@@ -263,18 +272,30 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       // STEP 1: Direct sales (Level 1, active only)
       // Use user_closure depth=1 to count direct students (reliable, matches what admin UI shows).
       // referred_by may be stale or mismatched — closure is the source of truth.
+      // Direct Sale = (A) registered via referral code OR (B) created directly by this member
+      // ("Create Account for Another User"). Both ways land in user_closure depth 1.
       const directMembers = await query(
-        "SELECT u.id, u.account_type, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.depth = 1",
+        "SELECT u.id, u.account_type, u.status, u.created_at FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.depth = 1",
         [user.id]
       );
       const activeDirects = directMembers.filter(d => d.status === 'active');
       const studentDirectSales = activeDirects.filter(d => d.account_type === 'student').length;
       const registrationDirectSales = activeDirects.filter(d => d.account_type === 'registration_free').length;
       const totalDirectSales = studentDirectSales + registrationDirectSales;
-      const qualifiedDirectSales = studentDirectSales;
 
-      // STEP 2: Minimum direct sales eligibility (configurable, default 2)
-      if (qualifiedDirectSales < minDirectSales) {
+      // Weekly Direct Sales = qualified (active STUDENT) directs created INSIDE this settlement week.
+      // Eligibility for the weekly rank commission requires minDirectSales NEW direct sales this week.
+      // Registration Free never qualifies for commission — only Student directs count here.
+      // Note: the week window is [weekStart 00:00, weekEnd 23:59:59].
+      const weeklyDirects = activeDirects.filter(d =>
+        d.account_type === 'student' &&
+        d.created_at >= `${weekStart} 00:00:00` &&
+        d.created_at <= `${weekEnd} 23:59:59`
+      );
+      const weeklyDirectSales = weeklyDirects.length;
+
+      // STEP 2: Minimum NEW weekly direct sales eligibility (configurable, default 2)
+      if (weeklyDirectSales < minDirectSales) {
         const whId = uuidv4();
         await execute(`INSERT INTO weekly_history (id, user_id, week_start, week_end, calculation_date,
           previous_rank, current_rank, total_direct_sales, student_direct_sales, registration_direct_sales,
@@ -283,9 +304,9 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [whId, user.id, weekStart, weekEnd, new Date().toISOString().slice(0, 19).replace("T", " "),
             user.rank, user.rank, totalDirectSales, studentDirectSales, registrationDirectSales,
-            qualifiedDirectSales, 0, 0, 0,
-            'not_eligible', 'no_change', `Less than ${minDirectSales} qualified direct sales (${qualifiedDirectSales})`]);
-        results.push({ user_id: user.id, rank: user.rank, eligible: false, reason: `directs < ${minDirectSales} (${qualifiedDirectSales})`, totalDirectSales, studentDirectSales, registrationDirectSales });
+            weeklyDirectSales, 0, 0, 0,
+            'not_eligible', 'no_change', `Less than ${minDirectSales} qualified direct sales this week (${weeklyDirectSales})`]);
+        results.push({ user_id: user.id, rank: user.rank, eligible: false, reason: `weekly directs < ${minDirectSales} (${weeklyDirectSales})`, totalDirectSales, studentDirectSales, registrationDirectSales, weeklyDirectSales });
         continue;
       }
 
@@ -322,9 +343,10 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       }
       const qualifiedNetworkCount = allTeamMembers.filter(m => m.status === 'active').length;
 
-      // STEP 4: Recalculate rank based on DIRECT student count (depth 1 only).
-      // Gate (STEP 2) already ensures qualifiedDirectSales >= minDirectSales.
-      // 2 direct students → Star, 5 → Executive, 10 → Executive Star, etc.
+      // STEP 4: Recalculate rank based on QUALIFIED TEAM SIZE (all levels below, active STUDENT only).
+      // Higher-ranked members are already excluded in STEP 3 (see higherRankExcluded).
+      // Gate (STEP 2) only controls commission eligibility (min NEW weekly directs) — it does NOT gate rank.
+      // Rank thresholds map to team size: 2 → Star, 5 → Executive, 10 → Executive Star, 20 → Team Leader, etc.
       const previousRank = user.rank;
       let promotionStatus = 'no_change';
       let newRank = user.rank;
@@ -332,7 +354,7 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
         const rankIdx = allRanks.findIndex(r => r.name === user.rank);
         for (let i = (rankIdx >= 0 ? rankIdx + 1 : 0); i < allRanks.length; i++) {
           const next = allRanks[i];
-          if (qualifiedDirectSales >= sReq(next)) {
+          if (qualifiedTeamCount >= sReq(next)) {
             newRank = next.name;
             await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')",
               [uuidv4(), user.id, "🎉 Rank Up!", `You reached ${next.name} rank! Your bonus is included in the weekly commission.`]);
@@ -340,7 +362,7 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
         }
       } else {
         for (const next of allRanks) {
-          if (qualifiedDirectSales >= sReq(next)) { newRank = next.name; } else { break; }
+          if (qualifiedTeamCount >= sReq(next)) { newRank = next.name; } else { break; }
         }
       }
       if (newRank !== previousRank) {
@@ -361,17 +383,27 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       } else {
         const bonus = bVal(finalRank) || 0;
         if (bonus > 0) {
-          weeklyCommission = bonus;
-          commissionStatus = 'paid';
-          await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [bonus, user.id]);
-          await execute("INSERT INTO weekly_commissions (id, user_id, rank_name, amount, week_start, week_end, status) VALUES (?, ?, ?, ?, ?, ?, 'paid')",
-            [uuidv4(), user.id, finalRank.name, bonus, weekStart, weekEnd]);
-          await execute("INSERT INTO wallet_transactions (id, user_id, amount, type, description, status) VALUES (?, ?, ?, 'credit', ?, 'completed')",
-            [uuidv4(), user.id, bonus, `العمولة الأسبوعية - رتبة ${finalRank.name} (${weekStart})`]);
-          await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'commission')",
-            [uuidv4(), user.id, "🏆 عمولة أسبوعية", `ربحت ${bonus} E-Money كعمولة أسبوعية عن رتبة ${finalRank.name}`]);
-          totalAwarded++;
-          totalCommissions += bonus;
+          // Requirement 12: never pay the same weekly rank commission twice for one user+week.
+          const alreadyPaid = await queryOne(
+            "SELECT id FROM weekly_commissions WHERE user_id = ? AND week_start = ? LIMIT 1",
+            [user.id, weekStart]
+          );
+          if (alreadyPaid) {
+            commissionStatus = 'already_paid';
+            failureReason = `Commission already paid for ${user.id} / ${weekStart}`;
+          } else {
+            weeklyCommission = bonus;
+            commissionStatus = 'paid';
+            await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [bonus, user.id]);
+            await execute("INSERT OR IGNORE INTO weekly_commissions (id, user_id, rank_name, amount, week_start, week_end, status) VALUES (?, ?, ?, ?, ?, ?, 'paid')",
+              [uuidv4(), user.id, finalRank.name, bonus, weekStart, weekEnd]);
+            await execute("INSERT INTO wallet_transactions (id, user_id, amount, type, description, status) VALUES (?, ?, ?, 'credit', ?, 'completed')",
+              [uuidv4(), user.id, bonus, `العمولة الأسبوعية - رتبة ${finalRank.name} (${weekStart})`]);
+            await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'commission')",
+              [uuidv4(), user.id, "🏆 عمولة أسبوعية", `ربحت ${bonus} E-Money كعمولة أسبوعية عن رتبة ${finalRank.name}`]);
+            totalAwarded++;
+            totalCommissions += bonus;
+          }
         } else {
           commissionStatus = 'no_bonus';
           failureReason = `Rank ${finalRank.name} has no weekly bonus`;
@@ -394,14 +426,14 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [whId, user.id, weekStart, weekEnd, new Date().toISOString().slice(0, 19).replace("T", " "),
           previousRank, newRank, totalDirectSales, studentDirectSales, registrationDirectSales,
-          qualifiedDirectSales, qualifiedTeamCount, qualifiedNetworkCount, studentMembers,
+          weeklyDirectSales, qualifiedTeamCount, qualifiedNetworkCount, studentMembers,
           registrationMembers, higherRankExcluded, inactiveExcluded, weeklyCommission,
           commissionStatus, promotionStatus, failureReason, details]);
 
       results.push({
         user_id: user.id, rank: newRank, previousRank, eligible: commissionStatus === 'paid',
         bonus: weeklyCommission, totalDirectSales, studentDirectSales, registrationDirectSales,
-        qualifiedDirectSales, qualifiedTeamCount, qualifiedNetworkCount, studentMembers,
+        weeklyDirectSales, qualifiedTeamCount, qualifiedNetworkCount, studentMembers,
         registrationMembers, higherRankExcluded, inactiveExcluded, promotionStatus,
         commissionStatus, failureReason
       });

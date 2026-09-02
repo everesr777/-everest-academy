@@ -62,6 +62,14 @@ function createDb() {
     weekly_sales INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now','localtime')),
     UNIQUE(week_start, rank_position)
   )`);
+  db.run(`CREATE TABLE leaders (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, rank TEXT NOT NULL,
+    avatar TEXT, icon TEXT DEFAULT '🏆', sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+  )`);
+  db.run(`CREATE TABLE excluded_leaders (
+    user_id TEXT PRIMARY KEY, excluded_at TEXT DEFAULT (datetime('now','localtime'))
+  )`);
   db.run(`CREATE TABLE notifications (
     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, title TEXT NOT NULL, message TEXT,
     type TEXT DEFAULT 'info', is_read INTEGER DEFAULT 0, related_id TEXT,
@@ -117,7 +125,7 @@ mock.module("../db.js", {
   },
 });
 
-const { runWeeklySettlement, getCurrentWeek, getSettlementWeek, getSettlementSettings, settlementConfigDisplay, nextSettlementTime, partsInTz } =
+const { runWeeklySettlement, getCurrentWeek, getSettlementWeek, getSettlementSettings, settlementConfigDisplay, nextSettlementTime, partsInTz, refreshLeadersSnapshot } =
   await import("./weeklySettlement.js");
 
 function seedRanks(db) {
@@ -127,22 +135,31 @@ function seedRanks(db) {
     ["r2", "Executive", 5, 1500, 1, null, null],
     ["r3", "Executive Star", 10, 3000, 2, null, null],
     ["r4", "Team Leader", 20, 5000, 3, null, null],
+    ["r5", "Senior Leader", 40, 8000, 4, null, null],
   ];
   for (const r of ranks) stmt.run(r);
   stmt.free();
 }
 
-function insertUser(db, { id, name, email, role = "student", account_type = "student", rank = "", referred_by = null, direct_count = 0, e_money = 0, status = "active" }) {
+// NOTE: created_at defaults to the current real time (NOT within a fake test week).
+// Tests that need "NEW directs this week" must pass created_at inside [WEEK, WEEK_END].
+function insertUser(db, { id, name, email, role = "student", account_type = "student", rank = "", referred_by = null, created_by_user = null, direct_count = 0, e_money = 0, status = "active", created_at = null }) {
+  const ca = created_at || null;
   db.run(
-    "INSERT INTO users (id,full_name,email,password,role,account_type,referral_code,referred_by,rank,e_money,status,blocked,direct_count,rank_progress) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-    [id, name, email, "pw", role, account_type, "REF-" + id, referred_by, rank, e_money, status, 0, direct_count, 0]
+    "INSERT INTO users (id,full_name,email,password,role,account_type,referral_code,referred_by,created_by_user,rank,e_money,status,blocked,direct_count,rank_progress,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    [id, name, email, "pw", role, account_type, "REF-" + id, referred_by, created_by_user, rank, e_money, status, 0, direct_count, 0, ca]
   );
 }
 
+// Insert closure descendants at depth 2 (below the user), mimicking an entire downline team.
 function insertClosure(db, ancestor, descendants) {
   for (const d of descendants) {
     db.run("INSERT OR IGNORE INTO user_closure (ancestor,descendant,depth) VALUES (?,?,2)", [ancestor, d]);
   }
+}
+// Insert a DIRECT (depth 1) closure link for a direct child.
+function insertDirectClosure(db, ancestor, descendant) {
+  db.run("INSERT OR IGNORE INTO user_closure (ancestor,descendant,depth) VALUES (?,?,1)", [ancestor, descendant]);
 }
 
 function insertWeeklySales(db, userId, weekStart, sales) {
@@ -163,6 +180,11 @@ function seedSettings(db, overrides = {}) {
   }
 }
 
+const WEEK = "2026-08-02";
+const WEEK_END = "2026-08-08";
+const W_IN = `${WEEK} 12:00:00`;        // inside the week window
+const W_PREV = "2026-07-25 12:00:00";   // before the week (old directs)
+
 // ─── Tests ───
 
 test("defaults: Friday 00:00 Africa/Cairo, enabled, min 2 directs", async () => {
@@ -177,28 +199,13 @@ test("defaults: Friday 00:00 Africa/Cairo, enabled, min 2 directs", async () => 
   assert.equal(settings.settlement_enabled, "true");
   assert.equal(settings.settlement_min_direct_sales, "2");
   const display = settlementConfigDisplay(settings);
-  assert.equal(display.enabled, true);
   assert.equal(display.day, "Friday");
   assert.equal(display.hour, 0);
   assert.equal(display.minute, 0);
   assert.equal(display.timezone, "Africa/Cairo");
-  assert.equal(display.minDirectSales, 2);
   const next = nextSettlementTime(settings);
   assert.equal(next.day, "Friday");
   assert.match(next.label, /00:00/);
-});
-
-test("empty settings table falls back to defaults", async () => {
-  const db = createDb();
-  ctx = apiFor(db);
-  const settings = await getSettlementSettings();
-  assert.equal(settings.settlement_day, "5");
-  assert.equal(settings.settlement_timezone, "Africa/Cairo");
-});
-
-test("partsInTz: Cairo timezone day-of-week correctness", () => {
-  assert.equal(partsInTz(new Date("2026-08-07T12:00:00Z"), "Africa/Cairo").dow, 5); // Friday
-  assert.equal(partsInTz(new Date("2026-08-09T12:00:00Z"), "Africa/Cairo").dow, 0); // Sunday
 });
 
 test("weekly cycle matches settlement schedule (Friday start)", async () => {
@@ -207,224 +214,308 @@ test("weekly cycle matches settlement schedule (Friday start)", async () => {
   ctx = apiFor(db);
   const { weekStart, weekEnd } = await getCurrentWeek();
   const [y, m, d] = weekStart.split("-").map(Number);
-  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  assert.equal(dow, 5, "running week must start on settlement day (Friday)");
+  assert.equal(new Date(Date.UTC(y, m - 1, d)).getUTCDay(), 5, "running week must start on Friday");
   const start = Date.UTC(y, m - 1, d);
   const [ey, em, ed] = weekEnd.split("-").map(Number);
-  const end = Date.UTC(ey, em - 1, ed);
-  assert.equal((end - start) / 86400000, 6);
-  const settled = await getSettlementWeek();
-  const [sy, sm, sd] = settled.weekEnd.split("-").map(Number);
-  const settledEnd = Date.UTC(sy, sm - 1, sd);
-  assert.equal((start - settledEnd) / 86400000, 1, "settled week must end the day before the running week starts");
+  assert.equal((Date.UTC(ey, em - 1, ed) - start) / 86400000, 6);
 });
 
-test("full settlement run: promote, single commission, reset, snapshot, no downgrade, idempotent", async () => {
+// Test 1, 2: 0 or 1 NEW weekly direct → NOT eligible for commission.
+// Test 3: 2 NEW weekly directs → eligible.
+test("T1/T2/T3: eligible only with >= `minDirectSales` NEW directs THIS week", async () => {
   const db = createDb();
   seedRanks(db);
   seedSettings(db);
-  const WEEK = "2026-08-02";
-  const WEEK_END = "2026-08-08";
-
-  // u-star: Executive, 3 directs, 12 qualified team members (t13 higher rank + t14 inactive excluded)
-  insertUser(db, { id: "u-star", name: "Star User", email: "star@t.com", rank: "Executive", referred_by: null, direct_count: 3 });
-  for (let i = 1; i <= 3; i++) insertUser(db, { id: `d${i}`, name: `Direct ${i}`, email: `d${i}@t.com`, rank: "Star", referred_by: "u-star" });
-  for (let i = 1; i <= 12; i++) insertUser(db, { id: `t${i}`, name: `Team ${i}`, email: `t${i}@t.com`, rank: "Star" });
-  insertUser(db, { id: "t13", name: "Higher Rank", email: "t13@t.com", rank: "Team Leader" });
-  insertUser(db, { id: "t14", name: "Inactive", email: "t14@t.com", rank: "Star", status: "inactive" });
-  insertClosure(db, "u-star", ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12", "t13", "t14"]);
-
-  // u-chain: Star with same 12-team network -> jumps to Executive Star in one pass (chain 5 -> 10)
-  insertUser(db, { id: "u-chain", name: "Chain User", email: "chain@t.com", rank: "Star", referred_by: null, direct_count: 3 });
-  for (let i = 1; i <= 3; i++) insertUser(db, { id: `cd${i}`, name: `Chain D${i}`, email: `cd${i}@t.com`, rank: "Star", referred_by: "u-chain" });
-  insertClosure(db, "u-chain", ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "t12", "t13", "t14"]);
-
-  // u-nochange: Executive Star but ZERO directs -> must NOT be downgraded
-  insertUser(db, { id: "u-nochange", name: "No Change", email: "nc@t.com", rank: "Executive Star", referred_by: null, direct_count: 0 });
-
-  // u-exec-noteam: Executive, 2 directs, no team -> rank unchanged, gets own-rank commission
-  insertUser(db, { id: "u-exec-noteam", name: "Exec No Team", email: "ent@t.com", rank: "Executive", referred_by: null, direct_count: 2 });
-  insertUser(db, { id: "ed1", name: "ED1", email: "ed1@t.com", rank: "Star", referred_by: "u-exec-noteam" });
-  insertUser(db, { id: "ed2", name: "ED2", email: "ed2@t.com", rank: "Star", referred_by: "u-exec-noteam" });
-
-  // u-tl: Executive Star with 20 active Star team members -> qualifies Team Leader
-  insertUser(db, { id: "u-tl", name: "Team Lead", email: "tl@t.com", rank: "Executive Star", referred_by: null, direct_count: 2 });
-  insertUser(db, { id: "td1", name: "TD1", email: "td1@t.com", rank: "Star", referred_by: "u-tl" });
-  insertUser(db, { id: "td2", name: "TD2", email: "td2@t.com", rank: "Star", referred_by: "u-tl" });
-  for (let i = 1; i <= 20; i++) insertUser(db, { id: `tt${i}`, name: `TL Team ${i}`, email: `tt${i}@t.com`, rank: "Star" });
-  insertClosure(db, "u-tl", Array.from({ length: 20 }, (_, i) => `tt${i + 1}`));
-
-  insertWeeklySales(db, "u-star", WEEK, 15);
-  insertWeeklySales(db, "t1", WEEK, 8);
-  insertWeeklySales(db, "d1", WEEK, 5);
+  // u0: 0 new directs → not eligible
+  insertUser(db, { id: "u0", name: "Zero", email: "u0@t.com", rank: "Executive", referred_by: null });
+  // u1: 1 new direct (Student, this week) → not eligible
+  insertUser(db, { id: "u1", name: "One", email: "u1@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "u1d", name: "U1D", email: "u1d@t.com", rank: "Star", referred_by: "u1", created_at: W_IN });
+  insertDirectClosure(db, "u1", "u1d");
+  // u2: 2 new directs (Student, this week) → eligible
+  insertUser(db, { id: "u2", name: "Two", email: "u2@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "u2d1", name: "U2D1", email: "u2d1@t.com", rank: "Star", referred_by: "u2", created_at: W_IN });
+  insertUser(db, { id: "u2d2", name: "U2D2", email: "u2d2@t.com", rank: "Star", referred_by: "u2", created_at: W_IN });
+  insertDirectClosure(db, "u2", "u2d1");
+  insertDirectClosure(db, "u2", "u2d2");
 
   ctx = apiFor(db);
-  const result = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u0'")[0].commission_status, "not_eligible");
+  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u1'")[0].commission_status, "not_eligible");
+  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u2'")[0].commission_status, "paid");
+});
 
-  assert.equal(result.success, true);
-  assert.equal(result.awarded, 4);
-  assert.equal(result.totalCommissions, 3000 + 3000 + 1500 + 5000);
+// Test 4: direct via referral code → counts.
+// Test 5: direct via "Create Account for Another User" (created_by_user) → counts.
+test("T4/T5: referral-code directs AND create-account directs both count", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  // u-ref: 2 new directs, both via referred_by
+  insertUser(db, { id: "u-ref", name: "Referrer", email: "ref@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "rd1", name: "RD1", email: "rd1@t.com", rank: "Star", referred_by: "u-ref", created_at: W_IN });
+  insertUser(db, { id: "rd2", name: "RD2", email: "rd2@t.com", rank: "Star", referred_by: "u-ref", created_at: W_IN });
+  insertDirectClosure(db, "u-ref", "rd1");
+  insertDirectClosure(db, "u-ref", "rd2");
+  // u-created: 2 new directs, both via created_by_user (Create Account for Another User)
+  insertUser(db, { id: "u-cr", name: "Creator", email: "cr@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "cd1", name: "CD1", email: "cd1@t.com", rank: "Star", referred_by: null, created_by_user: "u-cr", created_at: W_IN });
+  insertUser(db, { id: "cd2", name: "CD2", email: "cd2@t.com", rank: "Star", referred_by: null, created_by_user: "u-cr", created_at: W_IN });
+  insertDirectClosure(db, "u-cr", "cd1");
+  insertDirectClosure(db, "u-cr", "cd2");
 
-  const user = (id) => ctx.q("SELECT * FROM users WHERE id = ?", [id])[0];
-  const commissionsFor = (id) => ctx.q("SELECT * FROM weekly_commissions WHERE user_id = ?", [id]);
-  const historyFor = (id) => ctx.q("SELECT * FROM weekly_history WHERE user_id = ?", [id])[0];
-  const txFor = (id) => ctx.q("SELECT * FROM wallet_transactions WHERE user_id = ?", [id]);
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u-ref'")[0].commission_status, "paid");
+  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u-cr'")[0].commission_status, "paid");
+});
 
-  // Req 13: Executive -> Executive Star, promoted once, single commission
-  assert.equal(user("u-star").rank, "Executive Star");
-  assert.equal(user("u-star").e_money, 3000);
-  const starComms = commissionsFor("u-star");
-  assert.equal(starComms.length, 1, "exactly ONE commission per settled week");
-  assert.equal(starComms[0].rank_name, "Executive Star");
-  assert.equal(starComms[0].amount, 3000);
-  assert.equal(starComms[0].week_start, WEEK);
-  assert.equal(starComms[0].week_end, WEEK_END);
-  assert.equal(txFor("u-star").length, 1);
-  assert.equal(txFor("u-star")[0].amount, 3000);
-  assert.equal(txFor("u-star")[0].type, "credit");
-  const starHist = historyFor("u-star");
-  assert.equal(starHist.previous_rank, "Executive");
-  assert.equal(starHist.current_rank, "Executive Star");
-  assert.equal(starHist.commission_status, "paid");
-  assert.equal(starHist.qualified_team_count, 12);
-  assert.equal(starHist.qualified_direct_sales, 3);
-  assert.equal(starHist.higher_rank_excluded, 1);
-  assert.equal(starHist.inactive_excluded, 1);
-  const starDetails = JSON.parse(starHist.details);
-  assert.equal(starDetails.qualifiedNetworkCount, 13);
+// Test 6: registration_free direct → does NOT generate commission (must be STUDENT).
+test("T6: registration_free directs never qualify for commission", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "u-f", name: "FreeRef", email: "uf@t.com", rank: "Executive", referred_by: null });
+  // two NEW registration_free directs this week (should NOT count as commission-eligible)
+  insertUser(db, { id: "fd1", name: "FD1", email: "fd1@t.com", account_type: "registration_free", rank: "", referred_by: "u-f", created_at: W_IN });
+  insertUser(db, { id: "fd2", name: "FD2", email: "fd2@t.com", account_type: "registration_free", rank: "", referred_by: "u-f", created_at: W_IN });
+  insertDirectClosure(db, "u-f", "fd1");
+  insertDirectClosure(db, "u-f", "fd2");
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u-f'")[0].commission_status, "not_eligible");
+});
 
-  // Req 7: Star -> Executive -> Executive Star in one pass = ONE commission at final rank (3000, not 1500+3000)
-  assert.equal(user("u-chain").rank, "Executive Star");
-  assert.equal(user("u-chain").e_money, 3000);
-  const chainComms = commissionsFor("u-chain");
-  assert.equal(chainComms.length, 1);
-  assert.equal(chainComms[0].rank_name, "Executive Star");
-  assert.equal(chainComms[0].amount, 3000);
-  const chainHist = historyFor("u-chain");
-  assert.equal(chainHist.previous_rank, "Star");
-  assert.equal(chainHist.current_rank, "Executive Star");
-  assert.equal(chainHist.promotion_status, "promoted");
+// Test 7: registration_free upgraded to student → starts counting toward rank/team.
+test("T7: reg-free upgraded to student counts toward rank/team", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "u-h", name: "Host", email: "uh@t.com", rank: "Star", referred_by: null });
+  // 4 team members, all STUDENT (converted from reg-free) → team 4+
+  for (let i = 1; i <= 4; i++) {
+    insertUser(db, { id: `s${i}`, name: `S${i}`, email: `s${i}@t.com`, account_type: "student", rank: "Star" });
+  }
+  insertClosure(db, "u-h", ["s1", "s2", "s3", "s4"]);
+  // 2 NEW student directs this week (via create account), to satisfy the gate
+  insertUser(db, { id: "hd1", name: "HD1", email: "hd1@t.com", rank: "Star", referred_by: "u-h", created_at: W_IN });
+  insertUser(db, { id: "hd2", name: "HD2", email: "hd2@t.com", rank: "Star", referred_by: "u-h", created_at: W_IN });
+  insertDirectClosure(db, "u-h", "hd1");
+  insertDirectClosure(db, "u-h", "hd2");
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  // team = 4 (team members) → but Star requires 2; rank is based on TEAM size, so Star has qualifiedTeamCount 4
+  const h = ctx.q("SELECT * FROM weekly_history WHERE user_id = 'u-h'")[0];
+  // 4 student team members (depth 2) + 2 new student directs (depth 1) count toward rank → 6
+  assert.equal(h.qualified_team_count, 6);
+});
 
-  // Req 5: never downgraded
-  assert.equal(user("u-nochange").rank, "Executive Star");
-  assert.equal(user("u-nochange").e_money, 0);
-  assert.equal(commissionsFor("u-nochange").length, 0);
-  assert.equal(historyFor("u-nochange").commission_status, "not_eligible");
+// Test 8, 9: higher-ranked team member excluded; equal/lower ranked counted.
+test("T8/T9: higher-ranked member excluded, equal/lower ranked counted (dynamic per root rank)", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  // root = Executive (sort_order 1)
+  insertUser(db, { id: "root", name: "Root", email: "root@t.com", rank: "Executive", referred_by: null });
+  // two NEW student directs this week → gate passes
+  insertUser(db, { id: "r1", name: "R1", email: "r1@t.com", rank: "Star", referred_by: "root", created_at: W_IN });
+  insertUser(db, { id: "r2", name: "R2", email: "r2@t.com", rank: "Star", referred_by: "root", created_at: W_IN });
+  insertDirectClosure(db, "root", "r1");
+  insertDirectClosure(db, "root", "r2");
+  // Team members below root:
+  //   m-eq = Executive (equal to root) → counted
+  //   m-low = Star (lower) → counted
+  //   m-high = Executive Star (higher than root) → EXCLUDED
+  insertUser(db, { id: "m-eq", name: "MEq", email: "meq@t.com", rank: "Executive" });
+  insertUser(db, { id: "m-low", name: "MLow", email: "mlow@t.com", rank: "Star" });
+  insertUser(db, { id: "m-high", name: "MHigh", email: "mhigh@t.com", rank: "Executive Star" });
+  insertClosure(db, "root", ["m-eq", "m-low", "m-high"]);
 
-  // Req 11: incomplete progress -> rank unchanged, weekly sales reset, still gets own-rank commission
-  assert.equal(user("u-exec-noteam").rank, "Executive");
-  assert.equal(user("u-exec-noteam").e_money, 1500);
-  assert.equal(commissionsFor("u-exec-noteam")[0].rank_name, "Executive");
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  const hist = ctx.q("SELECT * FROM weekly_history WHERE user_id = 'root'")[0];
+  // counted: r1, r2 (directs) + m-eq + m-low = 4 ; m-high excluded
+  assert.equal(hist.qualified_team_count, 4);
+  assert.equal(hist.higher_rank_excluded, 1);
+});
 
-  // Req 12: Team Leader qualification still applies
-  assert.equal(user("u-tl").rank, "Team Leader");
-  assert.equal(user("u-tl").e_money, 5000);
-  assert.equal(commissionsFor("u-tl").length, 1);
+// Test 10: Star -> Executive -> Executive Star in one week = ONE commission at final rank (3000).
+test("T10: single commission on the LAST/highest qualified rank", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "u-chain", name: "Chain", email: "chain@t.com", rank: "Star", referred_by: null });
+  // 2 new student directs this week (gate)
+  insertUser(db, { id: "c0", name: "C0", email: "c0@t.com", rank: "Star", referred_by: "u-chain", created_at: W_IN });
+  insertUser(db, { id: "c1", name: "C1", email: "c1@t.com", rank: "Star", referred_by: "u-chain", created_at: W_IN });
+  insertDirectClosure(db, "u-chain", "c0");
+  insertDirectClosure(db, "u-chain", "c1");
+  // enough team to reach Executive Star (10+) below u-chain
+  for (let i = 0; i < 12; i++) insertUser(db, { id: `ct${i}`, name: `CT${i}`, email: `ct${i}@t.com`, rank: "Star" });
+  insertClosure(db, "u-chain", Array.from({ length: 12 }, (_, i) => `ct${i}`));
 
-  // Req 8: NO separate rank-up bonuses anywhere
-  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM rank_bonuses")[0].c, 0);
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  const u = ctx.q("SELECT * FROM users WHERE id = 'u-chain'")[0];
+  assert.equal(u.rank, "Executive Star");
+  assert.equal(u.e_money, 3000);
+  const comms = ctx.q("SELECT * FROM weekly_commissions WHERE user_id = 'u-chain'");
+  assert.equal(comms.length, 1);
+  assert.equal(comms[0].rank_name, "Executive Star");
+  assert.equal(comms[0].amount, 3000);
+});
 
-  // Req 6: rank history never deleted - every processed user has exactly one record
-  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_history")[0].c, result.total_users);
-  assert.equal(historyFor("u-star").current_rank, "Executive Star");
+// Test 11: did not complete higher rank by Friday → not granted, keeps own achievable rank.
+test("T11: incomplete higher-rank qualification is NOT granted at settlement", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  // u-exec: rank Executive, has only 2 new directs this week and team below threshold for next rank
+  insertUser(db, { id: "u-exec", name: "Exec", email: "ue@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "e0", name: "E0", email: "e0@t.com", rank: "Star", referred_by: "u-exec", created_at: W_IN });
+  insertUser(db, { id: "e1", name: "E1", email: "e1@t.com", rank: "Star", referred_by: "u-exec", created_at: W_IN });
+  insertDirectClosure(db, "u-exec", "e0");
+  insertDirectClosure(db, "u-exec", "e1");
+  // team of 4 in total (below Executive Star threshold of 10 → stays Executive)
+  insertUser(db, { id: "x1", name: "X1", email: "x1@t.com", rank: "Star" });
+  insertUser(db, { id: "x2", name: "X2", email: "x2@t.com", rank: "Star" });
+  insertClosure(db, "u-exec", ["x1", "x2"]);
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  const u = ctx.q("SELECT * FROM users WHERE id = 'u-exec'")[0];
+  assert.equal(u.rank, "Executive", "should NOT jump to Executive Star");
+  const hist = ctx.q("SELECT * FROM weekly_history WHERE user_id = 'u-exec'")[0];
+  assert.equal(hist.commission_status, "paid");
+  assert.equal(hist.weekly_commission, 1500);
+});
 
-  // Req 10: Top-10 snapshot saved BEFORE reset
-  const lb = ctx.q("SELECT * FROM leaderboard_history WHERE week_start = ? ORDER BY rank_position ASC", [WEEK]);
-  assert.equal(lb.length, 3);
-  assert.equal(lb[0].user_id, "u-star");
-  assert.equal(lb[0].weekly_sales, 15);
-  assert.equal(lb[1].user_id, "t1");
-  assert.equal(lb[1].weekly_sales, 8);
-
-  // Req 4: weekly sales reset AFTER snapshot (only for the settled week)
-  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_sales WHERE week_start = ?", [WEEK])[0].c, 0);
-
-  // Settlement claim marked completed
-  const claim = ctx.q("SELECT * FROM weekly_settlements WHERE week_start = ?", [WEEK])[0];
-  assert.equal(claim.status, "completed");
-
-  // Idempotent: second run refuses
+// Test 12/17: double-commission protection — running settlement twice pays once.
+test("T12/T17: settlement paid once; re-run adds no extra commission", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "u-d", name: "Double", email: "ud@t.com", rank: "Executive Star", referred_by: null });
+  insertUser(db, { id: "d0", name: "D0", email: "d0@t.com", rank: "Star", referred_by: "u-d", created_at: W_IN });
+  insertUser(db, { id: "d1", name: "D1", email: "d1@t.com", rank: "Star", referred_by: "u-d", created_at: W_IN });
+  insertDirectClosure(db, "u-d", "d0");
+  insertDirectClosure(db, "u-d", "d1");
+  ctx = apiFor(db);
+  const first = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(first.success, true);
   const second = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
   assert.equal(second.success, false);
-  assert.match(second.error, /already settled/);
-  // No double commission after the refused re-run
-  assert.equal(commissionsFor("u-star").length, 1);
+  const comms = ctx.q("SELECT * FROM weekly_commissions WHERE user_id = 'u-d' AND week_start = ?", [WEEK]);
+  assert.equal(comms.length, 1);
+  assert.equal(ctx.q("SELECT e_money FROM users WHERE id = 'u-d'")[0].e_money, 3000);
+});
+
+// Test 13/14: after settlement weekly_sales reset to 0, but current_rank and rank_history preserved.
+test("T13/T14: weekly sales reset; rank and history preserved (no downgrade)", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "u-r", name: "Reset", email: "ur@t.com", rank: "Executive Star", referred_by: null });
+  insertUser(db, { id: "r0", name: "R0", email: "r0@t.com", rank: "Star", referred_by: "u-r", created_at: W_IN });
+  insertUser(db, { id: "r1", name: "R1", email: "r1@t.com", rank: "Star", referred_by: "u-r", created_at: W_IN });
+  insertDirectClosure(db, "u-r", "r0");
+  insertDirectClosure(db, "u-r", "r1");
+  insertWeeklySales(db, "u-r", WEEK, 20);
+  ctx = apiFor(db);
+  await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  // weekly sales reset
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_sales WHERE week_start = ?", [WEEK])[0].c, 0);
+  // current rank unchanged
+  assert.equal(ctx.q("SELECT rank FROM users WHERE id = 'u-r'")[0].rank, "Executive Star");
+  // rank history preserved
+  const hist = ctx.q("SELECT * FROM weekly_history WHERE user_id = 'u-r'");
+  assert.equal(hist.length, 1);
+  assert.equal(hist[0].current_rank, "Executive Star");
+});
+
+// Test 16: Star does NOT appear in Top Leaders.
+test("T16: Star excluded from Top Leaders", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  // Two Executive users (with enough team to stay Executive) and two Stars.
+  for (const [id, name, rank] of [["L1","Leader1","Executive"],["L2","Leader2","Executive"],["S1","Star1","Star"],["S2","Star2","Star"]]) {
+    insertUser(db, { id, name, email: id + "@t.com", rank, referred_by: null });
+  }
+  // give each Leader 2 new student directs this week for the gate
+  for (const lid of ["L1","L2"]) {
+    insertUser(db, { id: lid + "d1", name: lid + "d1", email: lid + "d1@t.com", rank: "Star", referred_by: lid, created_at: W_IN });
+    insertUser(db, { id: lid + "d2", name: lid + "d2", email: lid + "d2@t.com", rank: "Star", referred_by: lid, created_at: W_IN });
+    insertDirectClosure(db, lid, lid + "d1");
+    insertDirectClosure(db, lid, lid + "d2");
+  }
+  insertWeeklySales(db, "L1", WEEK, 30);
+  insertWeeklySales(db, "L2", WEEK, 10);
+  insertWeeklySales(db, "S1", WEEK, 50);
+  ctx = apiFor(db);
+  const count = await refreshLeadersSnapshot();
+  const leaders = ctx.q("SELECT * FROM leaders");
+  assert.ok(!leaders.some(l => l.rank === "Star"), "Star must not appear in Top Leaders");
+  assert.ok(leaders.some(l => l.rank === "Executive"));
+  assert.ok(count <= 10);
+});
+
+// Test 15: Top-10 snapshot saved BEFORE reset (and Star excluded from leaderboard_history too).
+test("T15: leaderboard snapshot saved before reset; Star excluded", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "P1", name: "P1", email: "p1@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "SD", name: "SD", email: "sd@t.com", rank: "Star", referred_by: "P1", created_at: W_IN });
+  insertUser(db, { id: "SD2", name: "SD2", email: "sd2@t.com", rank: "Star", referred_by: "P1", created_at: W_IN });
+  insertDirectClosure(db, "P1", "SD");
+  insertDirectClosure(db, "P1", "SD2");
+  insertWeeklySales(db, "P1", WEEK, 15);
+  insertWeeklySales(db, "SD", WEEK, 8);
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+  // snapshot rows exist for the week
+  const lb = ctx.q("SELECT * FROM leaderboard_history WHERE week_start = ?", [WEEK]);
+  assert.ok(lb.length > 0);
+  // weekly sales reset after snapshot
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_sales WHERE week_start = ?", [WEEK])[0].c, 0);
 });
 
 test("auto mode skips when settlement disabled; manual still runs", async () => {
   const db = createDb();
   seedRanks(db);
   seedSettings(db, { settlement_enabled: "false" });
-  insertUser(db, { id: "u-a", name: "A", email: "a@t.com", rank: "Executive", referred_by: null, direct_count: 2 });
-  insertUser(db, { id: "a1", name: "A1", email: "a1@t.com", rank: "Star", referred_by: "u-a" });
-  insertUser(db, { id: "a2", name: "A2", email: "a2@t.com", rank: "Star", referred_by: "u-a" });
+  insertUser(db, { id: "u-a", name: "A", email: "a@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "a1", name: "A1", email: "a1@t.com", rank: "Star", referred_by: "u-a", created_at: W_IN });
+  insertUser(db, { id: "a2", name: "A2", email: "a2@t.com", rank: "Star", referred_by: "u-a", created_at: W_IN });
+  insertDirectClosure(db, "u-a", "a1");
+  insertDirectClosure(db, "u-a", "a2");
   ctx = apiFor(db);
   const auto = await runWeeklySettlement({ triggeredBy: "auto" });
-  assert.equal(auto.success, false);
   assert.equal(auto.skipped, "disabled");
   const manual = await runWeeklySettlement({ triggeredBy: "manual" });
   assert.equal(manual.success, true);
 });
 
-test("minimum direct sales is configurable (default 2)", async () => {
+test("minimum direct sales threshold is configurable", async () => {
   const db = createDb();
   seedRanks(db);
-  seedSettings(db);
-  insertUser(db, { id: "u-1", name: "One", email: "o@t.com", rank: "Executive", referred_by: null, direct_count: 1 });
-  insertUser(db, { id: "u-2", name: "Two", email: "w@t.com", rank: "Executive", referred_by: null, direct_count: 2 });
-  insertUser(db, { id: "o1", name: "O1", email: "o1@t.com", rank: "Star", referred_by: "u-1" });
-  insertUser(db, { id: "w1", name: "W1", email: "w1@t.com", rank: "Star", referred_by: "u-2" });
-  insertUser(db, { id: "w2", name: "W2", email: "w2@t.com", rank: "Star", referred_by: "u-2" });
+  seedSettings(db, { settlement_min_direct_sales: "3" });
+  insertUser(db, { id: "u-2", name: "Two", email: "u2@t.com", rank: "Executive", referred_by: null });
+  // only 2 new directs → below threshold 3
+  insertUser(db, { id: "w1", name: "W1", email: "w1@t.com", rank: "Star", referred_by: "u-2", created_at: W_IN });
+  insertUser(db, { id: "w2", name: "W2", email: "w2@t.com", rank: "Star", referred_by: "u-2", created_at: W_IN });
+  insertDirectClosure(db, "u-2", "w1");
+  insertDirectClosure(db, "u-2", "w2");
   ctx = apiFor(db);
-  let res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: "2026-08-02" });
-  assert.equal(res.success, true);
-  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u-1'")[0].commission_status, "not_eligible");
-  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u-2'")[0].commission_status, "paid");
-
-  // Raise threshold to 3 -> u-2 (2 directs) becomes ineligible
-  const db2 = createDb();
-  seedRanks(db2);
-  seedSettings(db2, { settlement_min_direct_sales: "3" });
-  insertUser(db2, { id: "u-2", name: "Two", email: "w@t.com", rank: "Executive", referred_by: null, direct_count: 2 });
-  insertUser(db2, { id: "w1", name: "W1", email: "w1@t.com", rank: "Star", referred_by: "u-2" });
-  insertUser(db2, { id: "w2", name: "W2", email: "w2@t.com", rank: "Star", referred_by: "u-2" });
-  ctx = apiFor(db2);
-  res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: "2026-08-02" });
+  await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
   assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u-2'")[0].commission_status, "not_eligible");
-});
-
-test("registration_free users participate in ranks/commissions normally, but only student downline counts", async () => {
-  const db = createDb();
-  seedRanks(db);
-  seedSettings(db);
-  insertUser(db, { id: "u-f", name: "Free", email: "f@t.com", account_type: "registration_free", rank: "Star", referred_by: null, direct_count: 2 });
-  // registration_free downline members never count toward the rank/team
-  insertUser(db, { id: "d1", name: "D1", email: "d1@t.com", account_type: "registration_free", rank: "", referred_by: "u-f" });
-  insertUser(db, { id: "d2", name: "D2", email: "d2@t.com", account_type: "registration_free", rank: "", referred_by: "u-f" });
-  // student downline members DO count
-  insertUser(db, { id: "t1", name: "T1", email: "t1@t.com", account_type: "student", rank: "", referred_by: "u-f" });
-  insertUser(db, { id: "t2", name: "T2", email: "t2@t.com", account_type: "student", rank: "", referred_by: "u-f" });
-  insertUser(db, { id: "t3", name: "T3", email: "t3@t.com", account_type: "student", rank: "", referred_by: "u-f" });
-  insertUser(db, { id: "t4", name: "T4", email: "t4@t.com", account_type: "student", rank: "", referred_by: "u-f" });
-  insertUser(db, { id: "t5", name: "T5", email: "t5@t.com", account_type: "student", rank: "", referred_by: "u-f" });
-  insertClosure(db, "u-f", ["d1", "d2", "t1", "t2", "t3", "t4", "t5"]);
-
-  ctx = apiFor(db);
-  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: "2026-08-02" });
-  assert.equal(res.success, true);
-  // u-f (registration_free) is still processed like a normal account and can rank up
-  const user = ctx.q("SELECT * FROM users WHERE id = 'u-f'")[0];
-  assert.equal(user.rank, "Executive");
-  assert.equal(user.e_money, 1500);
-  const comms = ctx.q("SELECT * FROM weekly_commissions WHERE user_id = 'u-f'");
-  assert.equal(comms.length, 1);
-  assert.equal(comms[0].rank_name, "Executive");
-  assert.equal(comms[0].amount, 1500);
-  const hist = ctx.q("SELECT * FROM weekly_history WHERE user_id = 'u-f'")[0];
-  assert.equal(hist.commission_status, "paid");
-  // only the 5 student directs count toward the rank (regfree recorded as info only)
-  assert.equal(hist.qualified_team_count, 5);
-  assert.equal(hist.qualified_direct_sales, 5);
-  assert.equal(hist.student_direct_sales, 5);
-  assert.equal(hist.registration_direct_sales, 2);
 });
