@@ -34,7 +34,8 @@ async function generateUserId() {
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  const user = await queryOne("SELECT * FROM users WHERE email = ?", [email]);
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const user = await queryOne("SELECT * FROM users WHERE LOWER(email) = ?", [cleanEmail]);
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
   let valid = await bcrypt.compare(password, user.password || "");
   // Legacy fallback: pre-bcrypt accounts stored the password as plaintext.
@@ -234,7 +235,8 @@ router.post("/verify-email-otp", async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
 
-    const user = await queryOne("SELECT id, email_otp, email_otp_expires FROM users WHERE email = ?", [email]);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await queryOne("SELECT id, email_otp, email_otp_expires FROM users WHERE LOWER(email) = ?", [cleanEmail]);
     if (!user) return res.status(404).json({ error: "No account found with this email" });
     if (user.email_verified) return res.status(400).json({ error: "Email is already verified" });
     if (!user.email_otp) return res.status(400).json({ error: "No OTP has been sent. Please request a new one." });
@@ -276,7 +278,8 @@ router.post("/resend-email-otp", async (req, res) => {
       });
     }
 
-    const user = await queryOne("SELECT id, full_name, email FROM users WHERE email = ?", [email]);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await queryOne("SELECT id, full_name, email FROM users WHERE LOWER(email) = ?", [cleanEmail]);
     if (!user) return res.status(404).json({ error: "No account found with this email" });
     if (user.email_verified) return res.status(400).json({ error: "Email is already verified" });
 
@@ -297,7 +300,8 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required" });
-    const user = await queryOne("SELECT id, full_name, email FROM users WHERE email = ?", [email]);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await queryOne("SELECT id, full_name, email FROM users WHERE LOWER(email) = ?", [cleanEmail]);
     if (!user) return res.status(404).json({ error: "No account found with this email" });
     if (user.blocked) return res.status(403).json({ error: "Account is blocked" });
     const otp = String(Math.floor(100000 + Math.random() * 900000));
@@ -322,7 +326,8 @@ router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
-    const user = await queryOne("SELECT id FROM users WHERE email = ?", [email]);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await queryOne("SELECT id FROM users WHERE LOWER(email) = ?", [cleanEmail]);
     if (!user) return res.status(404).json({ error: "No account found with this email" });
     const reset = await queryOne("SELECT * FROM password_resets WHERE user_id = ? AND otp = ? ORDER BY created_at DESC LIMIT 1", [user.id, otp]);
     if (!reset) return res.status(400).json({ error: "Invalid OTP code" });
@@ -342,7 +347,8 @@ router.post("/reset-password", async (req, res) => {
     const { email, otp, new_password } = req.body;
     if (!email || !otp || !new_password) return res.status(400).json({ error: "All fields are required" });
     if (new_password.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters" });
-    const user = await queryOne("SELECT id FROM users WHERE email = ?", [email]);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await queryOne("SELECT id FROM users WHERE LOWER(email) = ?", [cleanEmail]);
     if (!user) return res.status(404).json({ error: "No account found with this email" });
     const reset = await queryOne("SELECT * FROM password_resets WHERE user_id = ? AND otp = ? ORDER BY created_at DESC LIMIT 1", [user.id, otp]);
     if (!reset) return res.status(400).json({ error: "Invalid OTP code" });
