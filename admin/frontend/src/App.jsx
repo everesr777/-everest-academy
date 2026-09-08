@@ -26,6 +26,7 @@ import CustomerServicePage from "./pages/CustomerServicePage.jsx";
 import FreeCoursesSettingsPage from "./pages/FreeCoursesSettingsPage.jsx";
 import PricingSettingsPage from "./pages/PricingSettingsPage.jsx";
 import TransactionsPage from "./pages/TransactionsPage.jsx";
+import ActivityFeedPage from "./pages/ActivityFeedPage.jsx";
 
 
 function AppInner() {
@@ -79,6 +80,7 @@ function AppInner() {
     { id: "cs", label: lang === "ar" ? "خدمة العملاء" : "Customer Service", icon: "📞" },
     { id: "pricing", label: lang === "ar" ? "إعدادات الأسعار" : "Pricing Settings", icon: "💰" },
     { id: "transactions", label: lang === "ar" ? "سجل المعاملات" : "Transactions", icon: "💳" },
+    { id: "activity-feed", label: lang === "ar" ? "نشاط الفلوس والرتب" : "Money & Ranks Activity", icon: "💰" },
 
     ...(isManager ? [{ id: "admins-mgmt", label: lang === "ar" ? "👥 إدارة الأدمنز" : "👥 Admin Management", icon: "👥" }] : []),
     { id: "profile-settings", label: lang === "ar" ? "الإعدادات الشخصية" : "Settings", icon: "⚙️" },
@@ -126,6 +128,7 @@ function AppInner() {
           {page === "cs" && <CustomerServicePage />}
           {page === "pricing" && <PricingSettingsPage />}
           {page === "transactions" && <TransactionsPage />}
+          {page === "activity-feed" && <ActivityFeedPage />}
 
           {page === "admin-logs" && <AdminLogsPage />}
           {page === "membership-settings" && <MembershipSettingsPage />}

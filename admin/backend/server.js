@@ -133,7 +133,7 @@ app.use("/api/mlm", mlmRoutes);
 app.use("/api/ranks", ranksRoutes);
 app.use("/api/leaders", leadersRoutes);
 app.use("/api/notifications", notificationsRoutes);
-app.use("/api/dashboard", adminAuth, dashboardRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/upload", adminAuth, uploadLimiter, uploadRoutes);
 app.use("/api/payment-gateways", paymentGatewayRoutes);
 app.use("/api/chat", chatRoutes);

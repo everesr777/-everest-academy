@@ -20,6 +20,7 @@ export default async function sessionAuth(req, res, next) {
     req.path === "/feedbacks" ||
     req.path === "/proofs" ||
     req.path === "/dashboard" ||
+    req.path === "/dashboard/public-stats" ||
     req.path.startsWith("/payment-gateways/active") ||
     req.path.startsWith("/chat/") ||
     req.path === "/customer-service"

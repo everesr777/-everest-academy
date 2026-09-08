@@ -1,9 +1,10 @@
 import express from "express";
 import { query, queryOne } from "../db.js";
+import { adminAuth } from "../middleware/sessionAuth.js";
 
 const router = express.Router();
 
-router.get("/stats", async (req, res) => {
+router.get("/stats", adminAuth, async (req, res) => {
   try {
     const totalUsers = await queryOne(
       "SELECT COUNT(*) as count FROM users WHERE role NOT IN ('admin','manager')"
