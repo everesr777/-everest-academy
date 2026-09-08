@@ -893,7 +893,7 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
             >
               {[
                 {
-                  label: t("سينبك هذا الأسبوع", "Your Weekly CV"),
+                  label: t("سينبك هذا الأسبوع (اشتراكات معتمدة)", "Your CV This Week (approved enrollments)"),
                   value: weekly?.myWeeklySales ?? 0,
                   icon: "⚡",
                   bg: `linear-gradient(135deg, ${GOLD}12, ${GOLD}06)`,
@@ -908,7 +908,7 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                 },
                 {
                   label: t("متبقي للرتبة القادمة", "Left To Next Rank"),
-                  value: weekly?.nextRank ? `${weekly.nextRank.remainingSales} CV` : "—",
+                  value: weekly?.nextRank ? `${weekly.nextRank.teamLeft} ${t("طالب", "students")}` : "—",
                   icon: "🏁",
                   bg: "linear-gradient(135deg, #22c55e12, #22c55e06)",
                   border: "#22c55e22",
@@ -945,14 +945,14 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: c.textMuted, marginBottom: 8 }}>
                     <span>{t("الرتبة القادمة", "Next Rank")}: <b style={{ color: GOLD }}>{weekly.nextRank.name}</b></span>
-                    <span>{weekly.myWeeklySales} / {weekly.nextRank.salesRequired} CV</span>
+                    <span>{weekly.teamActiveCount} / {weekly.nextRank.salesRequired} {t("طالب", "students")}</span>
                   </div>
                   <div style={{ height: 10, borderRadius: 99, background: `${GOLD}14`, overflow: "hidden" }}>
-                    <div style={{ width: `${weekly.nextRank.salesRequired > 0 ? Math.min(100, (weekly.myWeeklySales / weekly.nextRank.salesRequired) * 100) : 0}%`, height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${GOLD}, #6E3BF2)` }} />
+                    <div style={{ width: `${weekly.nextRank.salesRequired > 0 ? Math.min(100, (weekly.teamActiveCount / weekly.nextRank.salesRequired) * 100) : 0}%`, height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${GOLD}, #6E3BF2)` }} />
                   </div>
                   <p style={{ fontSize: 12, color: c.textMuted, margin: "10px 0 0", lineHeight: 1.6 }}>
-                    {weekly.nextRank.remainingSales > 0
-                      ? `${t("باقي لك", "Remaining")} ${weekly.nextRank.remainingSales} ${t("سينب لوصول رتبة", "CV to reach")} ${weekly.nextRank.name}`
+                    {weekly.nextRank.teamLeft > 0
+                      ? `${t("باقي لك", "Remaining")} ${weekly.nextRank.teamLeft} ${t("طالب للوصول لرتبة", "students to reach")} ${weekly.nextRank.name}`
                       : t("✅ وصلت متطلبات الرتبة القادمة — انتظر التسوية الأسبوعية", "✅ You've met the next rank requirement — waiting for weekly settlement")}
                   </p>
                 </div>

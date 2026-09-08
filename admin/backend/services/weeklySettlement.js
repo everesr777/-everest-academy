@@ -144,13 +144,18 @@ export async function recordWeeklySales(enrollmentUserId, enrollmentId) {
 
     if (self.account_type === "student") await bump(enrollmentUserId);
 
-    let uplineId = (await queryOne("SELECT referred_by FROM users WHERE id = ?", [enrollmentUserId]))?.referred_by;
+    let up = await queryOne("SELECT referred_by, created_by_user FROM users WHERE id = ?", [enrollmentUserId]);
+    let uplineId = up ? (up.referred_by || up.created_by_user) : null;
     const visited = new Set();
     while (uplineId && !visited.has(uplineId)) {
       visited.add(uplineId);
-      const upline = await queryOne("SELECT id, account_type FROM users WHERE id = ?", [uplineId]);
-      if (upline && upline.account_type === "student") await bump(upline.id);
-      uplineId = (await queryOne("SELECT referred_by FROM users WHERE id = ?", [uplineId]))?.referred_by;
+      const upline = await queryOne("SELECT id, account_type, referred_by, created_by_user FROM users WHERE id = ?", [uplineId]);
+      if (upline) {
+        if (upline.account_type === "student") await bump(upline.id);
+        uplineId = upline.referred_by || upline.created_by_user;
+      } else {
+        uplineId = null;
+      }
     }
 
     await execute("UPDATE enrollments SET sales_counted = 1 WHERE id = ?", [enrollmentId]);

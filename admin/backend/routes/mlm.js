@@ -101,22 +101,38 @@ router.get("/weekly/:userId", async (req, res) => {
     const myWeeklySales = mySalesRow.c || 0;
     const reqSales = next ? sReq(next) : null;
 
+    // Active student team (all levels) — the metric for rank progress (mirrors settlement STEP 3/4).
+    const teamRows = await query(
+      "SELECT u.rank, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
+      [uid, uid]
+    );
+    let teamActiveCount = 0;
+    for (const tm of teamRows) {
+      if (tm.status !== 'active') continue;
+      const tmRank = allRanks.find(r => r.name === tm.rank);
+      if (tmRank && curPos >= 0 && tmRank.sort_order > curPos) continue;
+      teamActiveCount++;
+    }
+    const teamLeft = reqSales != null ? Math.max(0, reqSales - teamActiveCount) : null;
+
     res.json({
       weekStart,
       weekEnd,
       myWeeklySales,
+      teamActiveCount,
       currentRank: me.rank || null,
       directsWeekCount: directsRow.c || 0,
       directs: directs.map(d => ({ id: d.id, referral_code: d.referral_code, full_name: d.full_name, rank: d.rank, createdAt: d.created_at })),
       nextRank: next ? {
         name: next.name,
         salesRequired: reqSales,
+        teamLeft,
         remainingSales: reqSales != null ? Math.max(0, reqSales - myWeeklySales) : null,
       } : null,
     });
   } catch (err) {
     console.error("mlm/weekly error:", err.message);
-    res.json({ weekStart: null, weekEnd: null, myWeeklySales: 0, currentRank: null, directsWeekCount: 0, directs: [], nextRank: null });
+    res.json({ weekStart: null, weekEnd: null, myWeeklySales: 0, teamActiveCount: 0, currentRank: null, directsWeekCount: 0, directs: [], nextRank: null });
   }
 });
 
