@@ -40,13 +40,29 @@ import WhatsAppFloat from "./components/WhatsAppFloat";
 
 const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
+const fetchWithRetry = async (url, opts = {}, tries = 2) => {
+  for (let i = 0; i < tries; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const res = await fetch(url, { ...opts, signal: opts.signal || ctrl.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      if (e.name === "AbortError" || i === tries - 1) throw e;
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+};
+
 const api = async (path, opts = {}) => {
   const headers = { "Content-Type": "application/json" };
   const uid = localStorage.getItem("everest_user");
   const stoken = localStorage.getItem("everest_session_token");
   if (uid && stoken) { try { headers["x-user-id"] = JSON.parse(uid).id; headers["x-session-token"] = stoken; } catch {} }
   const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
-  const res = await fetch(url, { ...opts, headers: { ...headers, ...opts.headers } });
+  const res = await fetchWithRetry(url, { ...opts, headers: { ...headers, ...opts.headers } });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     if (body.session_expired) {

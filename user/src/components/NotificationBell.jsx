@@ -4,13 +4,25 @@ import { useLang } from "../LangContext";
 
 const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
-const api = (path, opts = {}) => {
+const api = async (path, opts = {}) => {
   const uid = localStorage.getItem("everest_user");
   const stoken = localStorage.getItem("everest_session_token");
   const headers = { "Content-Type": "application/json" };
   if (uid && stoken) { try { headers["x-user-id"] = JSON.parse(uid).id; headers["x-session-token"] = stoken; } catch {} }
   const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
-  return fetch(url, { ...opts, headers: { ...headers, ...opts.headers } }).then((r) => r.json());
+  for (let i = 0; i < 2; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const r = await fetch(url, { ...opts, signal: ctrl.signal, headers: { ...headers, ...opts.headers } });
+      clearTimeout(timer);
+      return r.json();
+    } catch (e) {
+      clearTimeout(timer);
+      if (e.name === "AbortError" || i === 1) throw e;
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
 };
 
 export default function NotificationBell({ userId }) {
