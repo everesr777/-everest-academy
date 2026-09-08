@@ -18,23 +18,41 @@ const useIsMobile = () => {
   return m;
 };
 
-/* ── Leaders Section: Everest TOP 10 (light-only premium, matches reference) ── */
-function LeadersSection({ leaders, m, dir, t }) {
+/* ── Leaders Section: Everest (adapts to light + dark) ── */
+function LeadersSection({ leaders, m, dir, t, theme }) {
   const scrollRef = React.useRef(null);
   const [scrollIdx, setScrollIdx] = React.useState(0);
 
-  // Fixed light Everest palette (this section is LIGHT MODE only on purpose)
+  // Everest palette — swaps between light and dark variants
+  const dark = theme === "dark";
   const purple = "#6E3BF2";
   const purpleMid = "#8B5CF6";
   const purpleLight = "#B88BFF";
   const lavender = "#F1ECFF";
-  const txt = "#1A1230";
-  const txtMuted = "#6E5A8E";
-  const cardBg = "#FFFFFF";
+  const txt = dark ? "#F4EEFF" : "#1A1230";
+  const txtMuted = dark ? "#BDA8E8" : "#6E5A8E";
+  const cardBg = dark ? "#221A43" : "#FFFFFF";
   const silver = "#A8A8A8";
   const bronze = "#B87333";
   const gold = "#FFD700";
   const rtl = dir === "rtl";
+
+  const bgGradient = dark
+    ? "linear-gradient(180deg,#0D0918 0%,#140E26 25%,#1B1236 55%,#221846 80%,#170F2A 100%)"
+    : "linear-gradient(180deg,#FDFCFF 0%,#F8F4FF 20%,#F1ECFF 48%,#E9E0FF 72%,#F4EEFF 100%)";
+  const heroBg = dark
+    ? "linear-gradient(120deg,#150E26 0%,#1D1438 45%,#2A1F4D 100%)"
+    : "linear-gradient(120deg,#FFFFFF 0%,#F7F2FF 45%,#EDE3FF 100%)";
+  const cardGlass = dark ? "rgba(28,19,56,.82)" : "rgba(255,255,255,.78)";
+  const innerAvatar = dark ? "#241A44" : "#FFFFFF";
+  const lavenderBg = dark ? "#2A1F4D" : lavender;
+  const keepGoingBg = dark
+    ? "linear-gradient(120deg,rgba(32,22,60,.92) 0%,rgba(38,27,72,.78) 100%)"
+    : "linear-gradient(120deg,rgba(255,255,255,.92) 0%,rgba(246,240,255,.75) 100%)";
+  const insetHi = dark ? "inset 0 1px 0 rgba(255,255,255,.06)" : "inset 0 1px 0 rgba(255,255,255,.95)";
+  const pedestal1 = dark ? "linear-gradient(180deg,#241A44,#2C2154)" : "linear-gradient(180deg,#FFFFFF,#E9DFFF)";
+  const pedestal2 = dark ? "linear-gradient(180deg,#2E2356,#3A2D6A)" : "linear-gradient(180deg,#F5EFFF,#DDCBFF)";
+  const haloWhite = dark ? "rgba(18,12,32,.7)" : "rgba(255,255,255,.6)";
 
   const heroLeader = leaders[0] || null;
   const restLeaders = leaders.slice(0, 10);
@@ -97,7 +115,7 @@ function LeadersSection({ leaders, m, dir, t }) {
   );
 
   return (
-    <section style={{ position: "relative", overflow: "hidden", padding: m ? "36px 16px 96px" : "58px 5% 64px", background: "linear-gradient(180deg,#FDFCFF 0%,#F8F4FF 20%,#F1ECFF 48%,#E9E0FF 72%,#F4EEFF 100%)", color: txt }}>
+    <section style={{ position: "relative", overflow: "hidden", padding: m ? "36px 16px 96px" : "58px 5% 64px", background: bgGradient, color: txt }}>
 
       {/* ── LAYERED MOUNTAINS (far .04 / mid .07 / front .11) ── */}
       <svg style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: m ? 260 : 400, opacity: 0.04, pointerEvents: "none" }} viewBox="0 0 1440 400" preserveAspectRatio="none">
@@ -154,11 +172,11 @@ function LeadersSection({ leaders, m, dir, t }) {
         <div style={{ textAlign: "center", position: "relative", zIndex: 2, marginBottom: m ? 16 : 32 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 20px", borderRadius: 999, background: "rgba(110,59,242,.07)", border: "1px solid rgba(165,129,255,.4)", marginBottom: m ? 12 : 18, boxShadow: "0 6px 18px rgba(110,59,242,.08)" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.09 6.26L21 9.27l-5 4.87L17.18 21 12 17.77 6.82 21 8 14.14l-5-4.87 6.91-1.01L12 2z" fill={gold}/></svg>
-            <span style={{ fontSize: m ? 11 : 13, letterSpacing: 3, color: "#5527CD", fontWeight: 800 }}>{t("أفضل 10","TOP 10")}</span>
+            <span style={{ fontSize: m ? 11 : 13, letterSpacing: 3, color: dark ? "#C9B0FF" : "#5527CD", fontWeight: 800 }}>Everest Leaders</span>
           </div>
           <h2 style={{ fontSize: m ? "1.7rem" : "clamp(2.1rem,5vw,3.4rem)", fontWeight: 900, margin: 0, lineHeight: 1.1 }}>
-            <span style={{ color: txt }}>{t("قادة إيفرست","Top 10")} </span>
-            <span style={{ background: `linear-gradient(135deg,${purple},${purpleMid},${purpleLight})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{t("المتميزون","LEADERS")}</span>
+            <span style={{ color: txt }}>Everest </span>
+            <span style={{ background: `linear-gradient(135deg,${purple},${purpleMid},${purpleLight})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{t("القادة","Leaders")}</span>
           </h2>
           {/* decorative underline */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, margin: "9px auto 10px", width: "fit-content" }}>
@@ -177,9 +195,9 @@ function LeadersSection({ leaders, m, dir, t }) {
             {heroLeader && (
               <div style={{
                 position: "relative", borderRadius: m ? 22 : 36, padding: m ? "20px 22px 26px" : "46px 56px",
-                background: "linear-gradient(120deg,#FFFFFF 0%,#F7F2FF 45%,#EDE3FF 100%)",
+                background: heroBg,
                 border: `1.5px solid ${purple}2E`,
-                boxShadow: "0 20px 60px rgba(110,59,242,.18), inset 0 1px 0 rgba(255,255,255,.95)",
+                boxShadow: `0 20px 60px rgba(110,59,242,.18), ${insetHi}`,
                 display: "flex", flexDirection: "row", alignItems: "center",
                 gap: m ? 14 : 56, overflow: "hidden", marginBottom: m ? 18 : 40,
                 animation: "leaderFadeUp 0.6s ease-out both"
@@ -239,8 +257,8 @@ function LeadersSection({ leaders, m, dir, t }) {
                   </div>
                   {/* main profile rings */}
                   <div style={{ position: "relative", width: m ? 118 : 216, height: m ? 118 : 216, borderRadius: "50%", padding: m ? 5 : 7, background: `linear-gradient(135deg,${purple},${purpleLight},${purpleMid},${purple})`, animation: "leaderGlow 3s ease-in-out infinite" }}>
-                    <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "#FFFFFF", padding: m ? 3 : 5, boxShadow: "inset 0 0 0 1px rgba(110,59,242,.14)" }}>
-                      <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: lavender, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: innerAvatar, padding: m ? 3 : 5, boxShadow: "inset 0 0 0 1px rgba(110,59,242,.14)" }}>
+                      <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: lavenderBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {heroLeader.avatar?.trim() ? (
                           <img src={heroLeader.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         ) : (
@@ -255,8 +273,8 @@ function LeadersSection({ leaders, m, dir, t }) {
                   <span style={{ position: "absolute", bottom: m ? 36 : 64, right: m ? 2 : -4, fontSize: m ? 9 : 13, color: purple, opacity: 0.55, animation: "sparkPulse 4s ease-in-out 1.2s infinite", pointerEvents: "none" }}>⋆</span>
                   {/* layered pedestal + glow */}
                   <div style={{ position: "relative", width: m ? 96 : 200, margin: "12px auto 0" }}>
-                    <div style={{ height: m ? 6 : 12, borderRadius: "0 0 26px 26px", background: "linear-gradient(180deg,#FFFFFF,#E9DFFF)", border: "1px solid rgba(110,59,242,.18)", borderTop: "none", boxShadow: "0 18px 34px rgba(110,59,242,.22)" }} />
-                    <div style={{ height: m ? 4 : 9, width: "88%", margin: "0 auto", borderRadius: "0 0 26px 26px", background: "linear-gradient(180deg,#F5EFFF,#DDCBFF)", border: "1px solid rgba(110,59,242,.12)", borderTop: "none", opacity: 0.9 }} />
+                    <div style={{ height: m ? 6 : 12, borderRadius: "0 0 26px 26px", background: pedestal1, border: "1px solid rgba(110,59,242,.18)", borderTop: "none", boxShadow: "0 18px 34px rgba(110,59,242,.22)" }} />
+                    <div style={{ height: m ? 4 : 9, width: "88%", margin: "0 auto", borderRadius: "0 0 26px 26px", background: pedestal2, border: "1px solid rgba(110,59,242,.12)", borderTop: "none", opacity: 0.9 }} />
                     <div style={{ height: m ? 12 : 20, width: "112%", margin: "-6px -6% 0", borderRadius: "50%", background: "radial-gradient(ellipse,rgba(110,59,242,.3) 0%,transparent 70%)", filter: "blur(8px)", pointerEvents: "none" }} />
                   </div>
                   {/* mountains right behind / below profile */}
@@ -275,7 +293,7 @@ function LeadersSection({ leaders, m, dir, t }) {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: m ? 12 : 18 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={purple} strokeWidth="2" fill="none"/><circle cx="9" cy="7" r="4" stroke={purple} strokeWidth="2" fill="none"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke={purple} strokeWidth="2" fill="none"/><path d="M16 3.13a4 4 0 0 1 0 7.75" stroke={purple} strokeWidth="2" fill="none"/></svg>
-                    <span style={{ fontSize: m ? 15 : 18, fontWeight: 800, color: txt }}>{t("أفضل 10 قادة","Top 10 Leaders")}</span>
+                    <span style={{ fontSize: m ? 15 : 18, fontWeight: 800, color: txt }}>Everest Leaders</span>
                   </div>
                   <span style={{ fontSize: m ? 10 : 12, color: txtMuted, fontWeight: 600, opacity: 0.8 }}>{t("اسحب للمزيد ←","Scroll for more →")}</span>
                 </div>
@@ -314,23 +332,23 @@ function LeadersSection({ leaders, m, dir, t }) {
                           position: "relative", overflow: "hidden", textAlign: "center",
                           padding: m ? "12px 8px 14px" : "16px 10px 18px",
                           borderRadius: m ? 16 : 22, transform: `rotate(${rot}deg)`,
-                          background: "rgba(255,255,255,.78)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+                          background: cardGlass, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
                           border: `1.5px solid ${pos === 2 ? "rgba(160,160,160,.45)" : pos === 3 ? "rgba(190,120,60,.4)" : pos === 1 ? "rgba(110,59,242,.4)" : "rgba(110,59,242,.16)"}`,
-                          boxShadow: `${regShadow}, inset 0 1px 0 rgba(255,255,255,.95)`,
+                          boxShadow: `${regShadow}, ${insetHi}`,
                           transition: "box-shadow .25s ease"
                         }}>
                           {/* top accent strip */}
                           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: gradAccent, opacity: 0.9, borderRadius: `${m ? 16 : 22}px ${m ? 16 : 22}px 0 0` }} />
                           {/* medal + rank pill */}
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 9px", borderRadius: 999, background: softBg, marginTop: 6, boxShadow: "0 0 0 2px rgba(255,255,255,.6)" }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 9px", borderRadius: 999, background: softBg, marginTop: 6, boxShadow: `0 0 0 2px ${haloWhite}` }}>
                             <span style={{ fontSize: m ? 11 : 13 }}>{medal}</span>
                             <span style={{ fontSize: m ? 10 : 12, fontWeight: 900, color: accent }}>#{pos}</span>
                           </div>
                           {/* avatar rings */}
                           <div style={{ position: "relative", width: m ? 48 : 62, height: m ? 48 : 62, margin: "9px auto 9px" }}>
-                            <div style={{ width: "100%", height: "100%", borderRadius: "50%", padding: 3, background: `linear-gradient(135deg,${accent},#FFFFFF)`, boxShadow: `0 0 0 4px ${softBg}, 0 6px 14px rgba(110,59,242,.18)` }}>
-                              <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "#FFFFFF", padding: 2 }}>
-                                <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: lavender, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ width: "100%", height: "100%", borderRadius: "50%", padding: 3, background: `linear-gradient(135deg,${accent},${dark ? cardBg : "#FFFFFF"})`, boxShadow: `0 0 0 4px ${softBg}, 0 6px 14px rgba(110,59,242,.18)` }}>
+                              <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: innerAvatar, padding: 2 }}>
+                                <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: lavenderBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                   {l.avatar?.trim() ? (
                                     <img src={l.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                   ) : (
@@ -376,7 +394,7 @@ function LeadersSection({ leaders, m, dir, t }) {
               position: "relative", overflow: "hidden",
               marginTop: m ? 18 : 34, padding: m ? "16px 18px" : "22px 32px",
               borderRadius: m ? 18 : 24,
-              background: "linear-gradient(120deg,rgba(255,255,255,.92) 0%,rgba(246,240,255,.75) 100%)",
+              background: keepGoingBg,
               backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
               border: "1px solid rgba(110,59,242,.18)", borderLeft: "5px solid #6E3BF2",
               boxShadow: "0 14px 38px rgba(110,59,242,.14), inset 0 1px 0 rgba(255,255,255,.95)",
@@ -398,7 +416,6 @@ function LeadersSection({ leaders, m, dir, t }) {
                 <h4 style={{ margin: 0, fontSize: m ? 15 : 18, fontWeight: 800, color: purple }}>{t("استمر في التسلق!","Keep Going!")}</h4>
                 <p style={{ margin: "4px 0 0", fontSize: m ? 12 : 14, color: txtMuted, lineHeight: 1.5 }}>{t("الطريق طويل.. لكن القمة أقرب مما تتصور.","The road is long.. but the summit is closer than you think.")}</p>
               </div>
-              <span style={{ fontSize: m ? 20 : 28 }}>⛰️</span>
             </div>
           </>
         )}

@@ -121,6 +121,7 @@ export default function AffiliatePage() {
   const [copied, setCopied] = useState(false);
   const [dbRanks, setDbRanks] = useState([]);
   const [transferHistory, setTransferHistory] = useState([]);
+  const [weekly, setWeekly] = useState(null);
 
   const loadData = () => {
     if (!user) return;
@@ -180,6 +181,7 @@ export default function AffiliatePage() {
     { key: "team", label: t("فريقي", "My Team"), icon: "👥" },
     { key: "commissions", label: t("العمولات", "Commissions"), icon: "💰" },
     { key: "transfer", label: t("تحويل", "Transfer"), icon: "🔄" },
+    { key: "weekly", label: t("أسبوعي", "Weekly"), icon: "📈" },
   ];
 
   return (
@@ -766,7 +768,8 @@ export default function AffiliatePage() {
                       setTransferTarget(null);
                       const u = await api(`/api/users/${user.id}`);
                       if (u) login({ ...u, session_token: user.session_token });
-                      api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
+api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
+    api(`/api/mlm/weekly/${user.id}`).then(setWeekly).catch(() => {});
                       setTransferMsg(
                         t(
                           `✅ تم التحويل بنجاح! الرصيد الجديد: ${r.from_balance}`,
@@ -873,6 +876,132 @@ export default function AffiliatePage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+      {/* ============ WEEKLY TAB ============ */}
+        {tab === "weekly" && (
+          <div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 12,
+                marginBottom: 24,
+              }}
+              className="stats-grid"
+            >
+              {[
+                {
+                  label: t("سينبك هذا الأسبوع", "Your Weekly CV"),
+                  value: weekly?.myWeeklySales ?? 0,
+                  icon: "⚡",
+                  bg: `linear-gradient(135deg, ${GOLD}12, ${GOLD}06)`,
+                  border: `${GOLD}22`,
+                },
+                {
+                  label: t("مباشرون جدد هذا الأسبوع", "New Directs This Week"),
+                  value: weekly?.directsWeekCount ?? 0,
+                  icon: "👥",
+                  bg: "linear-gradient(135deg, #3b82f612, #3b82f606)",
+                  border: "#3b82f622",
+                },
+                {
+                  label: t("متبقي للرتبة القادمة", "Left To Next Rank"),
+                  value: weekly?.nextRank ? `${weekly.nextRank.remainingSales} CV` : "—",
+                  icon: "🏁",
+                  bg: "linear-gradient(135deg, #22c55e12, #22c55e06)",
+                  border: "#22c55e22",
+                },
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: stat.bg,
+                    border: `1px solid ${stat.border}`,
+                    borderRadius: 16,
+                    padding: "16px 14px",
+                    textAlign: "center",
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{stat.icon}</span>
+                  <p style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 2px", color: c.text }}>{stat.value}</p>
+                  <p style={{ fontSize: 11, color: c.textMuted, margin: 0 }}>{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Progress to next rank */}
+            <div style={{ background: c.bgCard, borderRadius: 20, padding: "20px 18px", marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.03)" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8, color: c.text }}>
+                🏔️ {t("التقدم نحو الرتبة القادمة", "Progress To Next Rank")}
+                {weekly?.currentRank && (
+                  <span style={{ fontSize: 11, background: `${GOLD}18`, color: GOLD, padding: "3px 10px", borderRadius: 20, fontWeight: 700 }}>
+                    {weekly.currentRank}
+                  </span>
+                )}
+              </h3>
+              {weekly?.nextRank ? (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: c.textMuted, marginBottom: 8 }}>
+                    <span>{t("الرتبة القادمة", "Next Rank")}: <b style={{ color: GOLD }}>{weekly.nextRank.name}</b></span>
+                    <span>{weekly.myWeeklySales} / {weekly.nextRank.salesRequired} CV</span>
+                  </div>
+                  <div style={{ height: 10, borderRadius: 99, background: `${GOLD}14`, overflow: "hidden" }}>
+                    <div style={{ width: `${weekly.nextRank.salesRequired > 0 ? Math.min(100, (weekly.myWeeklySales / weekly.nextRank.salesRequired) * 100) : 0}%`, height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${GOLD}, #6E3BF2)` }} />
+                  </div>
+                  <p style={{ fontSize: 12, color: c.textMuted, margin: "10px 0 0", lineHeight: 1.6 }}>
+                    {weekly.nextRank.remainingSales > 0
+                      ? `${t("باقي لك", "Remaining")} ${weekly.nextRank.remainingSales} ${t("سينب لوصول رتبة", "CV to reach")} ${weekly.nextRank.name}`
+                      : t("✅ وصلت متطلبات الرتبة القادمة — انتظر التسوية الأسبوعية", "✅ You've met the next rank requirement — waiting for weekly settlement")}
+                  </p>
+                </div>
+              ) : (
+                <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>
+                  {t("أنت بالفعل في أعلى رتبة", "You are already at the highest rank")}
+                </p>
+              )}
+            </div>
+
+            {/* Directs this week */}
+            <div style={{ background: c.bgCard, borderRadius: 20, padding: "20px 18px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8, color: c.text }}>
+                👥 {t("المباشرون هذا الأسبوع", "Directs This Week")}
+                {weekly?.directsWeekCount > 0 && (
+                  <span style={{ fontSize: 11, background: `${GOLD}18`, color: GOLD, padding: "2px 10px", borderRadius: 8, fontWeight: 600 }}>
+                    {weekly.directsWeekCount}
+                  </span>
+                )}
+              </h3>
+              {weekly?.directsWeekCount === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px 10px" }}>
+                  <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>🌱</span>
+                  <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>
+                    {t("لم ينضم مباشرون هذا الأسبوع بعد", "No direct joins this week yet")}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {(weekly.directs || []).map((d) => (
+                    <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: c.bgInput || c.bg, borderRadius: 14, padding: "12px 16px", border: `1px solid ${c.border || "#f0f0f0"}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 10, background: `${GOLD}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: GOLD, flexShrink: 0 }}>
+                          {(d.full_name || "?")[0]}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontWeight: 700, fontSize: 13, margin: 0, color: c.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.full_name}</p>
+                          <p style={{ fontSize: 10, color: c.textMuted, margin: "1px 0 0", direction: "ltr" }}>
+                            {d.referral_code}{d.rank ? ` · ${d.rank}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: c.textMuted, background: `${c.textMuted}0d`, padding: "4px 10px", borderRadius: 8, direction: "ltr", flexShrink: 0 }}>
+                        {d.createdAt ? d.createdAt.slice(0, 16) : "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
