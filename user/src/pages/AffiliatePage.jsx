@@ -955,9 +955,13 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                       : t("✅ وصلت متطلبات الرتبة القادمة — انتظر التسوية الأسبوعية", "✅ You've met the next rank requirement — waiting for weekly settlement")}
                   </p>
                 </div>
-              ) : (
+              ) : weekly ? (
                 <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>
                   {t("أنت بالفعل في أعلى رتبة", "You are already at the highest rank")}
+                </p>
+              ) : (
+                <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>
+                  {t("جاري تحميل بيانات الأسبوع...", "Loading weekly data...")}
                 </p>
               )}
             </div>
@@ -972,7 +976,7 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                   </span>
                 )}
               </h3>
-              {weekly?.directsWeekCount === 0 ? (
+              {!weekly || weekly.directsWeekCount === 0 ? (
                 <div style={{ textAlign: "center", padding: "24px 10px" }}>
                   <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>🌱</span>
                   <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>
