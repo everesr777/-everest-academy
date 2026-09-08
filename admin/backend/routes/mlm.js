@@ -101,25 +101,19 @@ router.get("/weekly/:userId", async (req, res) => {
     const myWeeklySales = mySalesRow.c || 0;
     const reqSales = next ? sReq(next) : null;
 
-    // Active student team (all levels) — the metric for rank progress (mirrors settlement STEP 3/4).
-    const teamRows = await query(
-      "SELECT u.rank, u.status FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.descendant != ? AND u.account_type = 'student'",
-      [uid, uid]
+    // NEW active STUDENT directs created INSIDE this week (matches settlement STEP 2 gate).
+    const wkNew = await query(
+      "SELECT id FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.depth = 1 AND u.account_type = 'student' AND u.status = 'active' AND u.created_at >= ? AND u.created_at <= ?",
+      [uid, from, to]
     );
-    let teamActiveCount = 0;
-    for (const tm of teamRows) {
-      if (tm.status !== 'active') continue;
-      const tmRank = allRanks.find(r => r.name === tm.rank);
-      if (tmRank && curPos >= 0 && tmRank.sort_order > curPos) continue;
-      teamActiveCount++;
-    }
-    const teamLeft = reqSales != null ? Math.max(0, reqSales - teamActiveCount) : null;
+    const weeklyNewStudents = wkNew.length;
+    const teamLeft = reqSales != null ? Math.max(0, reqSales - weeklyNewStudents) : null;
 
     res.json({
       weekStart,
       weekEnd,
       myWeeklySales,
-      teamActiveCount,
+      weeklyNewStudents,
       currentRank: me.rank || null,
       directsWeekCount: directsRow.c || 0,
       directs: directs.map(d => ({ id: d.id, referral_code: d.referral_code, full_name: d.full_name, rank: d.rank, createdAt: d.created_at })),
@@ -132,7 +126,7 @@ router.get("/weekly/:userId", async (req, res) => {
     });
   } catch (err) {
     console.error("mlm/weekly error:", err.message);
-    res.json({ weekStart: null, weekEnd: null, myWeeklySales: 0, teamActiveCount: 0, currentRank: null, directsWeekCount: 0, directs: [], nextRank: null });
+    res.json({ weekStart: null, weekEnd: null, myWeeklySales: 0, weeklyNewStudents: 0, currentRank: null, directsWeekCount: 0, directs: [], nextRank: null });
   }
 });
 

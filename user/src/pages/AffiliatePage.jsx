@@ -945,10 +945,10 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: c.textMuted, marginBottom: 8 }}>
                     <span>{t("الرتبة القادمة", "Next Rank")}: <b style={{ color: GOLD }}>{weekly.nextRank.name}</b></span>
-                    <span>{weekly.teamActiveCount} / {weekly.nextRank.salesRequired} {t("طالب", "students")}</span>
+                    <span>{weekly.weeklyNewStudents} / {weekly.nextRank.salesRequired} {t("طالب", "students")}</span>
                   </div>
                   <div style={{ height: 10, borderRadius: 99, background: `${GOLD}14`, overflow: "hidden" }}>
-                    <div style={{ width: `${weekly.nextRank.salesRequired > 0 ? Math.min(100, (weekly.teamActiveCount / weekly.nextRank.salesRequired) * 100) : 0}%`, height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${GOLD}, #6E3BF2)` }} />
+                    <div style={{ width: `${weekly.nextRank.salesRequired > 0 ? Math.min(100, (weekly.weeklyNewStudents / weekly.nextRank.salesRequired) * 100) : 0}%`, height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${GOLD}, #6E3BF2)` }} />
                   </div>
                   <p style={{ fontSize: 12, color: c.textMuted, margin: "10px 0 0", lineHeight: 1.6 }}>
                     {weekly.nextRank.teamLeft > 0
