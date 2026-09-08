@@ -128,6 +128,7 @@ export default function AffiliatePage() {
     api(`/api/mlm/tree?userId=${user.id}`).then(setTree).catch(() => {});
     api(`/api/mlm/commissions?userId=${user.id}`).then(setCommissions).catch(() => {});
     api(`/api/mlm/directs/${user.id}`).then(setDirects).catch(() => {});
+    api(`/api/mlm/weekly/${user.id}`).then(setWeekly).catch(() => {});
     api(`/api/mlm/upline/${user.id}`).then((u) => setUpline(u[0] || null)).catch(() => {});
     api("/api/ranks").then((d) => Array.isArray(d) ? setDbRanks(d) : null).catch(() => {});
     api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
@@ -976,7 +977,11 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                   </span>
                 )}
               </h3>
-              {!weekly || weekly.directsWeekCount === 0 ? (
+              {!weekly ? (
+                <p style={{ fontSize: 13, color: c.textMuted, margin: "8px 0 0" }}>
+                  {t("جاري تحميل بيانات الأسبوع...", "Loading weekly data...")}
+                </p>
+              ) : weekly.directsWeekCount === 0 ? (
                 <div style={{ textAlign: "center", padding: "24px 10px" }}>
                   <span style={{ fontSize: 40, display: "block", marginBottom: 10 }}>🌱</span>
                   <p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>
@@ -985,7 +990,7 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {(weekly.directs || []).map((d) => (
+                  {(weekly?.directs || []).map((d) => (
                     <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: c.bgInput || c.bg, borderRadius: 14, padding: "12px 16px", border: `1px solid ${c.border || "#f0f0f0"}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                         <div style={{ width: 34, height: 34, borderRadius: 10, background: `${GOLD}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: GOLD, flexShrink: 0 }}>
