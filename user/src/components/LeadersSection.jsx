@@ -272,14 +272,16 @@ export default function LeadersSection({ leaders, m, dir, t }) {
 
         {/* ══ COMPACT DOTS ══ */}
         {N > 1 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: m ? 4 : 6, marginTop: m ? 0 : 10, height: m ? 10 : 14, WebkitTapHighlightColor: "transparent" }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: m ? 4 : 6, marginTop: m ? 0 : 10, height: m ? 8 : 14, fontSize: 0, lineHeight: 0, WebkitTapHighlightColor: "transparent" }}>
             {leaders.slice(0, 10).map((_, i) => (
               <button
                 key={i}
+                className="lg-dot"
                 aria-label={`Go to leader ${i + 1}`}
                 onClick={() => { pause(); setPos(base + i); }}
                 style={{
-                  height: m ? 4 : 6, width: i === activeSlot ? (m ? 12 : 18) : m ? 4 : 6,
+                  height: m || W <= 420 ? 4 : 6,
+                  width: i === activeSlot ? (m || W <= 420 ? 12 : 18) : m || W <= 420 ? 4 : 6,
                   borderRadius: 99, border: "none", cursor: "pointer", padding: 0, outline: "none",
                   background: i === activeSlot ? "linear-gradient(90deg,#7C3AED,#A78BFA)" : "rgba(167,139,250,0.30)",
                   boxShadow: i === activeSlot ? "0 0 6px rgba(167,139,250,0.55)" : "none",
@@ -325,6 +327,7 @@ export default function LeadersSection({ leaders, m, dir, t }) {
         @keyframes lgAurora { 0%,100%{opacity:.45;transform:translate(0,0) scale(1)} 50%{opacity:.8;transform:translate(20px,-16px) scale(1.06)} }
         @keyframes lgBadgePulse { 0%,100%{box-shadow:0 0 10px rgba(167,139,250,.22)} 50%{box-shadow:0 0 20px rgba(124,58,237,.5)} }
         @keyframes lgActiveGlow { 0%,100%{box-shadow:0 0 0 1px ${PALETTE.borderHi} inset,0 16px 40px rgba(124,58,237,.4),0 0 28px rgba(124,58,237,.26)} 50%{box-shadow:0 0 0 1px ${PALETTE.borderHi} inset,0 16px 46px rgba(124,58,237,.55),0 0 44px rgba(124,58,237,.38)} }
+        .lg-dot{appearance:none;-webkit-appearance:none;border:none !important;box-sizing:border-box;margin:0 !important;min-width:0;min-height:0;line-height:0;overflow:hidden}
         @media (prefers-reduced-motion: reduce) {
           *, ::before, ::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
         }
