@@ -257,13 +257,12 @@ export default function LeadersSection({ leaders, m, dir, t }) {
                 const dist = Math.abs(k - pos);
                 const vis = dist <= 1 ? 1 : dist === 2 ? 0.68 : dist >= 3 ? 0 : 0.85;
                 const scale = isActive ? 1.05 : dist === 1 ? 0.88 : 0.78;
-                const { p, accent } = rankLabel(slot);
+                const { accent } = rankLabel(slot);
                 return (
                   <LeaderCard
                     key={`${ld.id}-${k}`}
-                    leader={ld} pos={p} accent={accent} m={m}
+                    leader={ld} accent={accent} m={m}
                     cw={cw} active={isActive} scale={scale} opacity={vis}
-                    gold={p === 1} highlight={isActive}
                   />
                 );
               })}
@@ -411,7 +410,7 @@ function BgLayer({ m }) {
   );
 }
 
-function LeaderCard({ leader, pos, accent, m, cw, active, scale, opacity, gold }) {
+function LeaderCard({ leader, accent, m, cw, active, scale, opacity }) {
   const c = PALETTE;
   return (
     <div style={{
@@ -433,19 +432,8 @@ function LeaderCard({ leader, pos, accent, m, cw, active, scale, opacity, gold }
       }}>
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: active ? `linear-gradient(90deg,transparent,${c.violetBright},transparent)` : "linear-gradient(90deg,transparent,rgba(167,139,250,.35),transparent)" }} />
 
-        {/* rank chip */}
-        <span style={{
-          display: "inline-flex", alignItems: "center", gap: 5, marginTop: 12,
-          padding: "2px 10px", borderRadius: 999,
-          background: gold ? "rgba(255,210,77,.14)" : "rgba(124,58,237,.16)",
-          border: gold ? "1px solid rgba(255,210,77,.45)" : "1px solid rgba(139,118,255,.4)",
-          fontSize: m ? 11 : 12.5, fontWeight: 900, color: accent, letterSpacing: 1,
-        }}>
-          {gold ? "👑" : pos} <span style={{ opacity: 0.75, fontWeight: 800 }}>#{pos}</span>
-        </span>
-
         {/* avatar */}
-        <div style={{ position: "relative", width: m ? 64 : 78, height: m ? 64 : 78, margin: "10px auto 8px" }}>
+        <div style={{ position: "relative", width: m ? 66 : 80, height: m ? 66 : 80, margin: m ? "22px auto 10px" : "26px auto 10px" }}>
           <div style={{ position: "absolute", inset: -8, borderRadius: "50%", background: `radial-gradient(circle,${accent}55 0%,transparent 70%)`, filter: "blur(4px)" }} />
           <div style={{ position: "relative", width: "100%", height: "100%", borderRadius: "50%", padding: 3, background: active ? `linear-gradient(135deg,${c.violetBright},${c.blue})` : "linear-gradient(135deg,rgba(167,139,250,.55),rgba(76,110,245,.35))" }}>
             <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: "#12163A", display: "flex", alignItems: "center", justifyContent: "center" }}>
