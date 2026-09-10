@@ -272,17 +272,17 @@ export default function LeadersSection({ leaders, m, dir, t }) {
 
         {/* ══ COMPACT DOTS ══ */}
         {N > 1 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: m ? 2 : 10, height: 14 }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: m ? 4 : 6, marginTop: m ? 0 : 10, height: m ? 10 : 14, WebkitTapHighlightColor: "transparent" }}>
             {leaders.slice(0, 10).map((_, i) => (
               <button
                 key={i}
                 aria-label={`Go to leader ${i + 1}`}
                 onClick={() => { pause(); setPos(base + i); }}
                 style={{
-                  height: 6, width: i === activeSlot ? (m ? 16 : 18) : 6,
-                  borderRadius: 99, border: "none", cursor: "pointer", padding: 0,
-                  background: i === activeSlot ? "linear-gradient(90deg,#7C3AED,#A78BFA)" : "rgba(167,139,250,0.32)",
-                  boxShadow: i === activeSlot ? "0 0 8px rgba(167,139,250,0.7)" : "none",
+                  height: m ? 4 : 6, width: i === activeSlot ? (m ? 12 : 18) : m ? 4 : 6,
+                  borderRadius: 99, border: "none", cursor: "pointer", padding: 0, outline: "none",
+                  background: i === activeSlot ? "linear-gradient(90deg,#7C3AED,#A78BFA)" : "rgba(167,139,250,0.30)",
+                  boxShadow: i === activeSlot ? "0 0 6px rgba(167,139,250,0.55)" : "none",
                   transition: "all .3s ease",
                 }}
               />
