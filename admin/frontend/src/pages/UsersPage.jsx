@@ -335,6 +335,18 @@ export default function UsersPage() {
                 <div className="flex items-center gap-3">
                   {selectedUser.blocked && <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">{t("محظور", "Blocked")}</span>}
                   {!editing && (
+                    <button onClick={async () => {
+                      try {
+                        const r = await api(`/api/users/${selectedUser.id}/impersonate`, { method: "POST" });
+                        if (r && r.session_token) {
+                          window.open(`https://everestcompany.com/?impersonate=1&uid=${encodeURIComponent(r.user_id)}&token=${encodeURIComponent(r.session_token)}`, "_blank");
+                        } else {
+                          alert(t("تعذر إنشاء الجلسة", "Could not create session"));
+                        }
+                      } catch (e) { alert(t("خطأ:", "Error:") + " " + e.message); }
+                    }} className="px-4 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">👤 {t("دخول كـ هذا المستخدم", "Login as this user")}</button>
+                  )}
+                  {!editing && (
                     <button onClick={() => setEditing(true)} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">✏️ {t("تعديل", "Edit")}</button>
                   )}
                   <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>

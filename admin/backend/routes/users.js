@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { query, queryOne, execute } from "../db.js";
 import { v4 as uuidv4 } from "uuid";
 import { sendOTPEmail, sendRejectionEmail } from "../services/emailService.js";
+import { adminAuth } from "../middleware/sessionAuth.js";
 
 const router = express.Router();
 
@@ -559,6 +560,35 @@ router.get("/created-by-me/:userId", async (req, res) => {
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin impersonation: generate a valid session for a user (login as this user)
+router.post("/:id/impersonate", adminAuth, async (req, res) => {
+  try {
+    const target = await queryOne("SELECT id, full_name, email, status, blocked, role FROM users WHERE id = ?", [req.params.id]);
+    if (!target) return res.status(404).json({ error: "User not found" });
+    if (target.role === "admin") return res.status(403).json({ error: "Cannot impersonate an admin account" });
+
+    const session_token = uuidv4() + "-" + Date.now();
+    const now = new Date().toISOString();
+
+    // Clean stale sessions (same logic as login)
+    await execute("DELETE FROM user_sessions WHERE user_id = ? AND (last_heartbeat IS NULL OR datetime(last_heartbeat) < datetime('now', '-15 seconds'))", [target.id]);
+    await execute(
+      "INSERT INTO user_sessions (id, user_id, session_token, device_type, device_info, last_heartbeat) VALUES (?, ?, ?, ?, ?, ?)",
+      [uuidv4(), target.id, session_token, "desktop", "Admin impersonation", now]
+    );
+    const allSessions = await query("SELECT session_token FROM user_sessions WHERE user_id = ?", [target.id]);
+    const tokensCsv = allSessions.map(s => s.session_token).join(',');
+    await execute("UPDATE users SET session_token = ? WHERE id = ?", [tokensCsv, target.id]);
+
+    await logAdminAction(req, "login-as-user", target.id, target.full_name, `Impersonated login for ${target.email}`);
+
+    res.json({ success: true, user_id: target.id, session_token });
+  } catch (e) {
+    console.error("Impersonate error:", e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 

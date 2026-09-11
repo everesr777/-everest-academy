@@ -15,6 +15,33 @@ export function AuthProvider({ children }) {
     } catch { return null; }
   });
 
+  // Admin impersonation: auto-login when arriving with ?impersonate=1&uid=..&token=..
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("impersonate") !== "1") return;
+    const impUid = params.get("uid");
+    const impToken = params.get("token");
+    if (!impUid || !impToken) return;
+
+    const clearParams = () => {
+      window.history.replaceState(null, "", window.location.pathname);
+    };
+
+    fetch(`${API}/users/${impUid}`, {
+      headers: { "x-user-id": impUid, "x-session-token": impToken }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(fresh => {
+        if (!fresh || !fresh.id) { clearParams(); return; }
+        const userData = { ...fresh, session_token: impToken };
+        setUser(userData);
+        localStorage.setItem("everest_user", JSON.stringify(userData));
+        localStorage.setItem("everest_session_token", impToken);
+        clearParams();
+      })
+      .catch(() => clearParams());
+  }, []);
+
   // Refresh stale user data on mount (old localStorage may lack account_type etc.)
   useEffect(() => {
     if (!user?.id || !user?.session_token) return;
