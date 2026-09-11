@@ -27,6 +27,8 @@ export default function UsersPage() {
   const [historyDetail, setHistoryDetail] = useState(null);
   const [showDirectDetail, setShowDirectDetail] = useState(false);
   const [userCards, setUserCards] = useState(null);
+  const [settlementWeeks, setSettlementWeeks] = useState([]);
+  const [settlementWeek, setSettlementWeek] = useState("");
 
   const loadUsers = () => {
     setLoading(true);
@@ -64,11 +66,18 @@ export default function UsersPage() {
     setHistoryDetail(null);
     setShowDirectDetail(false);
     setUserCards(null);
+    setSettlementWeeks([]);
+    setSettlementWeek("");
     api(`/api/mlm/rank-progress/${data.id}`).then(setRankProgress).catch(() => {});
     api(`/api/mlm/directs/${data.id}`).then(d => setDirectMembers(Array.isArray(d) ? d : [])).catch(() => {});
     api(`/api/mlm/weekly-history/${data.id}`).then(d => setWeeklyHistory(Array.isArray(d) ? d : [])).catch(() => {});
     api("/api/mlm/leaderboard").then(d => setLeaderboard(Array.isArray(d) ? d : [])).catch(() => {});
     api(`/api/users/${data.id}/id-cards`).then(setUserCards).catch(() => {});
+    api(`/api/mlm/settlement-directs/${data.id}`).then(d => {
+      const weeks = Array.isArray(d) ? d : (d?.weeks || []);
+      setSettlementWeeks(weeks);
+      setSettlementWeek(weeks.length ? weeks[0].weekStart : "");
+    }).catch(() => {});
   };
 
   const saveProfile = async () => {
@@ -340,6 +349,7 @@ export default function UsersPage() {
                     { key: "network", icon: "🌐", label: t("الشبكة المؤهلة", "Qualified Network") },
                     { key: "history", icon: "📜", label: t("السجل الأسبوعي", "Weekly History") },
                     { key: "leaderboard", icon: "🏆", label: t("لوحة المتصدرين", "Leaderboard") },
+                    { key: "settlementLog", icon: "📊", label: t("سجل التسوية الأسبوعية", "Weekly Settlement Log") },
                   ].map(tb => (
                     <button key={tb.key} onClick={() => setProfileTab(tb.key)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${profileTab === tb.key ? "bg-everest-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
@@ -900,6 +910,82 @@ export default function UsersPage() {
                             );
                           })}
                         </div>
+                      )}
+                    </div>
+                  )}
+
+                  {profileTab === "settlementLog" && (
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-lg mb-4">📊 {t("سجل التسوية الأسبوعية", "Weekly Settlement Log")}</h4>
+                      {settlementWeeks.length === 0 ? (
+                        <div className="bg-gray-50 rounded-xl p-8 text-center">
+                          <p className="text-gray-400">{t("لا يوجد أعضاء مباشرون مسجلين في هذا المستخدم.", "This user has no recorded direct members.")}</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <label className="text-sm text-gray-500">{t("الأسبوع:", "Week:")}</label>
+                            <select value={settlementWeek} onChange={e => setSettlementWeek(e.target.value)}
+                              className="px-3 py-2 border rounded-lg text-sm bg-white">
+                              {settlementWeeks.map(w => (
+                                <option key={w.weekStart} value={w.weekStart}>
+                                  {w.weekStart} → {w.weekEnd} ({w.total})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {(() => {
+                            const w = settlementWeeks.find(x => x.weekStart === settlementWeek);
+                            if (!w) return null;
+                            return (
+                              <>
+                                <div className="grid grid-cols-3 gap-3">
+                                  <div className="bg-blue-50 rounded-lg p-3 text-center">
+                                    <p className="text-xs text-blue-400">{t("الطلاب", "Students")}</p>
+                                    <p className="text-2xl font-bold text-blue-600 mt-1">{w.student}</p>
+                                  </div>
+                                  <div className="bg-purple-50 rounded-lg p-3 text-center">
+                                    <p className="text-xs text-purple-400">{t("تسجيل مجاني", "Reg Free")}</p>
+                                    <p className="text-2xl font-bold text-purple-600 mt-1">{w.registration_free}</p>
+                                  </div>
+                                  <div className="bg-green-50 rounded-lg p-3 text-center">
+                                    <p className="text-xs text-green-400">{t("الإجمالي", "Total")}</p>
+                                    <p className="text-2xl font-bold text-green-600 mt-1">{w.total}</p>
+                                  </div>
+                                </div>
+                                <div className="border rounded-lg overflow-hidden">
+                                  <div className="px-3 py-2 bg-gray-50 font-bold text-xs text-gray-500 uppercase">
+                                    {t("الأعضاء المباشرون في هذا الأسبوع", "Direct members this week")}
+                                  </div>
+                                  {w.members.length === 0 ? (
+                                    <div className="p-4 text-sm text-gray-400">{t("لا يوجد أعضاء مباشرون في هذا الأسبوع", "No direct members this week")}</div>
+                                  ) : (
+                                    <div className="divide-y">
+                                      {w.members.map(m => (
+                                        <div key={m.id} className="flex items-center justify-between px-3 py-2">
+                                          <div className="flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${m.status === 'active' ? 'bg-green-500' : 'bg-red-400'}`}></span>
+                                            <span className="text-sm font-medium">{m.full_name}</span>
+                                            <span className="text-xs text-gray-400">{m.id}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                              m.account_type === 'student' ? 'bg-blue-100 text-blue-700' :
+                                              m.account_type === 'registration_free' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'
+                                            }`}>
+                                              {m.account_type === 'student' ? '🎓 Student' : m.account_type === 'registration_free' ? '🆓 Reg Free' : m.account_type}
+                                            </span>
+                                            <span className="text-xs text-gray-400">{String(m.created_at || "").slice(0, 16)}</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </>
                       )}
                     </div>
                   )}

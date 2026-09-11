@@ -2,7 +2,7 @@ import express from "express";
 import { query, queryOne, execute } from "../db.js";
 import { v4 as uuidv4 } from "uuid";
 import { adminAuth } from "../middleware/sessionAuth.js";
-import { runWeeklySettlement, getSettlementSettings, getCurrentWeek, nextSettlementTime, settlementConfigDisplay } from "../services/weeklySettlement.js";
+import { runWeeklySettlement, getSettlementSettings, getCurrentWeek, nextSettlementTime, settlementConfigDisplay, weekStartForDate, weekEndFromStart } from "../services/weeklySettlement.js";
 
 const router = express.Router();
 
@@ -577,6 +577,54 @@ router.get("/weekly-history", async (req, res) => {
     const history = await query(sql, params);
     res.json(history);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Weekly settlement direct sales for one user (admin tab) ───
+// Returns every settlement week where this user added direct members,
+// with per-week counts split by account type (student / registration_free),
+// plus the member list for the requested week (or all weeks when no weekStart given).
+router.get("/settlement-directs/:userId", async (req, res) => {
+  try {
+    const uid = req.params.userId;
+    const me = await queryOne("SELECT id, full_name FROM users WHERE id = ?", [uid]);
+    if (!me) return res.status(404).json({ error: "User not found" });
+
+    const settings = await getSettlementSettings();
+    const tz = settings.settlement_timezone || "Africa/Cairo";
+    const day = parseInt(settings.settlement_day, 10) || 5;
+
+    const members = await query(
+      "SELECT id, full_name, account_type, status, created_at FROM users WHERE referred_by = ? OR created_by_user = ? ORDER BY created_at DESC",
+      [uid, uid]
+    );
+
+    const weeksMap = {};
+    for (const m of members) {
+      const ws = weekStartForDate(String(m.created_at || "").slice(0, 10), tz, day);
+      if (!weeksMap[ws]) {
+        weeksMap[ws] = { weekStart: ws, weekEnd: weekEndFromStart(ws), student: 0, registration_free: 0, total: 0, members: [] };
+      }
+      const w = weeksMap[ws];
+      w.total++;
+      if (m.account_type === "student") w.student++;
+      else if (m.account_type === "registration_free") w.registration_free++;
+      w.members.push({ id: m.id, full_name: m.full_name, account_type: m.account_type, status: m.status, created_at: m.created_at });
+    }
+
+    const weeks = Object.values(weeksMap).sort((a, b) => (b.weekStart < a.weekStart ? -1 : 1));
+
+    // Optional week filter: ?weekStart=YYYY-MM-DD returns member detail only for that week.
+    const qWeek = req.query.weekStart;
+    if (qWeek) {
+      const found = weeks.find(w => w.weekStart === qWeek);
+      return res.json({ weekStart: qWeek, weeks, week: found || null });
+    }
+
+    res.json({ weekStart: null, weeks });
+  } catch (err) {
+    console.error("mlm/settlement-directs error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });

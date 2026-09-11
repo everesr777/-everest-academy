@@ -63,9 +63,19 @@ function dateFromUtc(y, mo, d) {
   return new Date(Date.UTC(y, mo - 1, d));
 }
 
-function weekEndFromStart(weekStart) {
+export function weekEndFromStart(weekStart) {
   const [y, m, d] = weekStart.split("-").map(Number);
   return fmtDate(new Date(Date.UTC(y, m - 1, d + 6)));
+}
+
+// Settlement-week start (YYYY-MM-DD) of the week containing a given date string (YYYY-MM-DD),
+// using the same "most recent settlement day" rule as getCurrentWeek/getSettlementWeek.
+export function weekStartForDate(dateStr, tz = "Africa/Cairo", day = 5) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return dateStr;
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const daysBack = (dow - day + 7) % 7;
+  return fmtDate(dateFromUtc(y, m, d - daysBack));
 }
 
 // Date (YYYY-MM-DD) of the most recent occurrence of `day` in `tz` (today counts if today is `day`).
