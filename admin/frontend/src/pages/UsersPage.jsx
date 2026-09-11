@@ -339,7 +339,7 @@ export default function UsersPage() {
                       try {
                         const r = await api(`/api/users/${selectedUser.id}/impersonate`, { method: "POST" });
                         if (r && r.session_token) {
-                          window.open(`https://everestcompany.com/?impersonate=1&uid=${encodeURIComponent(r.user_id)}&token=${encodeURIComponent(r.session_token)}`, "_blank");
+                          window.open(`https://myeverestcompany.com/?impersonate=1&uid=${encodeURIComponent(r.user_id)}&token=${encodeURIComponent(r.session_token)}`, "_blank");
                         } else {
                           alert(t("تعذر إنشاء الجلسة", "Could not create session"));
                         }

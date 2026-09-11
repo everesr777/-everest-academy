@@ -38,6 +38,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem("everest_user", JSON.stringify(userData));
         localStorage.setItem("everest_session_token", impToken);
         clearParams();
+        window.location.href = "/home";
       })
       .catch(() => clearParams());
   }, []);
