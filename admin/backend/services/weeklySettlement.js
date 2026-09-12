@@ -204,7 +204,7 @@ export async function refreshLeadersSnapshot() {
   let excludeClause = "";
   const params = [];
   if (excludedIds.length > 0) {
-    excludeClause = `AND id NOT IN (${excludedIds.map(() => "?").join(",")})`;
+    excludeClause = `AND u.id NOT IN (${excludedIds.map(() => "?").join(",")})`;
     params.push(...excludedIds);
   }
   const week = await getCurrentWeek();
