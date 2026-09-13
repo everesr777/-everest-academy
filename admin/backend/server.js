@@ -27,6 +27,15 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(join(__dirname, "uploads")));
 
+// Preflight (OPTIONS) watcher — confirms whether Chrome's CORS preflight for
+// /api actually reaches Railway when a browser reports "Failed to fetch".
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS" && req.headers.origin) {
+    console.log(`[CORS-PREFLIGHT] ${req.headers.origin} -> ${req.path} reqMethod=${req.headers["access-control-request-method"] || "-"} reqHeaders=${req.headers["access-control-request-headers"] || "-"}`);
+  }
+  next();
+});
+
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, message: { error: "Too many requests. يرجى المحاولة لاحقاً." } });
 const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, message: { error: "Too many uploads." } });
 
