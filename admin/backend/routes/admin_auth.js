@@ -2,6 +2,7 @@ import express from "express";
 import { query, queryOne, execute } from "../db.js";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
+import { normalizeEmail, normalizePassword } from "./loginSanitize.js";
 
 const router = express.Router();
 
@@ -35,13 +36,15 @@ export async function seedAdmins() {
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+  const cleanEmail = normalizeEmail(email);
+  const cleanPassword = normalizePassword(password);
+  if (!cleanEmail || !cleanPassword) return res.status(400).json({ error: "Email and password required" });
 
-  const user = await queryOne("SELECT * FROM users WHERE email = ? AND (role = 'admin' OR role = 'manager')", [email]);
+  const user = await queryOne("SELECT * FROM users WHERE LOWER(email) = ? AND (role = 'admin' OR role = 'manager')", [cleanEmail]);
   if (!user) return res.status(401).json({ error: "Invalid admin credentials" });
-  let valid = await bcrypt.compare(password, user.password || "");
+  let valid = await bcrypt.compare(cleanPassword, user.password || "");
   // Legacy fallback: pre-bcrypt accounts stored the password as plaintext.
-  if (!valid && user.password && !user.password.startsWith("$2") && user.password === password) {
+  if (!valid && user.password && !user.password.startsWith("$2") && user.password === cleanPassword) {
     const hashed = await bcrypt.hash(user.password, 10);
     await execute("UPDATE users SET password = ? WHERE id = ?", [hashed, user.id]);
     valid = true;
