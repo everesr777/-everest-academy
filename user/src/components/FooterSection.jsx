@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
-
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
+import { apiRequest } from "../App";
 
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
@@ -242,7 +241,7 @@ export default function FooterSection({ showCTA }) {
   const [socials, setSocials] = useState({});
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/api/customer-service`)
+    apiRequest("/api/customer-service")
       .then((r) => r.json())
       .then((d) => setSocials(d))
       .catch(() => {});

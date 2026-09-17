@@ -4,9 +4,7 @@ import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import PublicNavbar from "../components/PublicNavbar";
 import FooterSection from "../components/FooterSection";
-import LeadersSection from "../components/LeadersSection";
-
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
+import { apiRequest } from "../App";
 
 const useIsMobile = () => {
   const [m, setM] = useState(typeof window !== "undefined" && window.innerWidth <= 768);
@@ -252,11 +250,9 @@ export default function LandingPage() {
   const m = useIsMobile();
   const [chatOpen, setChatOpen] = useState(false);
   const [stats, setStats] = useState({ totalMembers: 0, satisfactionRate: 95, totalFeedbacks: 0 });
-  const [leaders, setLeaders] = useState([]);
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/api/dashboard/public-stats`).then(r => r.json()).then(setStats).catch(() => {});
-    fetch(`${BACKEND_URL}/api/leaders`).then(r => r.json()).then(setLeaders).catch(() => {});
+    apiRequest("/api/dashboard/public-stats").then(r => r.json()).then(setStats).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -365,9 +361,6 @@ export default function LandingPage() {
 
       {/* Stats Carousel */}
       <PremiumStatsCarousel stats={stats} t={t} c={c} theme={theme} />
-
-      {/* Leaders — Top 10 */}
-      <LeadersSection leaders={leaders} theme={theme} m={m} dir={dir} t={t} />
 
       {/* Footer */}
       <FooterSection showCTA />

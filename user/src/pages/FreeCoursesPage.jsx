@@ -4,12 +4,11 @@ import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import PublicNavbar from "../components/PublicNavbar";
 import FooterSection from "../components/FooterSection";
+import { apiRequest, deepMedia } from "../App";
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
-
-const apiFetch = (path, opts = {}) => {
-  const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
-  return fetch(url, { headers: { "Content-Type": "application/json" }, ...opts }).then((r) => r.json());
+const apiFetch = async (path, opts = {}) => {
+  const res = await apiRequest(path, opts);
+  return deepMedia(await res.json());
 };
 
 const CATEGORY_ORDER = [

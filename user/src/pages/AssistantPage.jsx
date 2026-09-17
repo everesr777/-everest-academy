@@ -3,8 +3,7 @@ import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import { useNavigate } from "react-router-dom";
-
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
+import { apiRequest } from "../App";
 
 const useIsMobile = () => {
   const [m, setM] = useState(window.innerWidth <= 768);
@@ -73,8 +72,8 @@ export default function AssistantPage() {
     setChatLoading(true);
     try {
       const history = conv.messages.slice(0, -1).map(m => ({ role: m.role === "user" ? "user" : "model", text: m.text }));
-      const res = await fetch(`${BACKEND_URL}/api/chat`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await apiRequest("/api/chat", {
+        method: "POST",
         body: JSON.stringify({ message: msg, history })
       });
       const data = await res.json();

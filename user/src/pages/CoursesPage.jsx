@@ -65,7 +65,7 @@ export default function CoursesPage() {
 
   useEffect(() => {
     api("/api/courses?status=published").then(setCourses);
-    fetch(`${window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app"}/api/pricing`).then(r => r.json()).then(setPricing).catch(() => {});
+    api("/api/pricing").then(setPricing).catch(() => {});
   }, []);
 
   const visibleCourses = courses.filter(c => c.is_show_courses !== 0);

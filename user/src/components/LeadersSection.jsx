@@ -145,7 +145,7 @@ export default function LeadersSection({ leaders, m, theme, t }) {
 
   useEffect(() => { setPos(base); }, [base]);
 
-  /* center the active card — DOM-measured → exact in LTR/RTL/mobile/desktop */
+  /* center the active card — measured from real viewport rects → exact in LTR/RTL/mobile/desktop */
   useLayoutEffect(() => {
     const track = trackRef.current;
     const inner = innerRef.current;
@@ -155,7 +155,11 @@ export default function LeadersSection({ leaders, m, theme, t }) {
     const safePos = Math.max(0, Math.min(track.children.length - 1, pos));
     const el = track.children[safePos];
     if (!el) return;
-    const tx = Math.round(w / 2 - (el.offsetLeft + el.offsetWidth / 2));
+    const innerRect = inner.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const target = innerRect.left + innerRect.width / 2;
+    const current = elRect.left + elRect.width / 2;
+    const tx = Math.round(readTx(track) + (target - current));
     track.style.transition = suppress.current ? "none" : TRANSITION;
     suppress.current = false;
     track.style.transform = `translateX(${tx}px)`;

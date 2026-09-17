@@ -3,19 +3,12 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useTheme } from "../ThemeContext";
 import { useLang } from "../LangContext";
-import { uploadApi } from "../App";
-
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
+import { uploadApi, apiRequest, deepMedia } from "../App";
 
 const api2 = async (path, opts = {}) => {
-  const headers = { "Content-Type": "application/json" };
-  const uid = localStorage.getItem("everest_user");
-  const stoken = localStorage.getItem("everest_session_token");
-  if (uid && stoken) { try { headers["x-user-id"] = JSON.parse(uid).id; headers["x-session-token"] = stoken; } catch {} }
-  const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
-  const res = await fetch(url, { ...opts, headers: { ...headers, ...opts.headers } });
+  const res = await apiRequest(path, opts);
   if (!res.ok) { const body = await res.json().catch(() => ({})); throw new Error(body.error || `HTTP ${res.status}`); }
-  return res.json();
+  return deepMedia(await res.json());
 };
 
 export default function InstapayPurchasePage() {

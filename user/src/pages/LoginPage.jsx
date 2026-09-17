@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
-import { api } from "../App";
+import { api, pingBackend } from "../App";
 
 const useIsMobile = () => {
   const [m, setM] = useState(typeof window !== "undefined" && window.innerWidth <= 768);
@@ -53,21 +53,27 @@ export default function LoginPage() {
     return () => window.removeEventListener("popstate", onBack);
   }, [nav]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (emailRef.current) { emailRef.current.value = ""; emailRef.current.removeAttribute("readOnly"); }
-      if (passRef.current) { passRef.current.value = ""; passRef.current.removeAttribute("readOnly"); }
-      setForm({ email: "", password: "" });
-    }, 50);
-    return () => clearTimeout(timer);
-  }, []);
-
   const [deviceActive, setDeviceActive] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setDeviceActive(false); setLoading(true);
     try {
-      const { user, session_token } = await api("/api/auth/login", { method: "POST", body: JSON.stringify(form) });
+      // Read from the DOM refs (what is actually in the fields) instead of React
+      // state — Safari/Chrome autofill and mobile/IME keyboards fill the DOM
+      // without firing onChange, and the fields are uncontrolled so React never
+      // reverts them on re-render.
+      const rawEmail = emailRef.current?.value ?? form.email;
+      const rawPass = passRef.current?.value ?? form.password;
+      if (!rawEmail || !rawEmail.trim() || !rawPass) {
+        setErr(t("أدخل البريد الإلكتروني وكلمة المرور", "Enter your email and password"));
+        setLoading(false);
+        return;
+      }
+      const payload = {
+        email: rawEmail.trim().toLowerCase().replace(/[\s\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\u00ad]/g, ""),
+        password: rawPass.replace(/[\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\u00ad\ufeff]/g, "").trim(),
+      };
+      const { user, session_token } = await api("/api/auth/login", { method: "POST", body: JSON.stringify(payload) });
       login(user, session_token);
       setForm({ email: "", password: "" });
       window.history.replaceState(null, "", "/home");
@@ -75,6 +81,22 @@ export default function LoginPage() {
     } catch (e) {
       if (e.code === "DEVICE_ALREADY_ACTIVE") {
         setDeviceActive(true);
+      } else if (e.network) {
+        pingBackend().then((backendOk) => {
+          setErr(
+            backendOk
+              ? t(
+                  "تعذر إتمام الطلب — المتصفح يمنع الاتصال بالخادم (كاش قديم). امسح بيانات الموقع في إعدادات Chrome (Site Settings) ثم أعد المحاولة.",
+                  "Connection to the server was blocked by the browser (stale cache). Clear the site's data in Chrome Site Settings and retry."
+                )
+              : t(
+                  "تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت ثم أعد المحاولة.",
+                  "Can't reach the server. Check your internet connection and retry."
+                )
+          );
+        }).catch(() => {
+          setErr(t("تعذر الاتصال بالخادم. أعد المحاولة.", "Can't reach the server. Please retry."));
+        });
       } else {
         setErr(t(e.message || "بيانات الدخول غير صحيحة", e.message || "Invalid login credentials"));
       }
@@ -262,17 +284,18 @@ export default function LoginPage() {
           )}
 
           {/* Email Not Verified */}
-          <form onSubmit={submit} autoComplete="off">
+          <form onSubmit={submit}>
             {/* Email */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: c.text }}>
                 {t("البريد الإلكتروني", "Email")}
               </label>
               <input
-                type="text" required
+                type="email" required name="email"
                 placeholder={t("أدخل بريدك الإلكتروني", "Enter your email")}
-                ref={emailRef} readOnly autoComplete="off"
-                value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                ref={emailRef} autoComplete="username"
+                autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                defaultValue="" onChange={(e) => setForm({ ...form, email: e.target.value })}
                 style={{
                   width: "100%", padding: "14px 16px", borderRadius: 14,
                   background: c.bgInput, border: `2px solid ${c.border}`,
@@ -290,10 +313,10 @@ export default function LoginPage() {
               </label>
               <div style={{ position: "relative" }}>
                 <input
-                  type={showPass ? "text" : "password"} required
+                  type={showPass ? "text" : "password"} required name="password"
                   placeholder="••••••••"
-                  ref={passRef} readOnly autoComplete="new-password"
-                  value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  ref={passRef} autoComplete="current-password"
+                  defaultValue="" onChange={(e) => setForm({ ...form, password: e.target.value })}
                   style={{
                     width: "100%", padding: "14px 48px 14px 16px", borderRadius: 14,
                     background: c.bgInput, border: `2px solid ${c.border}`,
@@ -518,17 +541,18 @@ export default function LoginPage() {
             )}
 
             {/* Form */}
-            <form onSubmit={submit} autoComplete="off">
+            <form onSubmit={submit}>
               {/* Email */}
               <div style={{ marginBottom: 18 }}>
                 <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 700, color: c.text }}>
                   {t("البريد الإلكتروني", "Email")}
                 </label>
                 <input
-                  type="text" required
+                  type="email" required name="email"
                   placeholder={t("أدخل بريدك الإلكتروني", "Enter your email")}
-                  ref={emailRef} readOnly autoComplete="off"
-                  value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  ref={emailRef} autoComplete="username"
+                  autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                  defaultValue="" onChange={(e) => setForm({ ...form, email: e.target.value })}
                   style={{
                     width: "100%", padding: "14px 18px", borderRadius: 14,
                     background: c.bgCard, border: `2px solid ${c.border}`,
@@ -546,10 +570,10 @@ export default function LoginPage() {
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
-                    type={showPass ? "text" : "password"} required
+                    type={showPass ? "text" : "password"} required name="password"
                     placeholder="••••••••"
-                    ref={passRef} readOnly autoComplete="new-password"
-                    value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    ref={passRef} autoComplete="current-password"
+                    defaultValue="" onChange={(e) => setForm({ ...form, password: e.target.value })}
                     style={{
                       width: "100%", padding: "14px 50px 14px 18px", borderRadius: 14,
                       background: c.bgCard, border: `2px solid ${c.border}`,

@@ -228,10 +228,10 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    await execute(
-      "INSERT INTO users (id, full_name, email, phone, address, password, referral_code, referred_by, status, role, account_type, rank, governorate, country, id_card_front, id_card_back, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'registration', 'registration_free', '', ?, ?, ?, ?, 0)",
-      [id, cleanEmail, phone || null, address || null, hashedPassword, code, referredBy, governorate || null, country || null, singleIdCard, singleIdCard]
-    );
+      await execute(
+        "INSERT INTO users (id, full_name, email, phone, address, password, referral_code, referred_by, status, role, account_type, rank, governorate, country, id_card_front, id_card_back, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'registration', 'registration_free', '', ?, ?, ?, ?, 0)",
+        [id, full_name, cleanEmail, phone || null, address || null, hashedPassword, code, referredBy, governorate || null, country || null, singleIdCard, singleIdCard]
+      );
 
     // Populate closure table (for tree visibility — commissions handled on admin approval)
     await execute("INSERT INTO user_closure (ancestor, descendant, depth) VALUES (?, ?, 0)", [id, id]);

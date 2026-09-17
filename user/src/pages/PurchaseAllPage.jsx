@@ -7,8 +7,6 @@ import { api } from "../App";
 import AppNavbar from "../components/AppNavbar";
 import { formatWhatsAppLink } from "../whatsapp";
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
-
 export default function PurchaseAllPage() {
   const { t, dir, lang } = useLang();
   const { theme } = useTheme();
@@ -25,7 +23,7 @@ export default function PurchaseAllPage() {
 
   useEffect(() => {
     api("/api/courses?status=published").then(d => setCourses(d || [])).catch(() => {});
-    fetch(`${BACKEND_URL}/api/pricing`).then(r => r.json()).then(d => setPricing(d || {})).catch(() => {});
+    api("/api/pricing").then(d => setPricing(d || {})).catch(() => {});
     api("/api/customer-service").then(setCsData).catch(() => {});
   }, []);
 

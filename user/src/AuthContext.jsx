@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { apiRequest, deepMedia, apiClearCache } from "./App";
 
 const AuthContext = createContext();
-const API = window.location.origin.includes("localhost") ? "http://localhost:5000/api" : "https://everest-academy-production.up.railway.app/api";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -27,10 +27,11 @@ export function AuthProvider({ children }) {
       window.history.replaceState(null, "", window.location.pathname);
     };
 
-    fetch(`${API}/users/${impUid}`, {
+    apiRequest(`/api/users/${impUid}`, {
       headers: { "x-user-id": impUid, "x-session-token": impToken }
     })
       .then(r => r.ok ? r.json() : null)
+      .then(deepMedia)
       .then(fresh => {
         if (!fresh || !fresh.id) { clearParams(); return; }
         const userData = { ...fresh, session_token: impToken };
@@ -46,10 +47,11 @@ export function AuthProvider({ children }) {
   // Refresh stale user data on mount (old localStorage may lack account_type etc.)
   useEffect(() => {
     if (!user?.id || !user?.session_token) return;
-    fetch(`${API}/users/${user.id}`, {
+    apiRequest(`/api/users/${user.id}`, {
       headers: { "x-user-id": user.id, "x-session-token": user.session_token }
     })
       .then(r => r.ok ? r.json() : null)
+      .then(deepMedia)
       .then(fresh => {
         if (fresh && fresh.account_type) {
           const updated = { ...user, ...fresh, session_token: user.session_token };
@@ -65,9 +67,9 @@ export function AuthProvider({ children }) {
     if (!user?.id || !user?.session_token) return;
     let failedCount = 0;
     const sendHeartbeat = () => {
-      fetch(`${API}/auth/heartbeat`, {
+      apiRequest(`/api/auth/heartbeat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-user-id": user.id, "x-session-token": user.session_token },
+        headers: { "x-user-id": user.id, "x-session-token": user.session_token },
         body: JSON.stringify({ user_id: user.id }),
       }).then(res => {
         failedCount = 0;
@@ -101,22 +103,23 @@ export function AuthProvider({ children }) {
     setUser(userData);
     localStorage.setItem("everest_user", JSON.stringify(userData));
     if (token) localStorage.setItem("everest_session_token", token);
+    apiClearCache();
   };
 
   const logout = () => {
     try {
       const u = JSON.parse(localStorage.getItem("everest_user"));
       if (u && u.id && u.session_token) {
-        fetch(`${API}/auth/logout`, {
+        apiRequest(`/api/auth/logout`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "x-user-id": u.id,
             "x-session-token": u.session_token,
           },
         }).catch(() => {});
       }
     } catch {}
+    apiClearCache();
     setUser(null);
     localStorage.removeItem("everest_user");
     localStorage.removeItem("everest_session_token");

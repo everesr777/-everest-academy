@@ -3,6 +3,7 @@ import { useLang } from "../LangContext";
 import AppNavbar from "../components/AppNavbar";
 import { useTheme } from "../ThemeContext";
 import FooterSection from "../components/FooterSection";
+import { apiRequest } from "../App";
 
 const useIsMobile = () => {
   const [m, setM] = useState(typeof window !== "undefined" && window.innerWidth <= 768);
@@ -85,8 +86,6 @@ function RankRow({ s, i, t, c, m, onClick }) {
   );
 }
 
-const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
-
 export default function TopSallerPage() {
   const { t, dir } = useLang();
   const { colors: c } = useTheme();
@@ -99,7 +98,7 @@ export default function TopSallerPage() {
   const [modalCourse, setModalCourse] = useState(null);
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/api/courses/top-quiz-performers`)
+    apiRequest("/api/courses/top-quiz-performers")
       .then(r => r.json())
       .then(d => setPerformers(Array.isArray(d) ? d : []))
       .catch(() => {})

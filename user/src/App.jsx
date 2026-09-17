@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Routes, Route, Link, Navigate, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
 import { LangProvider, useLang } from "./LangContext";
 import { ThemeProvider } from "./ThemeContext";
 import ScreenProtection from "./components/ScreenProtection";
+import PullToRefresh from "./components/PullToRefresh";
 import LandingPage from "./pages/LandingPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -40,7 +41,15 @@ import WhatsAppFloat from "./components/WhatsAppFloat";
 
 const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
-const fetchWithRetry = async (url, opts = {}, tries = 2) => {
+class NetErr extends Error {
+  constructor(kind) {
+    super(kind === "timeout" ? "The request timed out" : "Failed to fetch");
+    this.network = true;
+    this.kind = kind;
+  }
+}
+
+const fetchWithRetry = async (url, opts = {}, tries = 3) => {
   for (let i = 0; i < tries; i++) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 12000);
@@ -50,19 +59,78 @@ const fetchWithRetry = async (url, opts = {}, tries = 2) => {
       return res;
     } catch (e) {
       clearTimeout(timer);
-      if (e.name === "AbortError" || i === tries - 1) throw e;
-      await new Promise(r => setTimeout(r, 800));
+      // Timeout — no point retrying the same slow request twice, but a second
+      // attempt often succeeds right after (server warm-up / flaky mobile net).
+      if (e.name === "AbortError") {
+        if (i < tries - 1) { await new Promise(r => setTimeout(r, 1000)); continue; }
+        throw new NetErr("timeout");
+      }
+      // Network-level failure (DNS/TLS/CORS preflight blocked): "Failed to fetch".
+      if (e instanceof TypeError || /fetch failed/i.test(e.message || "")) {
+        if (i < tries - 1) { await new Promise(r => setTimeout(r, 1200)); continue; }
+        throw new NetErr("unreachable");
+      }
+      throw e;
     }
   }
 };
 
-const api = async (path, opts = {}) => {
+const isLocal = () => window.location.origin.includes("localhost");
+const proxyUrl = (path) => `/api.php?path=${encodeURIComponent(path)}`;
+
+// Media URLs returned by the backend are absolute Railway URLs (e.g.
+// https://up.railway.app/uploads/x.jpg). In Chrome those cross-origin
+// sub-resource requests fail at the network layer — rewrite them to the
+// same-origin proxy so covers/avatars load in every browser.
+const MEDIA_BASE = "https://everest-academy-production.up.railway.app";
+const mediaUrl = (u) =>
+  typeof u === "string" && u.indexOf(MEDIA_BASE) === 0
+    ? isLocal() ? u : proxyUrl(u.slice(MEDIA_BASE.length))
+    : u;
+const deepMedia = (v) => {
+  if (typeof v === "string") return mediaUrl(v);
+  if (Array.isArray(v)) return v.map(deepMedia);
+  if (v && typeof v === "object") { const o = {}; for (const k in v) o[k] = deepMedia(v[k]); return o; }
+  return v;
+};
+
+const apiRequest = async (path, opts = {}) => {
   const headers = { "Content-Type": "application/json" };
   const uid = localStorage.getItem("everest_user");
   const stoken = localStorage.getItem("everest_session_token");
   if (uid && stoken) { try { headers["x-user-id"] = JSON.parse(uid).id; headers["x-session-token"] = stoken; } catch {} }
-  const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
-  const res = await fetchWithRetry(url, { ...opts, headers: { ...headers, ...opts.headers } });
+
+  const attempt = async (url, omitCreds) =>
+    fetchWithRetry(url, { ...opts, credentials: omitCreds ? "omit" : undefined, headers: { ...headers, ...opts.headers } });
+
+  if (path.startsWith("http") || isLocal()) return attempt(`${BACKEND_URL}${path}`, true);
+  try {
+    return await attempt(`${BACKEND_URL}${path}`, true);
+  } catch (e) {
+    if (!e.network) throw e;
+    try { return await attempt(proxyUrl(path), false); }
+    catch { throw e; }
+  }
+};
+
+// ---- In-memory server-state cache (stale-while-revalidate) ----
+// GET responses are cached per user for 5 minutes. Returning to a visited
+// page resolves instantly from the cache (no spinner); when a cached entry
+// goes stale it is re-fetched in the background and swapped silently.
+const CACHE = new Map();
+const INFLIGHT = new Map();
+const STALE_MS = 5 * 60 * 1000;
+
+const cacheUserKey = () => {
+  try {
+    const d = JSON.parse(localStorage.getItem("everest_user") || "null");
+    return (d && d.id) ? d.id : "anon";
+  } catch { return "anon"; }
+};
+const cacheKeyOf = (path) => `${path}|${cacheUserKey()}`;
+
+const fetchJson = async (path, opts) => {
+  const res = await apiRequest(path, opts);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     if (body.session_expired) {
@@ -76,7 +144,66 @@ const api = async (path, opts = {}) => {
     if (body.upgradeRequired) err.upgradeRequired = true;
     throw err;
   }
-  return res.json();
+  return deepMedia(await res.json());
+};
+
+const revalidateKey = (path) => {
+  const key = cacheKeyOf(path);
+  fetchJson(path, {})
+    .then(d => CACHE.set(key, { data: d, ts: Date.now(), path }))
+    .catch(() => { /* keep the stale copy on network failure */ });
+};
+
+const api = async (path, opts = {}) => {
+  const method = (opts.method || "GET").toUpperCase();
+  const isGet = method === "GET" && opts.cache !== false;
+  if (!isGet) {
+    // Writes must always hit the network and invalidate cached reads.
+    const data = await fetchJson(path, opts);
+    if (method !== "GET") CACHE.clear();
+    if (opts.cache === false && method === "GET") INFLIGHT.delete(cacheKeyOf(path));
+    return data;
+  }
+  const key = cacheKeyOf(path);
+  const now = Date.now();
+  const hit = CACHE.get(key);
+  if (hit && now - hit.ts < STALE_MS) return hit.data;        // fresh → instant
+  if (hit) { revalidateKey(path); return hit.data; }          // stale → SWR
+  let p = INFLIGHT.get(key);
+  if (!p) {
+    p = fetchJson(path, opts)
+      .then(d => { CACHE.set(key, { data: d, ts: Date.now(), path }); INFLIGHT.delete(key); return d; })
+      .catch(e => { INFLIGHT.delete(key); throw e; });
+    INFLIGHT.set(key, p);
+  }
+  return p;
+};
+
+// Force a full background revalidation (used by pull-to-refresh): wipe the
+// cache, then silently re-fetch every previously seen URL to repopulate it.
+const apiRevalidateAll = () => {
+  const seen = [...CACHE.values()].map(e => e.path);
+  CACHE.clear();
+  INFLIGHT.clear();
+  seen.forEach(revalidateKey);
+};
+
+const apiClearCache = () => { CACHE.clear(); INFLIGHT.clear(); };
+
+// Lightweight connectivity self-test. Tries the direct backend, then the
+// same-origin proxy, so "can't reach the server" is only reported when the
+// site's own host really is unreachable.
+const pingBackend = async () => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  const ping = (url) => fetch(url, { credentials: "omit", signal: ctrl.signal }).then(r => r.ok).catch(() => false);
+  try {
+    if (isLocal()) return await ping(`${BACKEND_URL}/api/pricing`);
+    if (await ping(`${BACKEND_URL}/api/pricing`)) return true;
+    return await ping(proxyUrl("/api/pricing"));
+  } finally {
+    clearTimeout(timer);
+  }
 };
 
 const uploadApi = async (formData) => {
@@ -126,6 +253,11 @@ function ReferralRedirect() {
 }
 
 export default function App() {
+  const [pulse, setPulse] = useState(0);
+  const handleRefresh = useCallback(() => {
+    apiRevalidateAll();          // fresh data in the background
+    setPulse((p) => p + 1);      // remount current route so its hooks re-run
+  }, []);
   return (
     <AuthProvider>
       <LangProvider>
@@ -133,7 +265,8 @@ export default function App() {
       <ScreenProtection />
       <MembershipExpiredOverlay />
       <WhatsAppFloat />
-      <Routes>
+      <PullToRefresh onRefresh={handleRefresh}>
+      <Routes key={pulse}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/home" element={<Guard><HomePage /></Guard>} />
         <Route path="/login" element={<LoginPage />} />
@@ -166,10 +299,11 @@ export default function App() {
         <Route path="/create-account" element={<Guard><CreateAccountPage /></Guard>} />
         <Route path="/ref/:code" element={<ReferralRedirect />} />
       </Routes>
+      </PullToRefresh>
       </ThemeProvider>
       </LangProvider>
     </AuthProvider>
   );
 }
 
-export { api, uploadApi, BACKEND_URL };
+export { apiRequest, api, uploadApi, pingBackend, mediaUrl, deepMedia, apiRevalidateAll, apiClearCache, BACKEND_URL };

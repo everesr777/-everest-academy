@@ -52,7 +52,7 @@ export default function CreateAccountPage() {
     if (!user) return;
     api(`/api/users/${user.id}`).then(setProfile).catch(() => setProfile(user));
     api(`/api/users/created-by-me/${user.id}`).then(setCreatedUsers).catch(() => {});
-    fetch(`${BACKEND_URL}/api/pricing`).then(r => r.json()).then(d => { if (d.create_account_cost) setCost(parseInt(d.create_account_cost) || 5500); }).catch(() => {});
+    api("/api/pricing").then(d => { if (d.create_account_cost) setCost(parseInt(d.create_account_cost) || 5500); }).catch(() => {});
   }, [user]);
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
