@@ -170,7 +170,7 @@ function seedSettings(db, overrides = {}) {
   const defaults = {
     settlement_enabled: "true",
     settlement_day: "5",
-    settlement_hour: "0",
+    settlement_hour: "23",
     settlement_minute: "0",
     settlement_timezone: "Africa/Cairo",
     settlement_min_direct_sales: "2",
@@ -187,25 +187,25 @@ const W_PREV = "2026-07-25 12:00:00";   // before the week (old directs)
 
 // ─── Tests ───
 
-test("defaults: Friday 00:00 Africa/Cairo, enabled, min 2 directs", async () => {
+test("defaults: Friday 23:00 Africa/Cairo, enabled, min 2 directs", async () => {
   const db = createDb();
   seedSettings(db);
   ctx = apiFor(db);
   const settings = await getSettlementSettings();
   assert.equal(settings.settlement_day, "5");
-  assert.equal(settings.settlement_hour, "0");
+  assert.equal(settings.settlement_hour, "23");
   assert.equal(settings.settlement_minute, "0");
   assert.equal(settings.settlement_timezone, "Africa/Cairo");
   assert.equal(settings.settlement_enabled, "true");
   assert.equal(settings.settlement_min_direct_sales, "2");
   const display = settlementConfigDisplay(settings);
   assert.equal(display.day, "Friday");
-  assert.equal(display.hour, 0);
+  assert.equal(display.hour, 23);
   assert.equal(display.minute, 0);
   assert.equal(display.timezone, "Africa/Cairo");
   const next = nextSettlementTime(settings);
   assert.equal(next.day, "Friday");
-  assert.match(next.label, /00:00/);
+  assert.match(next.label, /23:00/);
 });
 
 test("weekly cycle matches settlement schedule (Friday start)", async () => {

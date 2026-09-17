@@ -4,7 +4,7 @@ import { query, queryOne, execute } from "../db.js";
 export const WEEKLY_SETTLEMENT_DEFAULTS = {
   settlement_enabled: "true",
   settlement_day: "5",
-  settlement_hour: "0",
+  settlement_hour: "23",
   settlement_minute: "0",
   settlement_timezone: "Africa/Cairo",
   settlement_min_direct_sales: "2",
@@ -28,10 +28,10 @@ export async function ensureSettlementSettings() {
   for (const [k, v] of Object.entries(WEEKLY_SETTLEMENT_DEFAULTS)) {
     try { await execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [k, v]); } catch (e) {}
   }
-  // Migrate stale seed defaults (old: Sun 23:55) → new default (Fri 00:00) without touching admin overrides.
+  // Migrate stale seed defaults (old: Sun 23:55) → new default (Fri 23:00) without touching admin overrides.
   try {
     await execute("UPDATE settings SET value = '5' WHERE key = 'settlement_day' AND value = '0'");
-    await execute("UPDATE settings SET value = '0' WHERE key = 'settlement_hour' AND value = '23'");
+    await execute("UPDATE settings SET value = '23' WHERE key = 'settlement_hour' AND value = '0'");
     await execute("UPDATE settings SET value = '0' WHERE key = 'settlement_minute' AND value = '55'");
   } catch (e) {}
   try { await execute("UPDATE weekly_settlements SET status = 'failed' WHERE status = 'running'"); } catch (e) {}

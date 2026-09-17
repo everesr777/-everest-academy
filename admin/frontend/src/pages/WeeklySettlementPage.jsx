@@ -10,7 +10,7 @@ export default function WeeklySettlementPage() {
   const t = (ar, en) => tFn(ar, en);
 
   const [status, setStatus] = useState(null);
-  const [form, setForm] = useState({ settlement_enabled: "true", settlement_day: "5", settlement_hour: "0", settlement_minute: "0", settlement_timezone: "Africa/Cairo", settlement_min_direct_sales: "2" });
+  const [form, setForm] = useState({ settlement_enabled: "true", settlement_day: "5", settlement_hour: "23", settlement_minute: "0", settlement_timezone: "Africa/Cairo", settlement_min_direct_sales: "2" });
   const [weekly, setWeekly] = useState([]);
   const [weeklyWeek, setWeeklyWeek] = useState("");
   const [history, setHistory] = useState([]);
@@ -32,7 +32,7 @@ export default function WeeklySettlementPage() {
       if (d.settings) setForm({
         settlement_enabled: d.settings.settlement_enabled || "true",
         settlement_day: d.settings.settlement_day || "5",
-        settlement_hour: d.settings.settlement_hour || "0",
+        settlement_hour: d.settings.settlement_hour || "23",
         settlement_minute: d.settings.settlement_minute || "0",
         settlement_timezone: d.settings.settlement_timezone || "Africa/Cairo",
         settlement_min_direct_sales: d.settings.settlement_min_direct_sales || "2",
