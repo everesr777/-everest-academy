@@ -36,6 +36,13 @@ mock.module("../db.js", {
   defaultExport: null,
 });
 
+mock.module("../middleware/sessionAuth.js", {
+  namedExports: {
+    adminAuth: async (req, res, next) => next(),
+  },
+  defaultExport: null,
+});
+
 const { default: router } = await import("./categories.js");
 
 let server;

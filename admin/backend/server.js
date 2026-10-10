@@ -138,7 +138,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin-auth", adminAuthRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/courses", coursesRoutes);
-app.use("/api/categories", adminAuth, categoriesRoutes);
+app.use("/api/categories", categoriesRoutes);
 app.use("/api/wallets", adminAuth, walletsRoutes);
 app.use("/api/mlm", mlmRoutes);
 app.use("/api/ranks", ranksRoutes);

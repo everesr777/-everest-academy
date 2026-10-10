@@ -12,6 +12,7 @@ export default async function sessionAuth(req, res, next) {
   // Public GET endpoints: course catalog, ranks, leaders, public feedbacks, proofs, dashboard stats, customer service
   if (req.method === "GET" && (
     req.path === "/courses" ||
+    req.path === "/categories" ||
     req.path.startsWith("/courses/") && !req.path.includes("/my") && !req.path.includes("/quiz-progress") ||
     req.path === "/free-courses" ||
     req.path === "/ranks" ||

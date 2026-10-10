@@ -7,19 +7,32 @@ import { api } from "../App";
 import AppNavbar from "../components/AppNavbar";
 import FooterSection from "../components/FooterSection";
 
-const CATEGORY_ORDER = [
-  { id: "trading", emoji: "📈", labelAr: "التداول", labelEn: "Trading", priceKey: "pkg_price_trading" },
-  { id: "media_buying", emoji: "📦", labelAr: "الميديا باينج والدروب شيبينج", labelEn: "Media Buying & Dropshipping", priceKey: "pkg_price_media_buying" },
-  { id: "marketing", emoji: "📢", labelAr: "الماركتينج والتسويق الرقمي", labelEn: "Marketing & Digital Marketing", priceKey: "pkg_price_marketing" },
-  { id: "social_media", emoji: "📱", labelAr: "السوشيال ميديا براند", labelEn: "Social Media Brand", priceKey: "pkg_price_social_media" },
-  { id: "other", emoji: "📂", labelAr: "أخرى", labelEn: "Other", priceKey: "pkg_price_other" },
+const CATEGORY_EMOJI = {
+  "cat-trading": "📈",
+  "cat-media": "📦",
+  "cat-marketing": "📢",
+  "cat-social": "📱",
+};
+
+const CATEGORY_FALLBACK_ORDER = [
+  { id: "cat-trading", emoji: "📈", labelAr: "التداول", labelEn: "Trading" },
+  { id: "cat-media", emoji: "📦", labelAr: "الميديا باينج والدروب شيبينج", labelEn: "Media Buying & Dropshipping" },
+  { id: "cat-marketing", emoji: "📢", labelAr: "الماركتينج والتسويق الرقمي", labelEn: "Marketing & Digital Marketing" },
+  { id: "cat-social", emoji: "📱", labelAr: "السوشيال ميديا براند", labelEn: "Social Media Brand" },
 ];
 
-const CATEGORY_MAP = {};
-CATEGORY_ORDER.forEach(c => { CATEGORY_MAP[c.labelAr] = c; });
+function norm(s) {
+  return (s || "").trim().toLowerCase();
+}
 
-function getCatInfo(catAr) {
-  return CATEGORY_MAP[catAr] || CATEGORY_ORDER.find(c => c.id === "other");
+function catMatches(courseCatAr, courseCatEn, cat) {
+  if (!cat) return false;
+  return (
+    norm(courseCatAr) === norm(cat.name_ar) ||
+    norm(courseCatAr) === norm(cat.name_en) ||
+    norm(courseCatEn) === norm(cat.name_en) ||
+    norm(courseCatEn) === norm(cat.name_ar)
+  );
 }
 
 function CourseCard({ c, popupCourse, setPopupCourse, user, isStudent }) {
@@ -56,6 +69,7 @@ export default function CoursesPage() {
   const nav = useNavigate();
   const isStudent = user && (user.account_type === "student" || user.account_type === "registration_free");
   const [courses, setCourses] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
   const [popupCourse, setPopupCourse] = useState(null);
   const [pricing, setPricing] = useState({});
@@ -65,6 +79,7 @@ export default function CoursesPage() {
 
   useEffect(() => {
     api("/api/courses?status=published").then(setCourses);
+    api("/api/categories").then(setCategories).catch(() => {});
     api("/api/pricing").then(setPricing).catch(() => {});
   }, []);
 
@@ -82,14 +97,25 @@ export default function CoursesPage() {
     : visibleCourses;
 
   const grouped = {};
+  let otherInfo = null;
   searched.forEach(c => {
-    const catAr = c.category_ar || "";
-    const info = getCatInfo(catAr);
+    let info = categories.find(cat => catMatches(c.category_ar, c.category, cat));
+    if (!info && CATEGORY_FALLBACK_ORDER.length && !otherInfo) {
+      otherInfo = { id: "other", emoji: "📂", labelAr: "أخرى", labelEn: "Other" };
+    }
+    if (!info) {
+      info = otherInfo;
+    }
     if (!grouped[info.id]) grouped[info.id] = { info, courses: [] };
     grouped[info.id].courses.push(c);
   });
 
-  const orderedGroups = CATEGORY_ORDER.filter(g => grouped[g.id]?.courses.length > 0);
+  const orderedGroups = [
+    ...CATEGORY_FALLBACK_ORDER.map(f => grouped[f.id] || null).filter(Boolean),
+    ...categories.filter(cat => grouped[cat.id] && !CATEGORY_FALLBACK_ORDER.some(f => f.id === cat.id))
+      .map(cat => grouped[cat.id]),
+    ...(grouped["other"] ? [grouped["other"]] : []),
+  ];
 
   return (
     <div style={{ background: theme === "dark" ? "#1a1a2e" : "#fafafa", minHeight: "100vh", fontFamily: "'Cairo', sans-serif", direction: dir }}>
@@ -255,8 +281,8 @@ export default function CoursesPage() {
             <React.Fragment key={groupKey.id}>
               <section className="cp-cat-section">
                 <div className="cp-cat-section-header">
-                  <span style={{ fontSize: "2rem" }}>{g.info.emoji}</span>
-                  <h2>{t(g.info.labelAr, g.info.labelEn)}</h2>
+                  <span style={{ fontSize: "2rem" }}>{g.info.emoji || CATEGORY_EMOJI[g.info.id] || "📚"}</span>
+                  <h2>{t(g.info.labelAr || g.info.name_ar, g.info.labelEn || g.info.name_en)}</h2>
                   <span className="cp-cat-count">{g.courses.length} {t("كورس", "courses")}</span>
                 </div>
                 <div className="cp-cards-row">

@@ -1,6 +1,7 @@
 import express from "express";
 import { query, queryOne, execute } from "../db.js";
 import { v4 as uuidv4 } from "uuid";
+import { adminAuth } from "../middleware/sessionAuth.js";
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", adminAuth, async (req, res) => {
   try {
     const { name_ar, name_en } = req.body || {};
     const ar = (name_ar || "").trim();
@@ -37,7 +38,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", adminAuth, async (req, res) => {
   try {
     const cat = await queryOne("SELECT * FROM categories WHERE id = ?", [req.params.id]);
     if (!cat) return res.status(404).json({ error: "Category not found" });
