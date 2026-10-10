@@ -83,6 +83,10 @@ function createSchema(driver, isTursoDb) {
       author_id TEXT, created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     )`,
+    `CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY, name_ar TEXT, name_en TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )`,
     `CREATE TABLE IF NOT EXISTS topics (
       id TEXT PRIMARY KEY, course_id TEXT NOT NULL, title TEXT NOT NULL,
       summary TEXT, title_ar TEXT, summary_ar TEXT, sort_order INTEGER DEFAULT 0,
@@ -380,6 +384,7 @@ function createSchema(driver, isTursoDb) {
       // Prevent double commission: at most one weekly rank commission per user per week (Requirement 12).
       try { await driver.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_weekly_commissions_user_week ON weekly_commissions (user_id, week_start)"); } catch(e) { console.log("⚠️ unique index on weekly_commissions skipped:", e.message); }
       await seedDataTurso(driver, exec);
+      await seedCategoriesIfEmpty(driver, true);
     })();
   }
   tables.forEach(sql => driver.run(sql));
@@ -433,6 +438,7 @@ function createSchema(driver, isTursoDb) {
   // Prevent double commission: at most one weekly rank commission per user per week (Requirement 12).
   try { driver.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_weekly_commissions_user_week ON weekly_commissions (user_id, week_start)"); } catch(e) { console.log("⚠️ unique index on weekly_commissions skipped:", e.message); }
   seedDataLocal(driver);
+  seedCategoriesIfEmpty(driver, false);
 }
 
 async function seedDataTurso(driver, exec) {
@@ -564,6 +570,33 @@ async function seedDataTurso(driver, exec) {
 
   console.log("  Turso mock data seeded: 18 users, 3 courses, 5 topics, 11 lessons, 8 quizzes");
   await driver.execute({ sql: "INSERT OR REPLACE INTO settings (key,value) VALUES ('mock_data_seeded','true')" }).catch(()=>{});
+}
+
+const DEFAULT_CATEGORIES = [
+  ["cat-trading", "التداول", "Trading"],
+  ["cat-media", "الميديا باينج والدروب شيبينج", "Media Buying & Dropshipping"],
+  ["cat-marketing", "الماركتينج والتسويق الرقمي", "Marketing & Digital Marketing"],
+  ["cat-social", "السوشيال ميديا براند", "Social Media Branding"],
+];
+
+async function seedCategoriesIfEmpty(driver, isTursoDb) {
+  const existsCheck = () => isTursoDb
+    ? driver.execute({ sql: "SELECT 1 FROM categories LIMIT 1" })
+    : (driver.exec("SELECT 1 FROM categories LIMIT 1") || []);
+  try {
+    const res = await existsCheck();
+    const hasRows = isTursoDb ? (res.rows && res.rows.length > 0) : (res.length > 0 && res[0].values.length > 0);
+    if (hasRows) return;
+    for (const [id, ar, en] of DEFAULT_CATEGORIES) {
+      if (isTursoDb) {
+        await driver.execute({ sql: "INSERT INTO categories (id,name_ar,name_en) VALUES (?,?,?)", args: [id, ar, en] }).catch(()=>{});
+      } else {
+        try { driver.run("INSERT INTO categories (id,name_ar,name_en) VALUES (?,?,?)", [id, ar, en]); } catch(e) {}
+      }
+    }
+  } catch(e) {
+    console.log("⚠️ categories seed skipped:", e.message);
+  }
 }
 
 function seedDataLocal(driver) {

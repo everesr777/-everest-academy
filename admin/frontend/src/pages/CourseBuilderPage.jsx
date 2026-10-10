@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, uploadApi } from "../api.js";
 
@@ -16,6 +16,37 @@ export default function CourseBuilderPage() {
     category: "", category_ar: "", tags: "", featured_image: "",
     author_id: "admin-001", status: "published",
   });
+  const [categories, setCategories] = useState([]);
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCatAr, setNewCatAr] = useState("");
+  const [newCatEn, setNewCatEn] = useState("");
+
+  useEffect(() => { api("/api/categories").then(setCategories).catch(() => {}); }, []);
+
+  const addCategory = async () => {
+    const ar = newCatAr.trim();
+    if (!ar) { alert(t("اكتب اسم التصنيف بالعربية", "Enter category name in Arabic")); return; }
+    try {
+      await api("/api/categories", { method: "POST", body: JSON.stringify({ name_ar: ar, name_en: newCatEn.trim() || ar }) });
+      setNewCatAr(""); setNewCatEn(""); setAddingCat(false);
+      const list = await api("/api/categories");
+      setCategories(list);
+      setCourse((prev) => ({ ...prev, category_ar: ar }));
+    } catch (err) {
+      alert(t("خطأ في إضافة التصنيف: ", "Error adding category: ") + err.message);
+    }
+  };
+
+  const deleteCategory = async (catId) => {
+    if (!confirm(t("متأكد من حذف هذا التصنيف؟", "Delete this category?"))) return;
+    try {
+      await api(`/api/categories/${catId}`, { method: "DELETE" });
+      const list = await api("/api/categories");
+      setCategories(list);
+    } catch (err) {
+      alert(t("خطأ في حذف التصنيف: ", "Error deleting category: ") + err.message);
+    }
+  };
 
   const handleChange = (field, value) => setCourse((prev) => ({ ...prev, [field]: value }));
 
@@ -140,12 +171,28 @@ export default function CourseBuilderPage() {
           </div>
           <div className="bg-white rounded-xl shadow-sm border p-4">
             <h4 className="font-bold mb-3">{t("التصنيفات", "Categories")} {req}</h4>
-            <select value={course.category_ar} onChange={e => { handleChange("category_ar", e.target.value); setErrors(prev => ({...prev, category: false})); }} className={`w-full px-3 py-2 border rounded-lg text-sm mb-2 ${errors.category ? "border-red-500" : ""}`}>
-              <option value="">{t("اختر التصنيف...", "Select category...")}</option>
-              {["التداول", "الميديا باينج والدروب شيبينج", "الماركتينج والتسويق الرقمي", "السوشيال ميديا براند"].map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <div className="flex gap-2 mb-2">
+              <select value={course.category_ar} onChange={e => { handleChange("category_ar", e.target.value); setErrors(prev => ({...prev, category: false})); }} className={`w-full px-3 py-2 border rounded-lg text-sm ${errors.category ? "border-red-500" : ""}`}>
+                <option value="">{t("اختر التصنيف...", "Select category...")}</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.name_ar}>{cat.name_ar}</option>
+                ))}
+              </select>
+              <button onClick={() => setAddingCat(true)} className="px-3 py-2 bg-everest-600 text-white rounded-lg text-sm whitespace-nowrap">＋ {t("إضافة", "Add")}</button>
+            </div>
+            {addingCat && (
+              <div className="space-y-2 border rounded-lg p-3 bg-gray-50 mb-2">
+                <input value={newCatAr} onChange={(e) => setNewCatAr(e.target.value)} placeholder={t("اسم التصنيف بالعربية", "Category name (Arabic)")} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <input value={newCatEn} onChange={(e) => setNewCatEn(e.target.value)} placeholder={t("الاسم بالإنجليزية (اختياري)", "Name in English (optional)")} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <div className="flex gap-2">
+                  <button onClick={addCategory} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs">{t("حفظ التصنيف", "Save Category")}</button>
+                  <button onClick={() => { setAddingCat(false); setNewCatAr(""); setNewCatEn(""); }} className="px-3 py-1.5 border rounded-lg text-xs">{t("إلغاء", "Cancel")}</button>
+                </div>
+              </div>
+            )}
+            {course.category_ar && (() => { const cc = categories.find((x) => x.name_ar === course.category_ar); return cc ? (
+              <button onClick={() => deleteCategory(cc.id)} className="text-xs text-red-500">🗑 {t("حذف هذا التصنيف", "Delete this category")}</button>
+            ) : null; })()}
           </div>
           <div className="bg-white rounded-xl shadow-sm border p-4">
             <h4 className="font-bold mb-3">{t("الوسوم", "Tags")} <span className="text-xs font-normal text-gray-400">({t("اختياري", "Optional")})</span></h4>

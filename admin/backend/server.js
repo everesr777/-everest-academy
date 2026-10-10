@@ -113,6 +113,7 @@ import { getSettlementSettings, runWeeklySettlement, getSettlementWeek, partsInT
 import authRoutes from "./routes/auth.js";
 import usersRoutes from "./routes/users.js";
 import coursesRoutes from "./routes/courses.js";
+import categoriesRoutes from "./routes/categories.js";
 import walletsRoutes from "./routes/wallets.js";
 import mlmRoutes from "./routes/mlm.js";
 import ranksRoutes from "./routes/ranks.js";
@@ -137,6 +138,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin-auth", adminAuthRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/courses", coursesRoutes);
+app.use("/api/categories", adminAuth, categoriesRoutes);
 app.use("/api/wallets", adminAuth, walletsRoutes);
 app.use("/api/mlm", mlmRoutes);
 app.use("/api/ranks", ranksRoutes);

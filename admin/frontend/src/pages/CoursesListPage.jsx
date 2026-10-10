@@ -37,6 +37,14 @@ export default function CoursesListPage() {
   const [uploadingLessonId, setUploadingLessonId] = useState(null);
   const [quizEditor, setQuizEditor] = useState(null); // { type: 'topic'|'lesson'|'final', topicId, lessonId?, quizId? }
   const [quizForm, setQuizForm] = useState({ title: "", questions: [], pass_mark: 50, quiz_type: "mcq" });
+  const [catList, setCatList] = useState([]);
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCatAr, setNewCatAr] = useState("");
+  const [newCatEn, setNewCatEn] = useState("");
+
+  const loadCategories = () => api("/api/categories").then(setCatList);
+
+  useEffect(() => { loadCategories(); }, []);
 
   const load = () => api("/api/courses").then(setCourses).finally(() => setLoading(false));
 
@@ -66,6 +74,28 @@ export default function CoursesListPage() {
     setEditCourse(fresh);
     load();
     alert(t("تم التحديث", "Updated"));
+  };
+
+  const addCategory = async () => {
+    const ar = newCatAr.trim();
+    if (!ar) { alert(t("اكتب اسم التصنيف بالعربية", "Enter category name in Arabic")); return; }
+    try {
+      await api("/api/categories", { method: "POST", body: JSON.stringify({ name_ar: ar, name_en: newCatEn.trim() || ar }) });
+      setNewCatAr(""); setNewCatEn(""); setAddingCat(false);
+      await loadCategories();
+    } catch (err) {
+      alert(t("خطأ في إضافة التصنيف: ", "Error adding category: ") + err.message);
+    }
+  };
+
+  const deleteCategory = async (catId) => {
+    if (!confirm(t("متأكد من حذف هذا التصنيف؟", "Delete this category?"))) return;
+    try {
+      await api(`/api/categories/${catId}`, { method: "DELETE" });
+      await loadCategories();
+    } catch (err) {
+      alert(t("خطأ في حذف التصنيف: ", "Error deleting category: ") + err.message);
+    }
   };
 
   const addTopic = async () => {
@@ -306,11 +336,47 @@ export default function CoursesListPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("التصنيف", "Category")}</label>
-                  <input value={cv.category || ""} onChange={(e) => setCv("category", e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <select value={cv.category || ""} onChange={(e) => {
+                    const sel = e.target.value;
+                    const c = catList.find((x) => (x.name_en || x.name_ar) === sel);
+                    setCv("category", sel);
+                    if (c) setCv("category_ar", c.name_ar);
+                  }} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="">{t("اختر تصنيفاً...", "Select category...")}</option>
+                    {catList.map((c) => (
+                      <option key={c.id} value={c.name_en || c.name_ar}>{c.name_en || c.name_ar}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm font-medium">التصنيف بالعربية</label>
-                  <input value={cv.category_ar || ""} onChange={(e) => setCv("category_ar", e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                  <div className="flex gap-2">
+                    <select value={cv.category_ar || ""} onChange={(e) => {
+                      const sel = e.target.value;
+                      const c = catList.find((x) => x.name_ar === sel);
+                      setCv("category_ar", sel);
+                      if (c) setCv("category", c.name_en || c.name_ar);
+                    }} className="w-full px-3 py-2 border rounded-lg text-sm">
+                      <option value="">{t("اختر تصنيفاً...", "Select category...")}</option>
+                      {catList.map((c) => (
+                        <option key={c.id} value={c.name_ar}>{c.name_ar}</option>
+                      ))}
+                    </select>
+                    <button onClick={() => setAddingCat(true)} className="px-3 py-2 bg-everest-600 text-white rounded-lg text-sm whitespace-nowrap">＋ {t("إضافة", "Add")}</button>
+                  </div>
+                  {addingCat && (
+                    <div className="mt-2 space-y-2 border rounded-lg p-3 bg-gray-50">
+                      <input value={newCatAr} onChange={(e) => setNewCatAr(e.target.value)} placeholder={t("اسم التصنيف بالعربية", "Category name (Arabic)")} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <input value={newCatEn} onChange={(e) => setNewCatEn(e.target.value)} placeholder={t("الاسم بالإنجليزية (اختياري)", "Name in English (optional)")} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <div className="flex gap-2">
+                        <button onClick={addCategory} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs">{t("حفظ التصنيف", "Save Category")}</button>
+                        <button onClick={() => { setAddingCat(false); setNewCatAr(""); setNewCatEn(""); }} className="px-3 py-1.5 border rounded-lg text-xs">{t("إلغاء", "Cancel")}</button>
+                      </div>
+                    </div>
+                  )}
+                  {cv.category_ar && (() => { const cc = catList.find((x) => x.name_ar === cv.category_ar); return cc ? (
+                    <button onClick={() => deleteCategory(cc.id)} className="mt-2 text-xs text-red-500">🗑 {t("حذف هذا التصنيف", "Delete this category")}</button>
+                  ) : null; })()}
                 </div>
                 <div>
                   <label className="text-sm font-medium">{t("الصعوبة", "Difficulty")}</label>
