@@ -275,26 +275,23 @@ export default function CoursesPage() {
 
       {/* ===== COURSE SECTIONS BY CATEGORY ===== */}
       {orderedGroups.length > 0 ? (
-        orderedGroups.map((groupKey, idx) => {
-          const g = grouped[groupKey.id];
-          return (
-            <React.Fragment key={groupKey.id}>
-              <section className="cp-cat-section">
-                <div className="cp-cat-section-header">
-                  <span style={{ fontSize: "2rem" }}>{g.info.emoji || CATEGORY_EMOJI[g.info.id] || "📚"}</span>
-                  <h2>{t(g.info.labelAr || g.info.name_ar, g.info.labelEn || g.info.name_en)}</h2>
-                  <span className="cp-cat-count">{g.courses.length} {t("كورس", "courses")}</span>
-                </div>
-                <div className="cp-cards-row">
-                  {g.courses.map(c => (
-                    <CourseCard key={c.id} c={c} popupCourse={popupCourse} setPopupCourse={setPopupCourse} user={user} isStudent={isStudent} />
-                  ))}
-                </div>
-              </section>
-              {idx < orderedGroups.length - 1 && <hr className="cp-cat-divider" />}
-            </React.Fragment>
-          );
-        })
+        orderedGroups.map((g, idx) => (
+          <React.Fragment key={g.info.id}>
+            <section className="cp-cat-section">
+              <div className="cp-cat-section-header">
+                <span style={{ fontSize: "2rem" }}>{g.info.emoji || CATEGORY_EMOJI[g.info.id] || "📚"}</span>
+                <h2>{t(g.info.labelAr || g.info.name_ar, g.info.labelEn || g.info.name_en)}</h2>
+                <span className="cp-cat-count">{g.courses.length} {t("كورس", "courses")}</span>
+              </div>
+              <div className="cp-cards-row">
+                {g.courses.map(c => (
+                  <CourseCard key={c.id} c={c} popupCourse={popupCourse} setPopupCourse={setPopupCourse} user={user} isStudent={isStudent} />
+                ))}
+              </div>
+            </section>
+            {idx < orderedGroups.length - 1 && <hr className="cp-cat-divider" />}
+          </React.Fragment>
+        ))
       ) : (
         <div className="cp-emp">
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
