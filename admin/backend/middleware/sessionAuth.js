@@ -13,6 +13,7 @@ export default async function sessionAuth(req, res, next) {
   if (req.method === "GET" && (
     req.path === "/courses" ||
     req.path === "/categories" ||
+    req.path === "/home-hero" ||
     req.path.startsWith("/courses/") && !req.path.includes("/my") && !req.path.includes("/quiz-progress") ||
     req.path === "/free-courses" ||
     req.path === "/ranks" ||

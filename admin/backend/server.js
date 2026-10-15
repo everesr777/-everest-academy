@@ -178,6 +178,17 @@ app.get("/api/pricing", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Public home hero image (no auth needed — used by the logged-in home page hero)
+const DEFAULT_HOME_HERO_IMAGE = "/images/Screenshot_2026-06-28_145125-removebg-preview.png";
+app.get("/api/home-hero", async (req, res) => {
+  try {
+    const row = await queryOne("SELECT value FROM settings WHERE key = 'home_hero_image'");
+    res.json({ url: (row && row.value) ? row.value : DEFAULT_HOME_HERO_IMAGE });
+  } catch (e) {
+    res.json({ url: DEFAULT_HOME_HERO_IMAGE });
+  }
+});
+
 // Public upload for registration (no auth needed, rate-limited, images only)
 const pubUploadDir = join(__dirname, "uploads");
 if (!fs.existsSync(pubUploadDir)) fs.mkdirSync(pubUploadDir, { recursive: true });

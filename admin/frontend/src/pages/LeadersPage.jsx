@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
-import { api } from "../api.js";
+import { api, uploadApi } from "../api.js";
+
+const DEFAULT_HERO_IMAGE = "/images/Screenshot_2026-06-28_145125-removebg-preview.png";
 
 export default function LeadersPage() {
   const { lang, t: tFn } = useLang();
@@ -8,10 +10,44 @@ export default function LeadersPage() {
   const [leaders, setLeaders] = useState([]);
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [heroImage, setHeroImage] = useState(DEFAULT_HERO_IMAGE);
+  const [heroUploading, setHeroUploading] = useState(false);
+  const [heroMsg, setHeroMsg] = useState("");
 
-  useEffect(() => { fetchLeaders(); }, []);
+  const getAdminId = () => { try { return JSON.parse(localStorage.getItem("admin_session") || "{}").userId; } catch { return null; } };
+
+  useEffect(() => { fetchLeaders(); fetchHeroImage(); }, []);
 
   const fetchLeaders = () => api("/api/leaders").then(setLeaders).catch(() => {});
+
+  const fetchHeroImage = () => {
+    api("/api/home-hero").then((d) => setHeroImage((d && d.url) || DEFAULT_HERO_IMAGE)).catch(() => {});
+  };
+
+  const saveHeroImage = async (url) => {
+    const adminId = getAdminId();
+    if (!adminId) { setHeroMsg(t("معرف المدير غير موجود. أعد تسجيل الدخول.", "Admin ID not found. Please login again.")); return; }
+    setHeroMsg("");
+    try {
+      await api("/api/settings/home_hero_image", { method: "PUT", body: JSON.stringify({ value: url, admin_id: adminId }) });
+      setHeroImage(url || DEFAULT_HERO_IMAGE);
+      setHeroMsg(t("تم حفظ الصورة الترحيبية ✅", "Welcome image saved ✅"));
+    } catch (e) { setHeroMsg(e.message); }
+  };
+
+  const changeHeroImage = async (file) => {
+    if (!file) return;
+    setHeroUploading(true);
+    setHeroMsg("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const d = await uploadApi(fd);
+      if (d && d.url) await saveHeroImage(d.url);
+      else setHeroMsg(t("فشل رفع الصورة", "Image upload failed"));
+    } catch (e) { setHeroMsg(e.message); }
+    setHeroUploading(false);
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -44,6 +80,32 @@ export default function LeadersPage() {
     <div>
       <h2 className="text-2xl font-bold mb-6">{t("🏆 إدارة القادة", "🏆 Leaders Management")} (Our Leaders)</h2>
       <p className="text-gray-500 text-sm mb-4">{t("أعلى 10 أعضاء — يتم تحديثهم تلقائياً كل أسبوع. يمكنك الإضافة أو الحذف يدوياً (الحد الأقصى 10).", "Top 10 members — auto-updated weekly. You can add or remove manually (max 10).")}</p>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold">🖼️ {t("تغير الصوره الترحيبيه", "Change Welcome Image")}</h3>
+          {heroMsg && <span className="text-xs text-gray-500">{heroMsg}</span>}
+        </div>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="w-40 h-28 rounded-xl border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center">
+            {heroImage ? (
+              <img src={heroImage} alt={t("الصورة الترحيبية", "Welcome image")} className="w-full h-full object-contain" onError={(e) => { e.target.style.display = "none" }} />
+            ) : (
+              <span className="text-gray-300 text-3xl">🖼️</span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className={`px-5 py-2.5 rounded-xl font-medium text-sm text-white transition ${heroUploading ? "bg-everest-400 cursor-wait" : "bg-everest-600 hover:bg-everest-700 cursor-pointer"}`}>
+              {heroUploading ? t("جاري الرفع...", "Uploading...") : "⬆️ " + t("تغير الصورة الترحيبيه", "Change Welcome Image")}
+              <input type="file" accept="image/*" className="hidden" disabled={heroUploading} onChange={(e) => { changeHeroImage(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+            <button onClick={() => saveHeroImage("")}
+              className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-200 transition">
+              ↩️ {t("استعادة الافتراضية", "Reset to default")}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="flex gap-2 flex-1 min-w-[280px]">

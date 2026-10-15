@@ -98,11 +98,13 @@ export default function HomePage() {
   const [courses, setCourses] = useState([]);
   const [modal, setModal] = useState(null);
   const [leaders, setLeaders] = useState([]);
+  const [heroImage, setHeroImage] = useState("/images/Screenshot_2026-06-28_145125-removebg-preview.png");
 
   useEffect(() => {
     api("/api/courses?status=published").then((d) => setCourses((d || []).filter((c) => c.is_show_homepage !== 0))).catch(() => {});
     api("/api/leaders").then(setLeaders).catch(() => {});
     api("/api/ranks").then((d) => Array.isArray(d) ? setDbRanks(d) : null).catch(() => {});
+    api("/api/home-hero").then((d) => { if (d && d.url) setHeroImage(d.url); }).catch(() => {});
   }, []);
 
   const handleLogout = () => { logout(); nav("/login"); };
@@ -122,7 +124,7 @@ export default function HomePage() {
           </div>
         </div>
         <div style={s.heroImage}>
-            <img src="/images/Screenshot_2026-06-28_145125-removebg-preview.png" alt="Hero" style={s.heroImg} />
+            <img src={heroImage} alt="Hero" style={s.heroImg} onError={(e) => { e.target.src = "/images/Screenshot_2026-06-28_145125-removebg-preview.png"; }} />
         </div>
       </section>
 
