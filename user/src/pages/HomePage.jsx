@@ -109,6 +109,25 @@ export default function HomePage() {
 
   const handleLogout = () => { logout(); nav("/login"); };
 
+  const rankList = dbRanks.length
+    ? dbRanks.map((dr) => {
+        const meta = ranks.find((r) => r.name === dr.name) || {};
+        const sales = Number(dr.sales_required ?? dr.min_direct ?? 0);
+        const bonus = Number(dr.bonus ?? dr.weekly_bonus ?? 0);
+        const isStar = dr.name === "Star";
+        const fmt = bonus.toLocaleString("en-US");
+        return {
+          icon: meta.icon || "🏅",
+          name: dr.name,
+          req: isStar ? `${sales} ينضمو من خلال الكود بتاعك` : `${sales} مبيعات الفريق`,
+          reqEn: isStar ? `${sales} joins through your referral code` : `${sales} Team Sales.`,
+          reward: bonus > 0 ? `مكافأة ${fmt} EM` : (meta.reward || "دخول المجتمع والتقدير"),
+          rewardEn: bonus > 0 ? `${fmt} EM Bonus.` : (meta.rewardEn || "Community access & recognition."),
+          image: dr.image || null,
+        };
+      })
+    : ranks;
+
   return (
       <div style={{background:c.bg,minHeight:"100vh",direction:dir}}>
       <AppNavbar />
@@ -178,9 +197,8 @@ export default function HomePage() {
             <p style={{ color:c.textSoft,lineHeight:1.7,maxWidth:600,margin:"auto" }}>{t("تعرف على متطلبات ومكافآت كل رتبة في إيفرست.","Learn the requirements and rewards for every Everest rank.")}</p>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:m?"1fr":"repeat(auto-fill,minmax(320px,1fr))",gap:20, ...(m ? {display:"flex",overflowX:"auto",scrollSnapType:"x mandatory",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",paddingBottom:8} : {}) }}>
-            {ranks.map((r, i) => {
-              const dbRank = dbRanks.find(dr => dr.name === r.name);
-              const imgSrc = dbRank?.image || `/RanksImages/${r.name}.jpeg`;
+            {rankList.map((r, i) => {
+              const imgSrc = r.image || `/RanksImages/${r.name}.jpeg`;
               const key = rankClassMap[r.name] || "senior";
               const colors = rankColors[key] || { color:"#fb923c", bg:"rgba(251,146,60,0.08)", border:"1px solid rgba(251,146,60,0.18)" };
               return (

@@ -470,10 +470,11 @@ router.post("/enrollments/admin-add", async (req, res) => {
 async function updateUserRankAndReward(userId) {
   const user = await queryOne("SELECT total_team_sales, rank FROM users WHERE id = ?", [userId]);
   if (!user) return;
-  const allRanks = await query("SELECT * FROM ranks WHERE is_active = 1 ORDER BY min_direct DESC");
+  const allRanks = await query("SELECT * FROM ranks WHERE is_active = 1 ORDER BY sort_order DESC");
   let newRank = "Star";
   for (const r of allRanks) {
-    if (user.total_team_sales >= r.min_direct) { newRank = r.name; break; }
+    const required = r.sales_required !== undefined && r.sales_required !== null ? r.sales_required : r.min_direct;
+    if (user.total_team_sales >= required) { newRank = r.name; break; }
   }
   if (newRank !== user.rank) {
     await execute("UPDATE users SET rank = ?, updated_at = datetime('now','localtime') WHERE id = ?", [newRank, userId]);

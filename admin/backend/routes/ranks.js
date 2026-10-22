@@ -1,13 +1,18 @@
 import { v4 as uuidv4 } from "uuid";
 import express from "express";
 import { query, queryOne, execute } from "../db.js";
+import { adminAuth } from "../middleware/sessionAuth.js";
 
 const router = express.Router();
+
+// ?all=true (all ranks incl. inactive) is admin-only — the public list stays public
+const adminOnlyIfAll = (req, res, next) =>
+  req.query.all === "true" ? adminAuth(req, res, next) : next();
 
 const sReq = (r) => r.sales_required !== undefined ? r.sales_required : r.min_direct;
 const bVal = (r) => r.bonus !== undefined ? r.bonus : r.weekly_bonus;
 
-router.get("/", async (req, res) => {
+router.get("/", adminOnlyIfAll, async (req, res) => {
   const { all } = req.query;
   let sql = `
     SELECT r.*,
@@ -45,7 +50,7 @@ router.get("/leaderboard", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", adminAuth, async (req, res) => {
   try {
     const { name, sales_required, bonus, is_active, image } = req.body;
     if (!name) return res.status(400).json({ error: "Name required" });
@@ -58,7 +63,7 @@ router.post("/", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", adminAuth, async (req, res) => {
   try {
     const { name, sales_required, bonus, sort_order, is_active, image } = req.body;
     const existing = await queryOne("SELECT id FROM ranks WHERE id = ?", [req.params.id]);
@@ -85,7 +90,7 @@ router.put("/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", adminAuth, async (req, res) => {
   try {
     const existing = await queryOne("SELECT id FROM ranks WHERE id = ?", [req.params.id]);
     if (!existing) return res.status(404).json({ error: "Rank not found" });
@@ -215,7 +220,7 @@ async function advanceUserRank(userId) {
   return { rank: user.rank };
 }
 
-router.post("/update", async (req, res) => {
+router.post("/update", adminAuth, async (req, res) => {
   try {
     const users = await query("SELECT id FROM users WHERE role != 'admin' AND account_type IN ('student','registration_free') AND status = 'active'");
     let updatedCount = 0;
@@ -293,7 +298,7 @@ router.get("/progress/:userId", async (req, res) => {
   }
 });
 
-router.post("/pay-sale", async (req, res) => {
+router.post("/pay-sale", adminAuth, async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: "userId required" });
