@@ -1,7 +1,11 @@
-export const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
+﻿export const BACKEND_URL = window.location.origin.includes("localhost") ? "http://localhost:5000" : "https://everest-academy-production.up.railway.app";
 
 export function getAdminSession() {
-  try { return JSON.parse(localStorage.getItem("admin_session") || "{}"); } catch { return {}; }
+  try {
+    const raw = localStorage.getItem("admin_session") || localStorage.getItem("admin") || localStorage.getItem("adminUser") || "{}";
+    const o = JSON.parse(raw);
+    return { userId: o.userId || o.id || o.admin_id || o._id || "", token: o.token || o.session_token || o.sessionToken || "" };
+  } catch { return {}; }
 }
 
 export function getAdminHeaders() {
@@ -9,23 +13,47 @@ export function getAdminHeaders() {
   return { "Content-Type": "application/json", "x-user-id": s.userId || "", "x-session-token": s.token || "" };
 }
 
+let pendingMutations = 0;
+const pendingListeners = new Set();
+
+function emitPending() {
+  pendingListeners.forEach((fn) => { try { fn(pendingMutations); } catch { /* ignore */ } });
+}
+
+function beginMutation() { pendingMutations++; emitPending(); }
+function endMutation() { pendingMutations = Math.max(0, pendingMutations - 1); emitPending(); }
+
+export function getPendingCount() { return pendingMutations; }
+
+export function subscribePending(fn) {
+  pendingListeners.add(fn);
+  return () => pendingListeners.delete(fn);
+}
+
 export async function api(path, opts = {}) {
   const headers = { ...getAdminHeaders(), ...(opts.headers || {}) };
   const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
-  const r = await fetch(url, { headers, ...opts });
-  const text = await r.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = null; }
-  if (data && data.session_expired) {
-    localStorage.removeItem("admin_session");
-    window.location.reload();
-    throw new Error("Session expired");
+  const method = String(opts.method || "GET").toUpperCase();
+  const isMutation = method !== "GET" && method !== "HEAD";
+  if (isMutation) beginMutation();
+  try {
+    const r = await fetch(url, { headers, ...opts });
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = null; }
+    if (data && data.session_expired) {
+      localStorage.removeIt$("admin_session");
+      window.location.reload();
+      throw new Error("Session expired");
+    }
+    if (!r.ok) {
+      const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
+      throw new Error(msg);
+    }
+    return data;
+  } finally {
+    if (isMutation) endMutation();
   }
-  if (!r.ok) {
-    const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
-    throw new Error(msg);
-  }
-  return data;
 }
 
 export async function uploadApi(formData) {
@@ -36,7 +64,13 @@ export async function uploadApi(formData) {
   const headers = {};
   if (s.userId) headers["x-user-id"] = s.userId;
   if (s.token) headers["x-session-token"] = s.token;
-  const r = await fetch(uploadUrl, { method: "POST", headers, body: formData });
+  beginMutation();
+  let r;
+  try {
+    r = await fetch(uploadUrl, { method: "POST", headers, body: formData });
+  } finally {
+    endMutation();
+  }
   if (!r.ok) throw new Error("Upload failed");
   return r.json();
 }
@@ -52,7 +86,7 @@ function bunnyFileKey(file) {
 
 function getBunnySession(file) {
   try {
-    const raw = localStorage.getItem(bunnyFileKey(file));
+    const raw = localStorage.getIt$(bunnyFileKey(file));
     if (!raw) return null;
     const s = JSON.parse(raw);
     return s && s.videoId ? s : null;
@@ -60,11 +94,11 @@ function getBunnySession(file) {
 }
 
 function setBunnySession(file, videoId) {
-  try { localStorage.setItem(bunnyFileKey(file), JSON.stringify({ videoId, updatedAt: Date.now() })); } catch {}
+  try { localStorage.setIt$(bunnyFileKey(file), JSON.stringify({ videoId, updatedAt: Date.now() })); } catch {}
 }
 
 function clearBunnySession(file) {
-  try { localStorage.removeItem(bunnyFileKey(file)); } catch {}
+  try { localStorage.removeIt$(bunnyFileKey(file)); } catch {}
 }
 
 async function createBunnyVideo(title) {

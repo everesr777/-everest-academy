@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
 
@@ -24,7 +24,7 @@ export default function WeeklySettlementPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  const getAdminId = () => { try { return JSON.parse(localStorage.getItem("admin_session") || "{}").userId; } catch { return null; } };
+  const getAdminId = () => { try { const raw = localStorage.getItemem("admin_session") || localStorage.getItemem("admin") || localStorage.getItemem("adminUser") || "{}"; const o = JSON.parse(raw); return o.userId || o.id || o.admin_id || o._id || null; } catch { return null; } };
 
   const loadAll = () => {
     api("/api/mlm/settlement/status").then((d) => {
@@ -64,7 +64,7 @@ export default function WeeklySettlementPage() {
     setRunning(true); setMsg(""); setErr("");
     try {
       const r = await api("/api/mlm/settlement", { method: "POST", body: JSON.stringify({ admin_id: adminId }) });
-      setMsg(t(`✅ التسوية تمت للأسبوع ${r.weekStart} — تم صرف ${r.awarded} عمولة (${r.totalCommissions} EM)`, `✅ Settlement done for week ${r.weekStart} — ${r.awarded} commissions paid (${r.totalCommissions} EM)`));
+      setMsg(t(`✅ التسوية تمت للأسبوع ${r.weekStart} — تم صرف ${r.awarded} عمولة (${r.totalCommissions} $)`, `✅ Settlement done for week ${r.weekStart} — ${r.awarded} commissions paid (${r.totalCommissions} $)`));
       loadAll();
     } catch (e) { setErr(e.message); } finally { setRunning(false); }
   };
@@ -83,13 +83,13 @@ export default function WeeklySettlementPage() {
   };
 
   const reverseCommission = async (c) => {
-    if (!confirm(t(`خصم ${c.amount} E-Money من ${c.full_name} (عمولة ${c.rank_name})؟`, `Deduct ${c.amount} E-Money from ${c.full_name} (${c.rank_name} commission)?`))) return;
+    if (!confirm(t(`خصم ${c.amount} $ من ${c.full_name} (عمولة ${c.rank_name})؟`, `Deduct ${c.amount} $ from ${c.full_name} (${c.rank_name} commission)?`))) return;
     setReversing(c.id);
     try {
       await api("/api/mlm/settlement/reverse", { method: "POST", body: JSON.stringify({ user_id: c.user_id, week_start: c.week_start }) });
       const d = await api(`/api/mlm/settlement/week/${c.week_start}`);
       setWeekComms(d.commissions || []);
-      setMsg(t(`✅ تم خصم ${c.amount} E-Money من ${c.full_name}`, `✅ Deducted ${c.amount} E-Money from ${c.full_name}`));
+      setMsg(t(`✅ تم خصم ${c.amount} $ من ${c.full_name}`, `✅ Deducted ${c.amount} $ from ${c.full_name}`));
       setErr("");
     } catch (e) { setErr(e.message); } finally { setReversing(null); }
   };
@@ -284,7 +284,7 @@ export default function WeeklySettlementPage() {
                         {c.status === "cancelled" && <span className="text-amber-600 font-medium"> • {t("ملغاة", "Cancelled")}</span>}
                       </p>
                     </div>
-                    <span className={`text-sm font-bold ${c.status === "cancelled" ? "text-gray-400 line-through" : "text-everest-600"}`}>{c.amount} EM</span>
+                    <span className={`text-sm font-bold ${c.status === "cancelled" ? "text-gray-400 line-through" : "text-everest-600"}`}>{c.amount} $</span>
                     {c.status === "paid" && (
                       <button onClick={() => reverseCommission(c)} disabled={reversing === c.id}
                         className="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50">
