@@ -71,6 +71,59 @@ router.get("/directs/:userId", async (req, res) => {
 });
 
 // ─── Weekly progress: own sales (seneb) + direct student joins this week + progress to next rank ───
+// ─── Weekly progress for specific week (history view) ───
+router.get("/weekly/:userId/history", async (req, res) => {
+  try {
+    const uid = req.params.userId;
+    const weekStart = req.query.weekStart;
+    if (!weekStart) return res.status(400).json({ error: "weekStart required" });
+    const me = await queryOne("SELECT id, rank FROM users WHERE id = ?", [uid]);
+    if (!me) return res.status(404).json({ error: "User not found" });
+    const ws = new Date(weekStart + "T00:00:00Z");
+    const we = new Date(ws.getTime() + 6 * 86400000);
+    const weekEnd = we.toISOString().slice(0, 10);
+    const from = weekStart + " 00:00:00";
+    const to = weekEnd + " 23:59:59";
+    const mySalesRow = await queryOne(
+      "SELECT COUNT(*) AS c FROM enrollments WHERE user_id = ? AND status = 'approved' AND enrolled_at >= ? AND enrolled_at <= ?",
+      [uid, from, to]
+    );
+    const directs = await query(
+      "SELECT id, referral_code, full_name, rank, account_type, created_at FROM users WHERE (referred_by = ? OR created_by_user = ?) AND account_type = 'student' AND created_at >= ? AND created_at <= ? ORDER BY created_at DESC",
+      [uid, uid, from, to]
+    );
+    const directsRow = await queryOne(
+      "SELECT COUNT(*) AS c FROM users WHERE (referred_by = ? OR created_by_user = ?) AND account_type = 'student' AND created_at >= ? AND created_at <= ?",
+      [uid, uid, from, to]
+    );
+    const allRanks = await query("SELECT id, name, sales_required, min_direct, sort_order FROM ranks WHERE is_active = 1 ORDER BY sort_order ASC");
+    const cur = allRanks.find(r => r.name === me.rank);
+    const curPos = cur ? cur.sort_order : -1;
+    const next = allRanks.find(r => r.sort_order > curPos);
+    const myWeeklySales = mySalesRow ? (mySalesRow.c || 0) : 0;
+    const reqSales = next ? sReq(next) : null;
+    const wkNew = await query(
+      "SELECT id FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.depth = 1 AND u.account_type = 'student' AND u.status = 'active' AND u.created_at >= ? AND u.created_at <= ?",
+      [uid, from, to]
+    );
+    const weeklyNewStudents = wkNew.length;
+    const teamLeft = reqSales != null ? Math.max(0, reqSales - weeklyNewStudents) : null;
+    res.json({
+      weekStart,
+      weekEnd,
+      myWeeklySales,
+      weeklyNewStudents,
+      currentRank: me.rank || null,
+      directsWeekCount: directsRow ? (directsRow.c || 0) : 0,
+      directs: (directs || []).map(d => ({ id: d.id, referral_code: d.referral_code, full_name: d.full_name, rank: d.rank, createdAt: d.created_at })),
+      nextRank: next ? { name: next.name, salesRequired: reqSales, teamLeft, remainingSales: reqSales != null ? Math.max(0, reqSales - myWeeklySales) : null } : null,
+      isHistory: true,
+    });
+  } catch (err) {
+    console.error("mlm/weekly/history error:", err.message);
+    res.json({ weekStart: null, weekEnd: null, myWeeklySales: 0, weeklyNewStudents: 0, currentRank: null, directsWeekCount: 0, directs: [], nextRank: null, isHistory: true });
+  }
+});
 router.get("/weekly/:userId", async (req, res) => {
   try {
     const uid = req.params.userId;
