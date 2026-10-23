@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -165,7 +165,7 @@ export default function AffiliatePage() {
     }
   };
 
-  const eMoney = profileData?.e_money ?? user?.e_money ?? 0;
+  const eMoney = profileData?.usd_balance ?? user?.usd_balance ?? 0;
   const uniqueLevels = [...new Set(commissions.map((c) => c.level))].sort((a, b) => a - b);
 
   const countTeam = (nodes) => {
@@ -231,6 +231,34 @@ export default function AffiliatePage() {
             </button>
           ))}
         </div>
+          {showPrevWeek && prevWeekly && (
+            <div style={{ marginTop: 14, background: 'linear-gradient(180deg, rgba(255,215,0,0.06) 0%, rgba(20,20,30,0.85) 100%)', border: '1px solid rgba(255,215,0,0.25)', borderRadius: 16, padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ color: GOLD, fontWeight: 700 }}>اسبوع سابق • {prevWeekly.weekStart} - {prevWeekly.weekEnd}</div>
+                <div style={{ color: '#9ca3af', fontSize: 12 }}>للعرض فقط</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 10 }}>
+                <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 12, padding: 10 }}>
+                  <div style={{ color: '#9ca3af', fontSize: 12 }}>مبيعاتي</div>
+                  <div style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>{prevWeekly.myWeeklySales ?? 0}</div>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 12, padding: 10 }}>
+                  <div style={{ color: '#9ca3af', fontSize: 12 }}>طلاب جدد مباشرون</div>
+                  <div style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>{prevWeekly.directsWeekCount ?? prevWeekly.weeklyNewStudents ?? 0}</div>
+                </div>
+              </div>
+              {prevWeekly.directs && prevWeekly.directs.length > 0 && (
+                <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+                  {prevWeekly.directs.slice(0, 15).map(d => (
+                    <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '6px 10px' }}>
+                      <div style={{ color: '#fff' }}>{d.full_name}</div>
+                      <div style={{ color: '#9ca3af', fontSize: 12 }}>{d.rank || '-'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
         {/* ============ TEAM TAB ============ */}
         {tab === "team" && (
@@ -338,7 +366,7 @@ export default function AffiliatePage() {
                 },
                 {
                   label: t("رصيدك الحالي", "Your Balance"),
-                  value: eMoney + " E",
+                  value: eMoney + " $",
                   icon: "💰",
                   bg: "linear-gradient(135deg, #22c55e12, #22c55e06)",
                   border: "#22c55e22",
@@ -510,6 +538,7 @@ export default function AffiliatePage() {
               )}
             </div>
           </div>
+          
         )}
 
         {/* ============ COMMISSIONS TAB ============ */}
@@ -595,7 +624,7 @@ export default function AffiliatePage() {
                         borderRadius: 8,
                       }}
                     >
-                      +{item.amount} E-Money
+                      +{item.amount} $
                     </span>
                   </div>
                 ))}
@@ -629,8 +658,8 @@ export default function AffiliatePage() {
                   {t("رصيدك الحالي", "Your Balance")}
                 </p>
                 <p style={{ fontSize: 30, fontWeight: 800, color: GOLD, margin: 0, lineHeight: 1 }}>
-                  {user?.e_money || 0}
-                  <span style={{ fontSize: 13, fontWeight: 600, color: c.textMuted, marginLeft: 4 }}>E-Money</span>
+                  {user?.usd_balance || 0}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: c.textMuted, marginLeft: 4 }}>$</span>
                 </p>
               </div>
               <div
@@ -869,7 +898,7 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
                           background: isOutgoing ? "rgba(239,68,68,.08)" : "rgba(34,197,94,.08)",
                           padding: "3px 10px", borderRadius: 8,
                         }}>
-                          {isOutgoing ? "-" : "+"}{tx.amount} EM
+                          {isOutgoing ? "-" : "+"}{tx.amount} $
                         </span>
                       </div>
                     );
@@ -935,6 +964,30 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
             <div style={{ background: c.bgCard, borderRadius: 20, padding: "20px 18px", marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.03)" }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8, color: c.text }}>
                 🏔️ {t("التقدم نحو الرتبة القادمة", "Progress To Next Rank")}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (showPrevWeek) { setShowPrevWeek(false); return; }
+                    if (!prevWeekly && !prevWeekLoading) {
+                      setPrevWeekLoading(true);
+                      const getPrev = () => {
+                        const tz='Africa/Cairo', dow=5;
+                        const p=new Intl.DateTimeFormat('en-GB',{timeZone:tz,weekday:'long',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+                        const gm=t=>p.find(x=>x.type===t).value;
+                        const dmap={Sunday:0,Monday:1,Tuesday:2,Wednesday:3,Thursday:4,Friday:5,Saturday:6};
+                        const cur=dmap[gm('weekday')];
+                        let diff=(cur-dow+7)%7; diff = diff===0?7:diff; diff = diff+7;
+                        const base=new Date(Date.UTC(+gm('year'),+gm('month')-1,+gm('day')));
+                        base.setUTCDate(base.getUTCDate()-diff);
+                        return base.toISOString().slice(0,10);
+                      };
+                      api(`/api/mlm/weekly/${user.id}/history?weekStart=${getPrev()}`).then(r=>{setPrevWeekly(r); setShowPrevWeek(true);}).catch(()=>{}).finally(()=>setPrevWeekLoading(false));
+                    } else { setShowPrevWeek(true); }
+                  }}
+                  style={{ marginTop: 10, padding: '6px 12px', borderRadius: 10, border: '1px solid rgba(255,215,0,0.4)', background: 'rgba(255,215,0,0.08)', color: GOLD, cursor: 'pointer', fontSize: 13 }}
+                >
+                  {prevWeekLoading ? '...جاري التحميل' : (showPrevWeek ? 'اخفاء الاسبوع السابق' : 'الاسبوع السابق')}
+                </button>
                 {weekly?.currentRank && (
                   <span style={{ fontSize: 11, background: `${GOLD}18`, color: GOLD, padding: "3px 10px", borderRadius: 20, fontWeight: 700 }}>
                     {weekly.currentRank}
@@ -1012,6 +1065,7 @@ api(`/api/mlm/transfers/${user.id}`).then(setTransferHistory).catch(() => {});
               )}
             </div>
           </div>
+          
         )}
       </div>
 
