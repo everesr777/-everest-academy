@@ -91,6 +91,17 @@ function createDb() {
     payment_proof TEXT, expires_at TEXT, enrolled_at TEXT DEFAULT (datetime('now','localtime')),
     sales_counted INTEGER DEFAULT 0
   )`);
+  db.run(`CREATE TABLE weekly_direct_assignments (
+    id TEXT PRIMARY KEY, upline_id TEXT NOT NULL, direct_id TEXT NOT NULL,
+    week_start TEXT NOT NULL, assigned_by TEXT, reason TEXT,
+    assigned_at TEXT DEFAULT (datetime('now','localtime')),
+    UNIQUE(upline_id, direct_id, week_start)
+  )`);
+  db.run(`CREATE TABLE weekly_settlement_audits (
+    id TEXT PRIMARY KEY, week_start TEXT NOT NULL, source TEXT,
+    status TEXT DEFAULT 'open', payload TEXT,
+    created_at TEXT DEFAULT (datetime('now','localtime')), completed_at TEXT
+  )`);
   return db;
 }
 
@@ -127,6 +138,10 @@ mock.module("../db.js", {
 
 const { runWeeklySettlement, getCurrentWeek, getSettlementWeek, getSettlementSettings, settlementConfigDisplay, nextSettlementTime, partsInTz, refreshLeadersSnapshot } =
   await import("./weeklySettlement.js");
+const { previewAssignments, assignEmailsToWeek, listAssignments, removeAssignment } =
+  await import("./weeklyAssignments.js");
+const { snapshotWeek, startAudit, finishAudit, getAuditById, listAudits, diffById } =
+  await import("./weeklyAudit.js");
 
 function seedRanks(db) {
   const stmt = db.prepare("INSERT INTO ranks (id,name,sales_required,bonus,sort_order,min_direct,weekly_bonus) VALUES (?,?,?,?,?,?,?)");
@@ -519,3 +534,212 @@ test("minimum direct sales threshold is configurable", async () => {
   await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
   assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'u-2'")[0].commission_status, "not_eligible");
 });
+
+// ─── Retroactive weekly assignments ───────────────────────────────────────────
+
+// A direct that already existed before the week can be assigned to that week explicitly,
+// without touching users.created_at. The gate must then count it.
+test("retroactive assignment makes a pre-week direct count for the week gate", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "up1", name: "Upline One", email: "up1@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "rd1", name: "Retro One", email: "rd1@t.com", rank: "Star", referred_by: "up1", created_at: W_PREV });
+  insertUser(db, { id: "rd2", name: "Retro Two", email: "rd2@t.com", rank: "Star", referred_by: "up1", created_at: W_PREV });
+  insertDirectClosure(db, "up1", "rd1");
+  insertDirectClosure(db, "up1", "rd2");
+  ctx = apiFor(db);
+
+  const preview = await previewAssignments({ weekStart: WEEK, emails: ["rd1@t.com", "rd2@t.com"] });
+  assert.equal(preview.weekStart, WEEK);
+  assert.equal(preview.weekEnd, WEEK_END);
+  assert.equal(preview.items.length, 2);
+  for (const item of preview.items) {
+    assert.equal(item.found, true);
+    assert.equal(item.createdInsideWeek, false, "account predates the week");
+    assert.equal(item.needsAssignment, true);
+    assert.equal(item.uplines.length, 1);
+    assert.equal(item.uplines[0].uplineId, "up1");
+    assert.equal(item.uplines[0].weeklyGateBefore, 0);
+    assert.equal(item.uplines[0].eligibleBefore, false);
+    assert.equal(item.uplines[0].alreadyPaidThisWeek, null);
+  }
+  assert.equal(preview.items[0].uplines[0].weeklyGateAfter, 2, "batch-aware preview counts both previewed directs");
+  assert.equal(preview.items[0].uplines[0].eligibleAfter, true, "two directs meet the gate");
+  assert.equal(preview.items[0].uplines[0].inThisBatch, true);
+
+  // created_at is untouched by the assignment
+  const before = ctx.q("SELECT created_at FROM users WHERE id = 'rd1'")[0].created_at;
+
+  const result = await assignEmailsToWeek({ weekStart: WEEK, emails: ["rd1@t.com", "rd2@t.com"], assignedBy: "test" });
+  assert.equal(result.created.length, 2);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_direct_assignments WHERE week_start = ? AND upline_id = 'up1'", [WEEK])[0].c, 2);
+  assert.equal(ctx.q("SELECT created_at FROM users WHERE id = 'rd1'")[0].created_at, before, "created_at must never change");
+
+  // idempotent: re-running assigns nothing new
+  const again = await assignEmailsToWeek({ weekStart: WEEK, emails: ["rd1@t.com", "rd2@t.com"], assignedBy: "test" });
+  assert.equal(again.created.length, 0);
+  assert.equal(again.skipped.filter(s => s.reason === "already_assigned").length, 2);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_direct_assignments WHERE week_start = ?", [WEEK])[0].c, 2);
+
+  // settlement now counts both assigned directs, pays once
+  const settle = await runWeeklySettlement({ triggeredBy: "manual", weekStart: WEEK });
+  assert.equal(settle.success, true);
+  assert.equal(settle.awarded, 1);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_commissions WHERE week_start = ? AND user_id = 'up1'", [WEEK])[0].c, 1);
+  assert.equal(Number(ctx.q("SELECT e_money FROM users WHERE id = 'up1'")[0].e_money), 1500);
+  const history = ctx.q("SELECT qualified_direct_sales, commission_status FROM weekly_history WHERE user_id = 'up1' AND week_start = ?", [WEEK])[0];
+  assert.equal(history.qualified_direct_sales, 2);
+  assert.equal(history.commission_status, "paid");
+});
+
+test("recompute requires an explicit user scope", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "u-x", name: "X", email: "x@t.com", rank: "Executive" });
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "manual", weekStart: WEEK, force: true, recompute: true });
+  assert.equal(res.success, false);
+  assert.match(res.error, /onlyUserIds/);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_history")[0].c, 0, "nothing must be written on a rejected recompute");
+});
+
+test("targeted recompute never pays the same user twice and leaves other members untouched", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "up1", name: "Upline One", email: "up1@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "up2", name: "Upline Two", email: "up2@t.com", rank: "Executive", referred_by: null });
+  // up1 gets 2 pre-week directs that will be assigned retroactively
+  insertUser(db, { id: "r1", name: "R1", email: "r1@t.com", rank: "Star", referred_by: "up1", created_at: W_PREV });
+  insertUser(db, { id: "r2", name: "R2", email: "r2@t.com", rank: "Star", referred_by: "up1", created_at: W_PREV });
+  insertDirectClosure(db, "up1", "r1");
+  insertDirectClosure(db, "up1", "r2");
+  // up2 is a normal, unaffected user already eligible this week
+  insertUser(db, { id: "n1", name: "N1", email: "n1@t.com", rank: "Star", referred_by: "up2", created_at: W_IN });
+  insertUser(db, { id: "n2", name: "N2", email: "n2@t.com", rank: "Star", referred_by: "up2", created_at: W_IN });
+  insertDirectClosure(db, "up2", "n1");
+  insertDirectClosure(db, "up2", "n2");
+  ctx = apiFor(db);
+
+  await assignEmailsToWeek({ weekStart: WEEK, emails: ["r1@t.com", "r2@t.com"], assignedBy: "test" });
+  const first = await runWeeklySettlement({ triggeredBy: "manual", weekStart: WEEK });
+  assert.equal(first.success, true);
+  assert.equal(first.awarded, 2);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_commissions WHERE week_start = ?", [WEEK])[0].c, 2);
+
+  const balanceBefore = {
+    up1: Number(ctx.q("SELECT e_money FROM users WHERE id = 'up1'")[0].e_money),
+    up2: Number(ctx.q("SELECT e_money FROM users WHERE id = 'up2'")[0].e_money),
+  };
+  const up2HistoryBefore = ctx.q("SELECT * FROM weekly_history WHERE user_id = 'up2' AND week_start = ?", [WEEK]);
+
+  const second = await runWeeklySettlement({ triggeredBy: "manual", weekStart: WEEK, force: true, recompute: true, onlyUserIds: ["up1"] });
+  assert.equal(second.success, true);
+  assert.equal(second.awarded, 0, "recompute must not pay again");
+  assert.equal(second.scoped_users, 1);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_commissions WHERE week_start = ? AND user_id = 'up1'", [WEEK])[0].c, 1);
+  assert.equal(Number(ctx.q("SELECT e_money FROM users WHERE id = 'up1'")[0].e_money), balanceBefore.up1);
+  assert.equal(Number(ctx.q("SELECT e_money FROM users WHERE id = 'up2'")[0].e_money), balanceBefore.up2);
+  assert.equal(ctx.q("SELECT commission_status FROM weekly_history WHERE user_id = 'up1' AND week_start = ?", [WEEK])[0].commission_status, "already_paid");
+  assert.deepEqual(ctx.q("SELECT * FROM weekly_history WHERE user_id = 'up2' AND week_start = ?", [WEEK]), up2HistoryBefore,
+    "out-of-scope history rows must not be rewritten");
+  // exactly one rank-up notification per promoted member, none duplicated by the recompute
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM notifications WHERE user_id = 'up1' AND title LIKE '%Rank Up%'")[0].c, 0);
+});
+
+test("recompute preserves the historical leaderboard when weekly sales were already consumed", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "lb1", name: "LB1", email: "lb1@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "lb1d1", name: "LB1D1", email: "lb1d1@t.com", rank: "Star", referred_by: "lb1", created_at: W_IN });
+  insertUser(db, { id: "lb1d2", name: "LB1D2", email: "lb1d2@t.com", rank: "Star", referred_by: "lb1", created_at: W_IN });
+  insertDirectClosure(db, "lb1", "lb1d1");
+  insertDirectClosure(db, "lb1", "lb1d2");
+  insertWeeklySales(db, "lb1", WEEK, 40);
+  insertWeeklySales(db, "lb1d1", WEEK, 10);
+  ctx = apiFor(db);
+
+  await runWeeklySettlement({ triggeredBy: "manual", weekStart: WEEK });
+  const snapshotBefore = ctx.q("SELECT * FROM leaderboard_history WHERE week_start = ? ORDER BY rank_position", [WEEK]);
+  assert.ok(snapshotBefore.length > 0);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_sales WHERE week_start = ?", [WEEK])[0].c, 0);
+
+  const res = await runWeeklySettlement({ triggeredBy: "manual", weekStart: WEEK, force: true, recompute: true, onlyUserIds: ["lb1"] });
+  assert.equal(res.success, true);
+  assert.deepEqual(ctx.q("SELECT * FROM leaderboard_history WHERE week_start = ? ORDER BY rank_position", [WEEK]), snapshotBefore);
+});
+
+test("removeAssignment drops the assignment and the direct stops counting", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "up3", name: "Upline Three", email: "up3@t.com", rank: "Executive", referred_by: null });
+  insertUser(db, { id: "r3", name: "R3", email: "r3@t.com", rank: "Star", referred_by: "up3", created_at: W_PREV });
+  insertDirectClosure(db, "up3", "r3");
+  ctx = apiFor(db);
+
+  const created = await assignEmailsToWeek({ weekStart: WEEK, emails: ["r3@t.com"], assignedBy: "test" });
+  assert.equal(created.created.length, 1);
+  const id = created.created[0].id;
+
+  const listed = await listAssignments(WEEK);
+  assert.equal(listed.assignments.length, 1);
+  assert.equal(listed.assignments[0].direct_email, "r3@t.com");
+
+  const removed = await removeAssignment(id);
+  assert.equal(removed.removed, true);
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_direct_assignments WHERE week_start = ?", [WEEK])[0].c, 0);
+  const missing = await removeAssignment(id);
+  assert.equal(missing.removed, false);
+});
+
+test("assignment preview reports unknown emails instead of failing", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  ctx = apiFor(db);
+  const preview = await previewAssignments({ weekStart: WEEK, emails: ["ghost@nowhere.com"] });
+  assert.equal(preview.items.length, 1);
+  assert.equal(preview.items[0].found, false);
+  assert.equal(preview.items[0].reason, "not_found");
+});
+
+test("audit snapshot is stored before mutation and completed afterwards", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "au1", name: "Audit User", email: "au1@t.com", rank: "Executive", e_money: 100 });
+  ctx = apiFor(db);
+
+  const before = await snapshotWeek(WEEK);
+  assert.equal(before.users.length, 1);
+  const id = await startAudit({ weekStart: WEEK, source: "test", before });
+
+  const open = await getAuditById(id);
+  assert.equal(open.status, "open");
+  assert.equal(open.week_start, WEEK);
+  assert.equal(open.payload.before.users[0].id, "au1");
+  assert.equal(open.payload.after, undefined);
+
+  // simulate the mutation
+  ctx.q("UPDATE users SET e_money = 250 WHERE id = 'au1'");
+  await ctx.execute("INSERT INTO weekly_commissions (id,user_id,rank_name,amount,week_start,week_end,status) VALUES ('wc-au','au1','Executive',150,?,?, 'paid')", [WEEK, WEEK_END]);
+
+  const after = await snapshotWeek(WEEK);
+  await finishAudit(id, { after, summary: { assignments: { created: [{ id: "as-1" }] } } });
+
+  const done = await getAuditById(id);
+  assert.equal(done.status, "complete");
+  assert.equal(done.payload.after.users[0].e_money, 250);
+  assert.equal(done.payload.after.commissions.length, 1);
+  assert.equal(diffById(before.commissions, after.commissions).length, 1);
+
+  const listed = await listAudits(WEEK);
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].id, id);
+});
+
+

@@ -328,6 +328,27 @@ function createSchema(driver, isTursoDb) {
       weekly_sales INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now','localtime')),
       UNIQUE(week_start, rank_position)
+    )`,
+    `CREATE TABLE IF NOT EXISTS weekly_direct_assignments (
+      id TEXT PRIMARY KEY,
+      upline_id TEXT NOT NULL,
+      direct_id TEXT NOT NULL,
+      week_start TEXT NOT NULL,
+      assigned_by TEXT,
+      assigned_at TEXT DEFAULT (datetime('now','localtime')),
+      reason TEXT,
+      UNIQUE(upline_id, direct_id, week_start),
+      FOREIGN KEY (upline_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (direct_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS weekly_settlement_audits (
+      id TEXT PRIMARY KEY,
+      week_start TEXT NOT NULL,
+      source TEXT,
+      status TEXT DEFAULT 'open',
+      payload TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      completed_at TEXT
     )`
   ];
 

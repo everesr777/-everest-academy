@@ -24,7 +24,16 @@ export default function WeeklySettlementPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  const getAdminId = () => { try { const raw = localStorage.getItemem("admin_session") || localStorage.getItemem("admin") || localStorage.getItemem("adminUser") || "{}"; const o = JSON.parse(raw); return o.userId || o.id || o.admin_id || o._id || null; } catch { return null; } };
+  // ── Retroactive weekly inclusion (assign an existing account to a past week) ──
+  const [retroWeek, setRetroWeek] = useState("");
+  const [retroEmails, setRetroEmails] = useState("");
+  const [retroPreview, setRetroPreview] = useState(null);
+  const [retroAssignments, setRetroAssignments] = useState([]);
+  const [retroBusy, setRetroBusy] = useState("");
+  const [retroMsg, setRetroMsg] = useState("");
+  const [retroErr, setRetroErr] = useState("");
+
+  const getAdminId = () => { try { const raw = localStorage.getItem("admin_session") || localStorage.getItem("admin") || localStorage.getItem("adminUser") || "{}"; const o = JSON.parse(raw); return o.userId || o.id || o.admin_id || o._id || null; } catch { return null; } };
 
   const loadAll = () => {
     api("/api/mlm/settlement/status").then((d) => {
@@ -96,6 +105,83 @@ export default function WeeklySettlementPage() {
 
   const cfg = status?.config || {};
   const next = status?.nextSettlement || null;
+
+  // ── Retroactive weekly inclusion helpers ──
+  const retroEmailList = () => retroEmails.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+
+  const loadRetroAssignments = async (ws) => {
+    if (!ws) { setRetroAssignments([]); return; }
+    try {
+      const d = await api(`/api/mlm/weekly-assignments?weekStart=${encodeURIComponent(ws)}`);
+      setRetroAssignments(d.assignments || []);
+    } catch { setRetroAssignments([]); }
+  };
+
+  useEffect(() => {
+    if (!retroWeek && status?.runs?.length) setRetroWeek(status.runs[0].week_start);
+  }, [status]);
+
+  useEffect(() => { loadRetroAssignments(retroWeek); }, [retroWeek]);
+
+  const previewRetro = async () => {
+    setRetroMsg(""); setRetroErr(""); setRetroPreview(null);
+    const emails = retroEmailList();
+    if (!retroWeek) { setRetroErr(t("اختر الأسبوع أولاً", "Choose the week first")); return; }
+    if (emails.length === 0) { setRetroErr(t("أدخل بريد حساب واحد على الأقل", "Enter at least one account email")); return; }
+    setRetroBusy("preview");
+    try {
+      const d = await api("/api/mlm/weekly-assignments/preview", {
+        method: "POST",
+        body: JSON.stringify({ weekStart: retroWeek, emails }),
+      });
+      setRetroPreview(d);
+    } catch (e) { setRetroErr(e.message); } finally { setRetroBusy(""); }
+  };
+
+  const applyRetro = async (resettle) => {
+    const emails = retroEmailList();
+    if (!retroWeek || emails.length === 0) { setRetroErr(t("اختر الأسبوع وأدخل البريدات", "Choose the week and enter emails")); return; }
+    const warn = resettle
+      ? t("سيتم تخصيص الحسابات للأسبوع وإعادة حساب عمولات الرعاة المتأثرين فقط. لن يُدفع أي مستخدم مرتين. متابعة؟",
+          "Accounts will be assigned to the week and only the affected uplines will be recalculated. No user is ever paid twice. Continue?")
+      : t("سيتم تخصيص الحسابات لهذا الأسبوع بدون إعادة تسوية. متابعة؟",
+          "Accounts will be assigned to this week without recomputing. Continue?");
+    if (!confirm(warn)) return;
+    setRetroBusy(resettle ? "resettle" : "assign"); setRetroMsg(""); setRetroErr("");
+    try {
+      const assign = await api("/api/mlm/weekly-assignments", {
+        method: "POST",
+        body: JSON.stringify({ weekStart: retroWeek, emails, dryRun: false, reason: "retroactive inclusion (admin UI)" }),
+      });
+      let result = null;
+      if (resettle) {
+        result = await api("/api/mlm/weekly-settlement/recompute", {
+          method: "POST",
+          body: JSON.stringify({ weekStart: retroWeek }),
+        });
+      }
+      setRetroMsg(
+        t(`✅ تم تخصيص ${assign.created.length} ارتباط (تخطي ${assign.skipped.length})` +
+          (result ? ` — أُعيد حساب ${result.scoped_users || 0} راعي، عمولات جديدة: ${result.awarded || 0} (${result.totalCommissions || 0} $)` : "") +
+          (result && result.auditId ? ` — رقم التدقيق: ${result.auditId}` : ""),
+          `✅ ${assign.created.length} assignment(s) created (${assign.skipped.length} skipped)` +
+          (result ? ` — ${result.scoped_users || 0} upline(s) recalculated, new commissions: ${result.awarded || 0} (${result.totalCommissions || 0} $)` : "") +
+          (result && result.auditId ? ` — audit id: ${result.auditId}` : ""))
+      );
+      await loadRetroAssignments(retroWeek);
+      loadAll();
+    } catch (e) { setRetroErr(e.message); } finally { setRetroBusy(""); }
+  };
+
+  const removeRetro = async (id) => {
+    if (!confirm(t("إزالة هذا الارتباط من الأسبوع؟ لن تُخصم أي عمولة مصروفة تلقائياً.", "Remove this week assignment? Already paid commissions are NOT reversed automatically."))) return;
+    setRetroBusy(id); setRetroMsg(""); setRetroErr("");
+    try {
+      await api(`/api/mlm/weekly-assignments/${id}`, { method: "DELETE" });
+      setRetroMsg(t("✅ تم حذف الارتباط", "✅ Assignment removed"));
+      await loadRetroAssignments(retroWeek);
+    } catch (e) { setRetroErr(e.message); } finally { setRetroBusy(""); }
+  };
 
   return (
     <div>
@@ -219,6 +305,146 @@ export default function WeeklySettlementPage() {
                     <p className="text-xs text-gray-400">{l.rank || t("بدون رتبة", "No rank")}</p>
                   </div>
                   <span className="text-sm font-bold text-everest-600">{l.weekly_sales} {t("مبيعة", "sales")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Retroactive weekly inclusion */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div>
+            <h3 className="text-lg font-bold">{t("🕰️ تضمين رجعي في أسبوع سابق", "🕰️ Retroactive Weekly Inclusion")}</h3>
+            <p className="text-sm text-gray-400 mt-1">
+              {t("اجعل حساباً موجوداً يُحسب كبيعة مباشرة جديدة لأسبوع سبق تسويته — دون تغيير تاريخ إنشاء الحساب، ودون دفع أي عمولة مرتين.",
+                 "Make an existing account count as a new direct sale for an already-settled week — without changing its created_at and without ever paying a commission twice.")}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("بداية الأسبوع (الجمعة)", "Week start (Friday)")}</label>
+            <input type="date" value={retroWeek} onChange={(e) => { setRetroWeek(e.target.value); setRetroPreview(null); }}
+              className="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-everest-500 focus:border-everest-500 outline-none" />
+            {status?.runs?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {status.runs.slice(0, 6).map((r) => (
+                  <button key={r.week_start} onClick={() => { setRetroWeek(r.week_start); setRetroPreview(null); }}
+                    className={`px-2 py-1 rounded-lg text-xs transition ${retroWeek === r.week_start ? "bg-everest-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                    {r.week_start}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("بريدات الحسابات (سطر لكل بريد أو مفصولة بفاصلة)", "Account emails (one per line or comma separated)")}</label>
+            <textarea rows={4} value={retroEmails} onChange={(e) => { setRetroEmails(e.target.value); setRetroPreview(null); }}
+              placeholder={"user1@gmail.com\nuser2@gmail.com"}
+              className="w-full px-4 py-2.5 border rounded-xl text-sm font-mono focus:ring-2 focus:ring-everest-500 focus:border-everest-500 outline-none" />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 mt-4">
+          <button onClick={previewRetro} disabled={!!retroBusy}
+            className="px-4 py-2.5 bg-gray-900 text-white rounded-xl font-medium text-sm hover:bg-gray-800 transition disabled:opacity-50">
+            {retroBusy === "preview" ? t("جاري المعاينة...", "Previewing...") : t("🔍 معاينة الأثر (بدون كتابة)", "🔍 Preview impact (read-only)")}
+          </button>
+          <button onClick={() => applyRetro(false)} disabled={!!retroBusy}
+            className="px-4 py-2.5 bg-everest-600 text-white rounded-xl font-medium text-sm hover:bg-everest-700 transition disabled:opacity-50">
+            {retroBusy === "assign" ? t("جاري التخصيص...", "Assigning...") : t("📌 تخصيص فقط", "📌 Assign only")}
+          </button>
+          <button onClick={() => applyRetro(true)} disabled={!!retroBusy}
+            className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-medium text-sm hover:bg-amber-600 transition disabled:opacity-50">
+            {retroBusy === "resettle" ? t("جاري التخصيص وإعادة التسوية...", "Assigning & recomputing...") : t("♻️ تخصيص + إعادة تسوية المتأثرين", "♻️ Assign + recompute affected")}
+          </button>
+        </div>
+
+        {retroMsg && <p className="text-sm text-green-600 mt-3 bg-green-50 px-3 py-2 rounded-lg">{retroMsg}</p>}
+        {retroErr && <p className="text-sm text-red-600 mt-3 bg-red-50 px-3 py-2 rounded-lg">{retroErr}</p>}
+
+        {/* Preview result */}
+        {retroPreview && (
+          <div className="mt-5 border-t border-gray-100 pt-4">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <h4 className="text-sm font-bold text-gray-800">
+                {t(`معاينة ${retroPreview.weekStart} → ${retroPreview.weekEnd}`, `Preview ${retroPreview.weekStart} → ${retroPreview.weekEnd}`)}
+              </h4>
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                {t(`الحد الأدنى ${retroPreview.minDirectSales}`, `min ${retroPreview.minDirectSales}`)}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${retroPreview.settlement ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                {retroPreview.settlement ? t(`التسوية: ${retroPreview.settlement.status}`, `settlement: ${retroPreview.settlement.status}`) : t("غير مسوّى", "not settled")}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {(retroPreview.items || []).map((item, i) => (
+                <div key={i} className={`rounded-xl border p-3 ${!item.found || item.blockedReason ? "border-red-200 bg-red-50/40" : "border-gray-200"}`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-bold text-gray-900">{item.email}</span>
+                    {!item.found && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{t("غير موجود", "not found")}</span>}
+                    {item.found && (
+                      <>
+                        <span className="text-xs text-gray-500">{item.fullName} • {item.accountType} • {item.status}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.createdInsideWeek ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                          {item.createdInsideWeek ? t("داخل الأسبوع أصلاً", "already inside the week") : t("يحتاج تخصيصاً رجعياً", "needs retroactive assignment")}
+                        </span>
+                        {item.blockedReason && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{item.blockedReason}</span>}
+                      </>
+                    )}
+                  </div>
+                  {(item.uplines || []).length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {item.uplines.map((u) => (
+                        <div key={u.uplineId} className="bg-white rounded-lg border border-gray-100 px-3 py-2 text-xs">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="font-semibold text-gray-800">{u.uplineName}</span>
+                            <span className="text-gray-400">{u.uplineEmail}</span>
+                            <span className="text-gray-500">{t("الرتبة", "rank")}: {u.uplineRank || "—"} → <b className="text-everest-700">{u.projectedRank || "—"}</b></span>
+                            <span className={`px-1.5 py-0.5 rounded ${u.eligibleAfter ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                              {t("البوابة", "gate")}: {u.weeklyGateBefore} → {u.weeklyGateAfter} / {u.minRequired}
+                            </span>
+                            <span className="text-gray-500">{t("عمولة متوقعة", "projected")}: <b className="text-everest-700">{u.projectedCommission} $</b></span>
+                            {u.alreadyAssigned && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{t("مخصص بالفعل", "already assigned")}</span>}
+                            {u.alreadyPaidThisWeek && <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">{t(`مدفوع بالفعل ${u.alreadyPaidThisWeek.amount} $`, `already paid ${u.alreadyPaidThisWeek.amount} $`)}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {item.found && !item.blockedReason && (item.uplines || []).length === 0 && (
+                    <p className="text-xs text-red-600 mt-1">{t("لا يوجد راعٍ مباشر في شجرة العلاقات", "No direct upline found in the relationship tree")}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Existing assignments for the selected week */}
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-bold text-gray-800">{t("الارتباطات المسجلة لهذا الأسبوع", "Recorded assignments for this week")}</h4>
+            <span className="text-xs text-gray-400">{retroAssignments.length}</span>
+          </div>
+          {retroAssignments.length === 0 ? (
+            <p className="text-xs text-gray-400 py-2">{t("لا توجد ارتباطات رجعية", "No retroactive assignments")}</p>
+          ) : (
+            <div className="space-y-1.5">
+              {retroAssignments.map((a) => (
+                <div key={a.id} className="flex flex-wrap items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 text-xs">
+                  <span className="font-medium text-gray-800">{a.direct_email}</span>
+                  <span className="text-gray-400">→</span>
+                  <span className="text-gray-700">{a.upline_email}</span>
+                  <span className="text-gray-400">• {a.assigned_at}</span>
+                  <button onClick={() => removeRetro(a.id)} disabled={!!retroBusy}
+                    className="ml-auto px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50">
+                    {retroBusy === a.id ? t("جاري...", "Working...") : t("إزالة", "Remove")}
+                  </button>
                 </div>
               ))}
             </div>

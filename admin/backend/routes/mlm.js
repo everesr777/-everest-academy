@@ -3,6 +3,8 @@ import { query, queryOne, execute } from "../db.js";
 import { v4 as uuidv4 } from "uuid";
 import { adminAuth } from "../middleware/sessionAuth.js";
 import { runWeeklySettlement, getSettlementSettings, getCurrentWeek, nextSettlementTime, settlementConfigDisplay, weekStartForDate, weekEndFromStart } from "../services/weeklySettlement.js";
+import { previewAssignments, assignEmailsToWeek, listAssignments, removeAssignment } from "../services/weeklyAssignments.js";
+import { snapshotWeek, startAudit, finishAudit, getAuditById, listAudits } from "../services/weeklyAudit.js";
 
 const router = express.Router();
 
@@ -865,6 +867,169 @@ router.post("/backfill-closure", async (req, res) => {
     }
     res.json({ success: true, processed: count });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Retroactive weekly assignments
+// Allows an admin to make an existing account count as a NEW direct sale for an
+// earlier week WITHOUT touching the account's original created_at.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /mlm/weekly-assignments?weekStart=YYYY-MM-DD
+router.get("/weekly-assignments", adminAuth, async (req, res) => {
+  try {
+    const { weekStart } = req.query;
+    if (!weekStart) return res.status(400).json({ error: "weekStart required" });
+    const data = await listAssignments(weekStart);
+    res.json(data);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /mlm/weekly-assignments/preview  { weekStart, emails: [] }
+// Read-only: explains eligibility impact before anything is written.
+router.post("/weekly-assignments/preview", adminAuth, async (req, res) => {
+  try {
+    const { weekStart, emails } = req.body || {};
+    const list = Array.isArray(emails) ? emails : [emails].filter(Boolean);
+    if (!weekStart) return res.status(400).json({ error: "weekStart required" });
+    if (list.length === 0) return res.status(400).json({ error: "emails required" });
+    const data = await previewAssignments({ weekStart, emails: list });
+    res.json(data);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /mlm/weekly-assignments  { weekStart, emails: [], reason, dryRun }
+router.post("/weekly-assignments", adminAuth, async (req, res) => {
+  try {
+    const { weekStart, emails, reason, dryRun } = req.body || {};
+    const list = Array.isArray(emails) ? emails : [emails].filter(Boolean);
+    if (!weekStart) return res.status(400).json({ error: "weekStart required" });
+    if (list.length === 0) return res.status(400).json({ error: "emails required" });
+    const adminId = req.headers["x-admin-id"] || "unknown";
+    const result = await assignEmailsToWeek({ weekStart, emails: list, reason, assignedBy: adminId, dryRun: !!dryRun });
+    if (!result.dryRun && result.created.length > 0) {
+      await logAdminAction(
+        req,
+        "WEEKLY_ASSIGN_DIRECTS",
+        null,
+        null,
+        `week=${result.weekStart} emails=${list.join(",")} created=${result.created.length}`
+      );
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /mlm/weekly-assignments/:id
+router.delete("/weekly-assignments/:id", adminAuth, async (req, res) => {
+  try {
+    const result = await removeAssignment(req.params.id);
+    if (!result.removed) return res.status(404).json({ error: result.reason });
+    await logAdminAction(req, "WEEKLY_ASSIGN_REMOVE", null, null,
+      `id=${req.params.id} week=${result.assignment.week_start} direct=${result.assignment.direct_id}`);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /mlm/weekly-settlement/recompute  { weekStart, userIds? }
+// Re-runs an already-settled week for the members affected by retroactive assignments.
+// Never pays the same user twice: existing weekly_commissions rows are preserved and
+// checked per user. When userIds is omitted, the uplines of that week's assignments are used.
+// A before/after audit snapshot is stored in weekly_settlement_audits for rollback.
+router.post("/weekly-settlement/recompute", adminAuth, async (req, res) => {
+  try {
+    const { weekStart, userIds } = req.body || {};
+    if (!weekStart) return res.status(400).json({ error: "weekStart required" });
+
+    let scope = Array.isArray(userIds) ? userIds.filter(Boolean) : [];
+    if (scope.length === 0) {
+      const { assignments } = await listAssignments(weekStart);
+      scope = [...new Set(assignments.map(a => a.upline_id).filter(Boolean))];
+    }
+    if (scope.length === 0) {
+      return res.status(400).json({ error: "no assignments for this week — nothing to recompute" });
+    }
+
+    const before = await snapshotWeek(weekStart);
+    const auditId = await startAudit({ weekStart, source: "api", before });
+
+    let result;
+    try {
+      result = await runWeeklySettlement({ triggeredBy: "manual", weekStart, force: true, recompute: true, onlyUserIds: scope });
+    } finally {
+      const after = await snapshotWeek(weekStart);
+      await finishAudit(auditId, {
+        after,
+        summary: {
+          weekStart,
+          scope,
+          settlement: result
+            ? { success: result.success, awarded: result.awarded || 0, totalCommissions: result.totalCommissions || 0, error: result.error || null }
+            : { success: false, error: "aborted" },
+        },
+      });
+    }
+
+    if (!result.success && result.error) return res.status(400).json({ ...result, auditId });
+    await logAdminAction(req, "WEEKLY_SETTLEMENT_RECOMPUTE", null, null,
+      `week=${weekStart} users=${scope.length} awarded=${result.awarded || 0} commissions=${result.totalCommissions || 0} audit=${auditId}`);
+    res.json({ ...result, auditId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /mlm/weekly-settlement/audits?weekStart=YYYY-MM-DD  — rollback snapshots
+router.get("/weekly-settlement/audits", adminAuth, async (req, res) => {
+  try {
+    res.json(await listAudits(req.query.weekStart || null));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// GET /mlm/weekly-settlement/audits/:id  — one full snapshot (before/after)
+router.get("/weekly-settlement/audits/:id", adminAuth, async (req, res) => {
+  try {
+    const row = await getAuditById(req.params.id);
+    if (!row) return res.status(404).json({ error: "audit not found" });
+    res.json(row);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// GET /mlm/weekly-settlement/:weekStart  — audit view for one week
+router.get("/weekly-settlement/:weekStart", adminAuth, async (req, res) => {
+  try {
+    const weekStart = req.params.weekStart;
+    const settlement = await queryOne("SELECT * FROM weekly_settlements WHERE week_start = ?", [weekStart]);
+    const commissions = await query(
+      `SELECT wc.id, wc.user_id, u.full_name, u.email, wc.rank_name, wc.amount, wc.status, wc.calculated_at
+         FROM weekly_commissions wc LEFT JOIN users u ON u.id = wc.user_id
+        WHERE wc.week_start = ? ORDER BY wc.amount DESC`,
+      [weekStart]
+    );
+    const history = await query(
+      `SELECT user_id, full_name, current_rank, qualified_direct_sales, qualified_team_count,
+              weekly_commission, commission_status, promotion_status, failure_reason
+         FROM (SELECT wh.*, u.full_name FROM weekly_history wh LEFT JOIN users u ON u.id = wh.user_id WHERE wh.week_start = ?)
+        ORDER BY weekly_commission DESC`,
+      [weekStart]
+    );
+    const assignments = await listAssignments(weekStart);
+    res.json({ weekStart, weekEnd: weekEndFromStart(weekStart), settlement: settlement || null, commissions, history, assignments });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 export default router;

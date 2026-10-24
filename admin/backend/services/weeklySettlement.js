@@ -235,10 +235,19 @@ export async function refreshLeadersSnapshot() {
   return topUsers.length;
 }
 
-export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: forcedWeekStart = null, force = false } = {}) {
+export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: forcedWeekStart = null, force = false, recompute = false, onlyUserIds = null } = {}) {
   const settings = await getSettlementSettings();
   if (settings.settlement_enabled !== "true" && triggeredBy !== "manual") {
     return { success: false, skipped: "disabled" };
+  }
+
+  const scope = Array.isArray(onlyUserIds)
+    ? [...new Set(onlyUserIds.filter(Boolean))]
+    : null;
+  // A recompute limited to specific members is the safe default for retroactive fixes:
+  // it never re-evaluates (or re-promotes) the rest of the membership.
+  if (recompute && (!scope || scope.length === 0)) {
+    return { success: false, error: "recompute requires onlyUserIds (targeted recompute only)" };
   }
 
   const week = forcedWeekStart
@@ -246,16 +255,35 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
     : (triggeredBy === "manual" ? await getCurrentWeek(settings) : await getSettlementWeek(settings));
   const { weekStart, weekEnd } = week;
 
+  // A recompute only makes sense for a week that was already fully settled. Refusing here
+  // also prevents creating a partial settlement row for an unsettled week.
+  let priorSettlement = null;
+  if (recompute) {
+    priorSettlement = await queryOne("SELECT id, status, completed_at FROM weekly_settlements WHERE week_start = ?", [weekStart]);
+    if (!priorSettlement || priorSettlement.status !== "completed") {
+      return { success: false, error: `Week ${weekStart} is not completed yet; run a normal settlement first` };
+    }
+  }
+
   // Atomic claim: UNIQUE(week_start) prevents double processing from any path.
   const claimId = uuidv4();
   await execute("INSERT OR IGNORE INTO weekly_settlements (id, week_start, week_end, status, triggered_by) VALUES (?, ?, ?, 'running', ?)",
     [claimId, weekStart, weekEnd, triggeredBy]);
-  const claimed = await queryOne("SELECT id, status FROM weekly_settlements WHERE week_start = ?", [weekStart]);
+  const claimed = await queryOne("SELECT id, status, completed_at FROM weekly_settlements WHERE week_start = ?", [weekStart]);
   if (!claimed) return { success: false, error: `Failed to claim week ${weekStart}` };
+  const settlementRowId = claimed.id;
+  const previousCompletedAt = claimed.completed_at;
+  const wasCompleted = claimed.status === "completed";
   if (claimed.status === "completed") {
-    return { success: false, error: `Week ${weekStart} already settled` };
+    if (!recompute) {
+      return { success: false, error: `Week ${weekStart} already settled` };
+    }
+    // Recompute mode: reopen the finished settlement so the week is evaluated again.
+    // Existing weekly_commissions rows are kept so no user is ever paid twice for the same week.
+    await execute("UPDATE weekly_settlements SET status = 'running', triggered_by = ?, completed_at = NULL WHERE id = ?",
+      [triggeredBy, claimed.id]);
   }
-  if (claimed.status === "running" && claimed.id !== claimId && !force) {
+  if (claimed.status === "running" && claimed.id !== claimId && !force && !recompute) {
     return { success: false, error: `Week ${weekStart} settlement already in progress` };
   }
 
@@ -264,15 +292,51 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
 
     // Duplicate guard (defense-in-depth on top of the claim table)
     const existingCommission = await queryOne("SELECT id FROM weekly_commissions WHERE week_start = ? LIMIT 1", [weekStart]);
-    if (existingCommission) {
+    if (existingCommission && !recompute) {
       await execute("UPDATE weekly_settlements SET status = 'completed', completed_at = datetime('now','localtime'), summary = ? WHERE id = ?",
-        [JSON.stringify({ duplicate: true }), claimId]);
+        [JSON.stringify({ duplicate: true }), settlementRowId]);
       return { success: false, error: `Week ${weekStart} already settled` };
     }
 
-    const users = await query(
-      "SELECT id, full_name, email, rank, direct_count, e_money, account_type FROM users WHERE role IN ('student','registration') AND status = 'active'"
-    );
+    const users = scope
+      ? await query(
+          `SELECT id, full_name, email, rank, direct_count, e_money, account_type FROM users
+            WHERE role IN ('student','registration') AND status = 'active'
+              AND id IN (${scope.map(() => "?").join(",")})`,
+          scope
+        )
+      : await query(
+          "SELECT id, full_name, email, rank, direct_count, e_money, account_type FROM users WHERE role IN ('student','registration') AND status = 'active'"
+        );
+
+    // Recompute: drop the previous per-user calculation rows for the members about to be
+    // recalculated ONLY. Financial rows (weekly_commissions / wallet_transactions / e_money)
+    // are NEVER deleted — the per-user already-paid guard below keeps them intact.
+    // The previous rows are captured first so the week can be re-evaluated from the same
+    // starting rank (otherwise a previous promotion would look like a no-op).
+    const priorRows = new Map();
+    if (recompute) {
+      const ids = users.map(u => u.id);
+      if (ids.length === 0) {
+        // Leave the historical settlement untouched when the requested scope has no
+        // active members (nothing to recalculate, so nothing may change).
+        if (wasCompleted) {
+          await execute("UPDATE weekly_settlements SET status = 'completed', completed_at = ? WHERE id = ?",
+            [previousCompletedAt, settlementRowId]);
+        }
+        return { success: false, error: "No active members found for the requested recompute scope" };
+      }
+      const placeholders = ids.map(() => "?").join(",");
+      const previous = await query(
+        `SELECT * FROM weekly_history WHERE week_start = ? AND user_id IN (${placeholders})`,
+        [weekStart, ...ids]
+      );
+      for (const row of previous) priorRows.set(row.user_id, row);
+      await execute(
+        `DELETE FROM weekly_history WHERE week_start = ? AND user_id IN (${placeholders})`,
+        [weekStart, ...ids]
+      );
+    }
     const allRanks = await query("SELECT * FROM ranks ORDER BY sort_order ASC");
     const rankMap = {};
     allRanks.forEach(r => { rankMap[r.name] = r; });
@@ -282,7 +346,16 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
     let totalCommissions = 0;
 
     for (const user of users) {
-      const userRank = rankMap[user.rank];
+      // On a targeted recompute, a promotion granted by the original run is already stored on
+      // the user. Re-evaluate from the rank they held BEFORE that week so the recalculation is
+      // idempotent (no lost promotions, no repeated rank-up notifications).
+      const storedRank = user.rank;
+      const prior = recompute ? priorRows.get(user.id) : null;
+      const baseRank =
+        prior && prior.current_rank === storedRank && prior.previous_rank
+          ? prior.previous_rank
+          : storedRank;
+      const userRank = rankMap[baseRank];
 
       // STEP 1: Direct sales (Level 1, active only)
       // Use user_closure depth=1 to count direct students (reliable, matches what admin UI shows).
@@ -298,14 +371,23 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       const registrationDirectSales = activeDirects.filter(d => d.account_type === 'registration_free').length;
       const totalDirectSales = studentDirectSales + registrationDirectSales;
 
-      // Weekly Direct Sales = qualified (active STUDENT) directs created INSIDE this settlement week.
+      // Weekly Direct Sales = qualified (active STUDENT) directs created INSIDE this settlement week
+      // OR retroactively assigned via weekly_direct_assignments for this week.
       // Eligibility for the weekly rank commission requires minDirectSales NEW direct sales this week.
       // Registration Free never qualifies for commission — only Student directs count here.
       // Note: the week window is [weekStart 00:00, weekEnd 23:59:59].
+      let assignedDirectIds = new Set();
+      try {
+        const assigns = await query(
+          "SELECT direct_id FROM weekly_direct_assignments WHERE upline_id = ? AND week_start = ?",
+          [user.id, weekStart]
+        );
+        for (const a of assigns) assignedDirectIds.add(a.direct_id);
+      } catch (e) {}
       const weeklyDirects = activeDirects.filter(d =>
         d.account_type === 'student' &&
-        d.created_at >= `${weekStart} 00:00:00` &&
-        d.created_at <= `${weekEnd} 23:59:59`
+        (assignedDirectIds.has(d.id) ||
+         (d.created_at >= `${weekStart} 00:00:00` && d.created_at <= `${weekEnd} 23:59:59`))
       );
       const weeklyDirectSales = weeklyDirects.length;
 
@@ -362,17 +444,15 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       // Higher-ranked members are already excluded in STEP 3 (see higherRankExcluded).
       // Gate (STEP 2) only controls commission eligibility (min NEW weekly directs) — it does NOT gate rank.
       // Rank thresholds map to team size: 2 → Star, 5 → Executive, 10 → Executive Star, 20 → Team Leader, etc.
-      const previousRank = user.rank;
-      let promotionStatus = 'no_change';
-      let newRank = user.rank;
+      const previousRank = baseRank;
+      let promotionStatus = previousRank !== storedRank ? 'promoted' : 'no_change';
+      let newRank = baseRank;
       if (userRank) {
-        const rankIdx = allRanks.findIndex(r => r.name === user.rank);
+        const rankIdx = allRanks.findIndex(r => r.name === baseRank);
         for (let i = (rankIdx >= 0 ? rankIdx + 1 : 0); i < allRanks.length; i++) {
           const next = allRanks[i];
           if (qualifiedTeamCount >= sReq(next)) {
             newRank = next.name;
-            await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')",
-              [uuidv4(), user.id, "🎉 Rank Up!", `You reached ${next.name} rank! Your bonus is included in the weekly commission.`]);
           } else { break; }
         }
       } else {
@@ -380,8 +460,14 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
           if (qualifiedTeamCount >= sReq(next)) { newRank = next.name; } else { break; }
         }
       }
-      if (newRank !== previousRank) {
+      if (newRank !== storedRank) {
         promotionStatus = 'promoted';
+        // Only notify on a genuinely new promotion (a recompute that reproduces the same
+        // rank must not spam the member with a second "Rank Up!" message).
+        if (newRank !== previousRank) {
+          await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')",
+            [uuidv4(), user.id, "🎉 Rank Up!", `You reached ${newRank} rank! Your bonus is included in the weekly commission.`]);
+        }
         const progress = allRanks.findIndex(r => r.name === newRank);
         const nextAfter = allRanks[progress + 1];
         const progressPct = nextAfter ? Math.min(100, Math.round((qualifiedTeamCount / sReq(nextAfter)) * 100)) : 100;
@@ -455,40 +541,50 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
     }
 
     // STEP 7: Snapshot Top-10 weekly leaderboard (by weekly sales, tie-break by rank then directs)
-    const top = await query(`
-      SELECT ws.user_id, ws.sales,
-             u.full_name, u.avatar, u.rank, u.direct_count, u.account_type,
-             COALESCE(r.sort_order, 0) as rank_order
-      FROM weekly_sales ws
-      JOIN users u ON u.id = ws.user_id
-      LEFT JOIN ranks r ON u.rank = r.name
-      WHERE ws.week_start = ? AND u.role != 'admin' AND u.account_type IN ('student','registration_free')
-      ORDER BY ws.sales DESC, rank_order DESC, u.direct_count DESC
-      LIMIT 10
-    `, [weekStart]);
-    await execute("DELETE FROM leaderboard_history WHERE week_start = ?", [weekStart]);
-    for (let i = 0; i < top.length; i++) {
-      await execute("INSERT OR REPLACE INTO leaderboard_history (id, week_start, rank_position, user_id, full_name, avatar, rank, weekly_sales) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [uuidv4(), weekStart, i + 1, top[i].user_id, top[i].full_name || "—", top[i].avatar, top[i].rank || "", top[i].sales]);
+    // On a recompute run the week's weekly_sales rows were already consumed by the first
+    // settlement, so we only rebuild the snapshot when there is fresh data. Otherwise the
+    // historical snapshot is preserved untouched.
+    const salesRow = await queryOne("SELECT COUNT(*) AS c FROM weekly_sales WHERE week_start = ?", [weekStart]);
+    const hasSalesData = Number(salesRow && salesRow.c) > 0;
+    let top = [];
+    if (!recompute || hasSalesData) {
+      top = await query(`
+        SELECT ws.user_id, ws.sales,
+               u.full_name, u.avatar, u.rank, u.direct_count, u.account_type,
+               COALESCE(r.sort_order, 0) as rank_order
+        FROM weekly_sales ws
+        JOIN users u ON u.id = ws.user_id
+        LEFT JOIN ranks r ON u.rank = r.name
+        WHERE ws.week_start = ? AND u.role != 'admin' AND u.account_type IN ('student','registration_free')
+        ORDER BY ws.sales DESC, rank_order DESC, u.direct_count DESC
+        LIMIT 10
+      `, [weekStart]);
+      await execute("DELETE FROM leaderboard_history WHERE week_start = ?", [weekStart]);
+      for (let i = 0; i < top.length; i++) {
+        await execute("INSERT OR REPLACE INTO leaderboard_history (id, week_start, rank_position, user_id, full_name, avatar, rank, weekly_sales) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [uuidv4(), weekStart, i + 1, top[i].user_id, top[i].full_name || "—", top[i].avatar, top[i].rank || "", top[i].sales]);
+      }
     }
 
     // STEP 8: Reset weekly sales counters — ONLY after the leaderboard snapshot is saved.
     // Next week's sales accumulate under a fresh week_start, so they start from zero.
-    await execute("DELETE FROM weekly_sales WHERE week_start = ?", [weekStart]);
+    if (!recompute || hasSalesData) {
+      await execute("DELETE FROM weekly_sales WHERE week_start = ?", [weekStart]);
+    }
 
-    const summary = JSON.stringify({ totalUsers: users.length, awarded: totalAwarded, totalCommissions, top10: top.length });
-    await execute("UPDATE weekly_settlements SET status = 'completed', completed_at = datetime('now','localtime'), summary = ? WHERE id = ?", [summary, claimId]);
+    const summary = JSON.stringify({ totalUsers: users.length, awarded: totalAwarded, totalCommissions, top10: top.length, recompute: !!recompute, scopedUsers: scope ? scope.length : null });
+    await execute("UPDATE weekly_settlements SET status = 'completed', completed_at = datetime('now','localtime'), summary = ? WHERE id = ?", [summary, settlementRowId]);
     await execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('settlement_last_run', ?)",
       [`${weekStart}|${weekEnd}|${new Date().toISOString()}|${triggeredBy}|${totalAwarded}`]);
 
-    console.log(`🏆 [SETTLEMENT] Week ${weekStart} - ${weekEnd} (${triggeredBy}): ${totalAwarded} awarded out of ${users.length}, ${totalCommissions} EM total`);
+    console.log(`🏆 [SETTLEMENT] Week ${weekStart} - ${weekEnd} (${triggeredBy}${recompute ? ", recompute" : ""}): ${totalAwarded} awarded out of ${users.length}, ${totalCommissions} EM total`);
 
     // STEP 9: Refresh "Our Leaders" homepage snapshot so new promotions appear immediately.
     try { await refreshLeadersSnapshot(); } catch (e) { console.error("Leaders snapshot refresh failed:", e.message); }
 
-    return { success: true, weekStart, weekEnd, triggeredBy, total_users: users.length, awarded: totalAwarded, totalCommissions, results, top10: top.length };
+    return { success: true, weekStart, weekEnd, triggeredBy, recompute: !!recompute, scoped_users: scope ? scope.length : null, total_users: users.length, awarded: totalAwarded, totalCommissions, results, top10: top.length };
   } catch (e) {
-    try { await execute("UPDATE weekly_settlements SET status = 'failed', completed_at = datetime('now','localtime') WHERE id = ?", [claimId]); } catch (_) {}
+    try { await execute("UPDATE weekly_settlements SET status = 'failed', completed_at = datetime('now','localtime') WHERE id = ?", [settlementRowId]); } catch (_) {}
     console.error("Weekly settlement error:", e);
     throw e;
   }
