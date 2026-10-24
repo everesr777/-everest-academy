@@ -16,7 +16,7 @@ function createDb() {
     total_team_sales REAL DEFAULT 0, direct_count INTEGER DEFAULT 0,
     blocked INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
     account_type TEXT DEFAULT 'student', rank_progress INTEGER DEFAULT 0,
-    membership_expires_at TEXT,
+    membership_expires_at TEXT, commission_exempt INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime'))
   )`);
@@ -159,11 +159,11 @@ function seedRanks(db) {
 
 // NOTE: created_at defaults to the current real time (NOT within a fake test week).
 // Tests that need "NEW directs this week" must pass created_at inside [WEEK, WEEK_END].
-function insertUser(db, { id, name, email, role = "student", account_type = "student", rank = "", referred_by = null, created_by_user = null, direct_count = 0, e_money = 0, status = "active", created_at = null }) {
+function insertUser(db, { id, name, email, role = "student", account_type = "student", rank = "", referred_by = null, created_by_user = null, direct_count = 0, e_money = 0, status = "active", created_at = null, commission_exempt = 0 }) {
   const ca = created_at || null;
   db.run(
-    "INSERT INTO users (id,full_name,email,password,role,account_type,referral_code,referred_by,created_by_user,rank,e_money,status,blocked,direct_count,rank_progress,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-    [id, name, email, "pw", role, account_type, "REF-" + id, referred_by, created_by_user, rank, e_money, status, 0, direct_count, 0, ca]
+    "INSERT INTO users (id,full_name,email,password,role,account_type,referral_code,referred_by,created_by_user,rank,e_money,status,blocked,direct_count,rank_progress,created_at,commission_exempt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    [id, name, email, "pw", role, account_type, "REF-" + id, referred_by, created_by_user, rank, e_money, status, 0, direct_count, 0, ca, commission_exempt]
   );
 }
 
@@ -803,6 +803,32 @@ test("listWeekDirects returns assigned directs for the week and hides ones moved
 
   const nextRows = await listWeekDirects("lup", NEXT);
   assert.equal(nextRows.length, 0, "ld1 is out of the NEXT window and ld2 was moved to WEEK");
+});
+
+test("commission_exempt: rank is still promoted but no weekly commission is paid", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "u-exempt", name: "Exempt", email: "exempt@t.com", rank: "Star", referred_by: null, commission_exempt: 1 });
+  insertUser(db, { id: "ex0", name: "EX0", email: "ex0@t.com", rank: "Star", referred_by: "u-exempt", created_at: W_IN });
+  insertUser(db, { id: "ex1", name: "EX1", email: "ex1@t.com", rank: "Star", referred_by: "u-exempt", created_at: W_IN });
+  insertDirectClosure(db, "u-exempt", "ex0");
+  insertDirectClosure(db, "u-exempt", "ex1");
+  for (let i = 0; i < 12; i++) insertUser(db, { id: `ext${i}`, name: `EXT${i}`, email: `ext${i}@t.com`, rank: "Star", created_at: W_IN });
+  insertClosure(db, "u-exempt", Array.from({ length: 12 }, (_, i) => `ext${i}`));
+
+  ctx = apiFor(db);
+  const res = await runWeeklySettlement({ triggeredBy: "auto", weekStart: WEEK });
+  assert.equal(res.success, true);
+
+  const u = ctx.q("SELECT * FROM users WHERE id = 'u-exempt'")[0];
+  assert.equal(u.rank, "Executive Star", "exempt accounts still rank up");
+  assert.equal(u.e_money, 0, "no E-Money added");
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_commissions WHERE user_id = 'u-exempt'")[0].c, 0);
+  const hist = ctx.q("SELECT * FROM weekly_history WHERE user_id = 'u-exempt'")[0];
+  assert.equal(hist.commission_status, "not_eligible");
+  assert.equal(hist.weekly_commission, 0);
+  assert.match(hist.failure_reason, /exempt/i);
 });
 
 test("assign refuses to attribute the same direct to two different weeks", async () => {

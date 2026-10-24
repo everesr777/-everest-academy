@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -65,7 +65,7 @@ export default function TopUpPage() {
         <div className="auth-card" style={{boxShadow:"0 5px 30px rgba(0,0,0,.04)",borderRadius:20,padding:30}}>
           <div style={{textAlign:"center",marginBottom:25}}>
             <h2 style={{fontSize:22,fontWeight:800}}>{t("💰 شحن الرصيد", "💰 Top Up Balance")}</h2>
-            <p style={{color:c.textSoft,fontSize:14,marginTop:4}}>{t("اشحن رصيد E-Money عبر فودافون كاش", "Top up your E-Money balance via Vodafone Cash")}</p>
+            <p style={{color:c.textSoft,fontSize:14,marginTop:4}}>{t("اشحن رصيد $ عبر فودافون كاش", "Top up your $ balance via Vodafone Cash")}</p>
           </div>
           {err && <p style={{color:"#ff4d4d",textAlign:"center",marginBottom:15,fontSize:14}}>{err}</p>}
           <form onSubmit={handleSubmit}>

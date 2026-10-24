@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, uploadApi, uploadVideoToBunny } from "../api.js";
 
@@ -393,7 +393,7 @@ export default function CoursesListPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">E-Money {t("السعر", "Price")}</label>
+                  <label className="text-sm font-medium">$ {t("السعر", "Price")}</label>
                   <input type="number" value={cv.price || 0} onChange={(e) => setCv("price", parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 border rounded-lg text-sm" />
                 </div>
                 <div className="flex items-center gap-3 pt-6">
@@ -865,7 +865,7 @@ export default function CoursesListPage() {
                   {c.title && c.title_ar && <p className="text-xs text-gray-400 mt-0.5">{c.title_ar}</p>}
                 </td>
                 <td data-label={t("التصنيف", "Category")} className="p-3 text-xs text-gray-500">{c.category_ar || c.category || "—"}</td>
-                <td data-label={t("السعر", "Price")} className="p-3 text-sm font-medium">{c.is_free ? (t("مجاني", "Free")) : `${c.price} E-Money`}</td>
+                <td data-label={t("السعر", "Price")} className="p-3 text-sm font-medium">{c.is_free ? (t("مجاني", "Free")) : `${c.price} $`}</td>
                 <td data-label={t("المؤلف", "Author")} className="p-3 text-xs">{c.author_name || "—"}</td>
                 <td data-label={t("الحالة", "Status")} className="p-3">
                   <select value={c.status || "draft"} onChange={async (e) => {
@@ -973,7 +973,7 @@ export default function CoursesListPage() {
                                     <p className="font-medium">{enr.payment_method || "—"}</p>
                                   </div>
                                   <div>
-                                    <span className="text-gray-400">{t("رصيد E-Money", "E-Money")}</span>
+                                    <span className="text-gray-400">{t("رصيد $", "$")}</span>
                                     <p className="font-medium">{enr.student_emoney || 0}</p>
                                   </div>
                                   <div>

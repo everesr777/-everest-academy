@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -30,13 +30,13 @@ export default function PurchaseAllPage() {
   const visibleCourses = courses.filter(c => c.is_show_courses !== 0);
   const totalLessons = visibleCourses.reduce((sum, c) => sum + (c.lesson_count || 0), 0);
   const contentPrice = Number(pricing.content_price || 0);
-  const balance = user?.e_money || 0;
+  const balance = user?.usd_balance || 0;
   const canBuy = balance >= contentPrice;
 
   const buyAllContent = async () => {
     if (!user) { nav("/login"); return; }
     if (!canBuy) {
-      setError(t("رصيد E-Money غير كافٍ. تواصل مع خدمة العملاء لشحن رصيدك.", "Insufficient E-Money balance. Contact customer service to top up."));
+      setError(t("رصيد $ غير كافٍ. تواصل مع خدمة العملاء لشحن رصيدك.", "Insufficient $ balance. Contact customer service to top up."));
       return;
     }
     setBuying(true);
@@ -175,7 +175,7 @@ export default function PurchaseAllPage() {
         {/* ===== PRICE CARD ===== */}
         <div className="pay-price-card">
           <div className="pay-price-label">{t("السعر الإجمالي لكل المحتوى", "Total Price for All Content")}</div>
-          <div className="pay-price-amount">{contentPrice.toLocaleString()} E-Money</div>
+          <div className="pay-price-amount">{contentPrice.toLocaleString()} $</div>
           <div className="pay-price-sub">{t("وصول دائم لجميع الكورسات", "Lifetime access to all courses")}</div>
         </div>
 
@@ -183,7 +183,7 @@ export default function PurchaseAllPage() {
         {user && (
           <div className="pay-balance-bar">
             <span>{t("رصيدك الحالي:", "Your balance:")}</span>
-            <strong>{balance.toLocaleString()} E-Money</strong>
+            <strong>{balance.toLocaleString()} $</strong>
           </div>
         )}
 
@@ -208,7 +208,7 @@ export default function PurchaseAllPage() {
           </Link>
         ) : (
           <button className={`pay-buy-btn ${buying ? "disabled" : canBuy ? "enabled" : "disabled"}`} onClick={buyAllContent} disabled={buying || !canBuy}>
-            {buying ? t("جاري الشراء...", "Purchasing...") : `💳 ${t("شراء كل المحتوى بـ", "Buy All Content for")} ${contentPrice.toLocaleString()} E-Money`}
+            {buying ? t("جاري الشراء...", "Purchasing...") : `💳 ${t("شراء كل المحتوى بـ", "Buy All Content for")} ${contentPrice.toLocaleString()} $`}
           </button>
         )}
 

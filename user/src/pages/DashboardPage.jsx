@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -79,8 +79,8 @@ export default function DashboardPage() {
               <span>{t("الكورسات","Courses")}</span>
             </div>
             <div className="mini-stat">
-              <h3>{user?.e_money || 0}</h3>
-              <span>{t("الرصيد","E-Money")}</span>
+              <h3>{user?.usd_balance || 0}</h3>
+              <span>{t("الرصيد","$")}</span>
             </div>
           </div>
         </div>

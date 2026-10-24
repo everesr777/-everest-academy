@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import { BACKEND_URL } from "../api.js";
@@ -33,7 +33,7 @@ export default function AdminLoginPage({ onLogin }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-everest-950 via-everest-900 to-everest-800 flex items-center justify-center p-4">
       {/* Theme toggle */}
-      <button onClick={toggle} title={theme === "dark" ? "Light Mode" : "Dark Mode"} className="absolute top-4 end-4 z-10 w-10 h-10 rounded-xl flex items-center justify-center text-lg cursor-pointer transition border border-white/10 bg-white/5 hover:bg-white/10">
+              <button data-no-confirm onClick={toggle} title={theme === "dark" ? "Light Mode" : "Dark Mode"} className="absolute top-4 end-4 z-10 w-10 h-10 rounded-xl flex items-center justify-center text-lg cursor-pointer transition border border-white/10 bg-white/5 hover:bg-white/10">
         {theme === "dark" ? "☀️" : "🌙"}
       </button>
 

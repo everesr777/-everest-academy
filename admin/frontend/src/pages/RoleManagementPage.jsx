@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
 
@@ -175,17 +175,17 @@ export default function RoleManagementPage() {
                   { label: t("الدور", "Role"), value: viewUserData?.role || viewUser.role },
                   { label: t("نوع الحساب", "Account Type"), value: viewUserData?.account_type || viewUser.account_type || "student" },
                   { label: t("الرتبة", "Rank"), value: viewUserData?.rank || "—" },
-                  { label: t("الرصيد", "E-Money"), value: viewUserData?.e_money ?? "—" },
+                  { label: t("الرصيد", "$"), value: viewUserData?.e_money ?? "—" },
                   { label: t("الحالة", "Status"), value: viewUserData?.status || viewUser.status },
                   { label: t("المحظور", "Blocked"), value: (viewUserData?.blocked || viewUser.blocked) ? t("نعم", "Yes") : t("لا", "No") },
                   { label: t("احالة من", "Referred By"), value: viewUserData?.referred_by || "—" },
                   { label: t("مبيعات الفريق", "Team Sales"), value: viewUserData?.total_team_sales ?? 0 },
                   { label: t("الأعضاء المباشرين", "Direct Count"), value: viewUserData?.direct_count ?? 0 },
                   { label: t("تاريخ التسجيل", "Joined"), value: viewUserData?.created_at ? new Date(viewUserData.created_at).toLocaleDateString() : "—" },
-                ].map((item, i) => (
+                ].map((it$, i) => (
                   <div key={i} className="bg-gray-50 rounded-lg p-2.5">
-                    <p className="text-[10px] text-gray-400">{item.label}</p>
-                    <p className="text-xs font-medium mt-0.5 break-all">{item.value}</p>
+                    <p className="text-[10px] text-gray-400">{it$.label}</p>
+                    <p className="text-xs font-medium mt-0.5 break-all">{it$.value}</p>
                   </div>
                 ))}
               </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import AppNavbar from "../components/AppNavbar";
 import { useTheme } from "../ThemeContext";
@@ -264,7 +264,7 @@ export default function TopSallerPage() {
                     <p style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: "uppercase", letterSpacing: 1, margin: "0 0 6px" }}>{t("الكورس", "Course")}</p>
                     <h4 style={{ fontSize: 16, fontWeight: 800, color: c.text, margin: "0 0 8px" }}>{courseName}</h4>
                     {courseDesc && <p style={{ fontSize: 12, color: c.textMuted, margin: 0, lineHeight: 1.6 }}>{courseDesc.length > 160 ? courseDesc.slice(0, 160) + "..." : courseDesc}</p>}
-                    {s.course_price != null && <p style={{ fontSize: 13, fontWeight: 700, color: sc, marginTop: 10 }}>{s.course_price} E-Money</p>}
+                    {s.course_price != null && <p style={{ fontSize: 13, fontWeight: 700, color: sc, marginTop: 10 }}>{s.course_price} $</p>}
                   </div>
                 </div>
               </div>

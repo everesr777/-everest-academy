@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { api } from "../api.js";
 import { useLang } from "../LangContext.jsx";
 
@@ -182,7 +182,7 @@ export default function FreeCoursesSettingsPage() {
             </div>
 
             <div className="col-span-2 text-center text-xs text-gray-400">
-              {course.is_free ? "🆓" : `${course.price} EM`}
+              {course.is_free ? "🆓" : `${course.price} $`}
             </div>
           </div>
         ))}

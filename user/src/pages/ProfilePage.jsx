@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -91,7 +91,7 @@ export default function ProfilePage() {
   const progressPct = rp.progress || 0;
   const currentRankName = rp.currentRank || p.rank || null;
   const nextRankName = rp.nextRank || "Star";
-  const eMoney = p.e_money || 0;
+  const eMoney = p.usd_balance || 0;
   const teamSales = p.total_team_sales || rp.qualifiedTeamCount || 0;
 
   const [now, setNow] = useState(Date.now());
@@ -214,7 +214,7 @@ export default function ProfilePage() {
             <div className="profile-stats-grid">
               <div className="stat-box"><span>📞 {t("الهاتف", "Phone")}</span><strong>{p.phone || "—"}</strong></div>
               <div className="stat-box"><span>🏅 {t("الرتبة", "Rank")}</span><strong>{currentRankName || "—"}</strong></div>
-              <div className="stat-box"><span>💰 E-Money</span><strong>{eMoney.toLocaleString()}</strong></div>
+              <div className="stat-box"><span>💰 $</span><strong>{eMoney.toLocaleString()}</strong></div>
               <div className="stat-box"><span>👥 {t("المباشرون", "Directs")}</span><strong>{p.direct_count || 0}</strong></div>
               <div className="stat-box"><span>📊 {t("مبيعات الفريق", "Team Sales")}</span><strong>{teamSales}</strong></div>
               <div className="stat-box"><span>📅 {t("تاريخ الانضمام", "Joined")}</span><strong>{(p.created_at || "").slice(0,10) || "—"}</strong></div>
@@ -242,7 +242,7 @@ export default function ProfilePage() {
             <div className="overview-stats">
               <div className="mini-stat">
                 <h3>{eMoney.toLocaleString()}</h3>
-                <span>E-Money</span>
+                <span>$</span>
               </div>
               <div className="mini-stat">
                 <h3>{currentRankName || "—"}</h3>

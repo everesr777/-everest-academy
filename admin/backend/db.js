@@ -70,7 +70,7 @@ function createSchema(driver, isTursoDb) {
       rank TEXT DEFAULT '', e_money REAL DEFAULT 0, academic_points REAL DEFAULT 0,
       total_team_sales REAL DEFAULT 0, direct_count INTEGER DEFAULT 0,
       blocked INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
-      membership_expires_at TEXT,
+      membership_expires_at TEXT, commission_exempt INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     )`,
@@ -393,6 +393,7 @@ function createSchema(driver, isTursoDb) {
       try { await driver.execute("ALTER TABLE user_sessions ADD COLUMN last_heartbeat TEXT"); } catch(e) {}
       try { await driver.execute("ALTER TABLE commissions ADD COLUMN description TEXT"); } catch(e) {}
       try { await driver.execute("ALTER TABLE enrollments ADD COLUMN sales_counted INTEGER DEFAULT 0"); } catch(e) {}
+      try { await driver.execute("ALTER TABLE users ADD COLUMN commission_exempt INTEGER DEFAULT 0"); } catch(e) {}
       try {
         await driver.execute("UPDATE users SET account_type = 'registration', role = 'registration' WHERE account_type = 'registration_sponsor'");
         await driver.execute("UPDATE users SET account_type = 'registration' WHERE role = 'registration' AND account_type = 'student'");
@@ -433,6 +434,7 @@ function createSchema(driver, isTursoDb) {
   try { driver.run("ALTER TABLE user_sessions ADD COLUMN last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch(e) {}
   try { driver.run("ALTER TABLE commissions ADD COLUMN description TEXT"); } catch(e) {}
   try { driver.run("ALTER TABLE enrollments ADD COLUMN sales_counted INTEGER DEFAULT 0"); } catch(e) {}
+  try { driver.run("ALTER TABLE users ADD COLUMN commission_exempt INTEGER DEFAULT 0"); } catch(e) {}
   try { driver.run("ALTER TABLE users ADD COLUMN account_type TEXT DEFAULT 'student'"); } catch(e) {}
   try { driver.run("ALTER TABLE courses ADD COLUMN is_show_free INTEGER DEFAULT 0"); } catch(e) {}
   try { driver.run("ALTER TABLE courses ADD COLUMN is_show_homepage INTEGER DEFAULT 1"); } catch(e) {}

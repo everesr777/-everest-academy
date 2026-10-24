@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
 
@@ -27,8 +27,8 @@ export default function AdminLogsPage() {
   };
 
   const actionLabels = {
-    "e-money credit": t("💰 إضافة رصيد", "💰 Credit"),
-    "e-money debit": t("💸 خصم رصيد", "💸 Debit"),
+    "$ credit": t("💰 إضافة رصيد", "💰 Credit"),
+    "$ debit": t("💸 خصم رصيد", "💸 Debit"),
     "block": t("🔒 حظر", "🔒 Block"),
     "unblock": t("🔓 فك حظر", "🔓 Unblock"),
     "approve as student": t("✅ تفعيل كـ Student", "✅ Approved as Student"),
@@ -38,7 +38,7 @@ export default function AdminLogsPage() {
   };
 
   const filtered = logs.filter(l => {
-    if (filter !== "all" && !l.action.includes(filter === "emoney" ? "e-money" : filter)) return false;
+    if (filter !== "all" && !l.action.includes(filter === "emoney" ? "$" : filter)) return false;
     if (dateFilter && l.created_at?.slice(0, 10) !== dateFilter) return false;
     return true;
   });

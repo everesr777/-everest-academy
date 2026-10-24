@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../App";
 import { useLang } from "../LangContext";
@@ -113,7 +113,7 @@ function ProfileTab() {
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("الاسم","Name")}</th>
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("الايميل","Email")}</th>
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("الدور","Role")}</th>
-            <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>E-Money</th>
+            <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>$</th>
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("الرتبة","Rank")}</th>
           </tr>
         </thead>
@@ -123,7 +123,7 @@ function ProfileTab() {
               <td style={{padding:"10px",color:c.text,fontWeight:600}}>{u.full_name}</td>
               <td style={{padding:"10px",color:"#9a95b0"}}>{u.email}</td>
               <td style={{padding:"10px"}}><span style={{padding:"3px 10px",borderRadius:999,fontSize:11,fontWeight:600,background:u.role==="admin"?"rgba(184,139,255,.15)":u.role==="student"?"rgba(37,99,255,.15)":"rgba(168,85,247,.15)",color:u.role==="admin"?"#B88BFF":u.role==="student"?"#2563ff":"#a855f7"}}>{u.role}</span></td>
-              <td style={{padding:"10px",color:"#B88BFF",fontWeight:700}}>{u.e_money}</td>
+              <td style={{padding:"10px",color:"#B88BFF",fontWeight:700}}>{u.usd_balance}</td>
               <td style={{padding:"10px",color:c.text}}>{u.rank}</td>
             </tr>
           ))}
@@ -297,7 +297,7 @@ function BuildCourseTab() {
         <div><label style={labelStyle}>{t("التصنيف (إنجليزي)","Category (English)")}</label>
           <input value={form.category} onChange={(e) => setForm({...form,category:e.target.value})} placeholder={t("e.g. Marketing, Coding","مثال: تسويق, برمجة")} style={inputStyle} /></div>
       </div>
-      <div style={{marginBottom:16}}><label style={labelStyle}>{t("السعر (E-Money)","Price (E-Money)")}</label>
+      <div style={{marginBottom:16}}><label style={labelStyle}>{t("السعر ($)","Price ($)")}</label>
         <input type="number" min="0" value={form.price} onChange={(e) => setForm({...form,price:Number(e.target.value)})} style={inputStyle} /></div>
       <div style={{marginBottom:20}}><label style={labelStyle}>{t("المستوى","Level")}</label>
         <select value={form.difficulty} onChange={(e) => setForm({...form,difficulty:e.target.value})} style={{...inputStyle,background:"rgba(20,16,36,.8)"}}>
@@ -415,7 +415,7 @@ function CoursesListTab() {
                   <div style={{fontSize:11,color:"#9a95b0",marginTop:2}}>{c.topic_count || 0} {t("مواضيع","topics")} · {c.lesson_count || 0} {t("دروس","lessons")} · {c.quiz_count || 0} {t("اختبارات","quizzes")}</div>
                 </td>
                 <td style={{padding:"10px",color:"#9a95b0"}}>{c.category_ar || c.category || "—"}</td>
-                <td style={{padding:"10px",color:"#B88BFF",fontWeight:700}}>{c.price === 0 ? t("مجاني","Free") : c.price + " E-Money"}</td>
+                <td style={{padding:"10px",color:"#B88BFF",fontWeight:700}}>{c.price === 0 ? t("مجاني","Free") : c.price + " $"}</td>
                 <td style={{padding:"10px",color:"#9a95b0"}}>{c.author_name || "—"}</td>
                 <td style={{padding:"10px"}}>
                   <span style={{padding:"3px 10px",borderRadius:999,fontSize:11,fontWeight:600,
@@ -569,7 +569,7 @@ function StudentsTab() {
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("الاسم","Name")}</th>
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("الايميل","Email")}</th>
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("الرتبة","Rank")}</th>
-            <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>E-Money</th>
+            <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>$</th>
             <th style={{padding:"12px 10px",textAlign:"right",color:"#9a95b0"}}>{t("تاريخ التسجيل","Enrolled")}</th>
           </tr>
         </thead>
@@ -579,7 +579,7 @@ function StudentsTab() {
               <td style={{padding:"10px",color:c.text,fontWeight:600}}>{u.full_name}</td>
               <td style={{padding:"10px",color:"#9a95b0"}}>{u.email}</td>
               <td style={{padding:"10px",color:c.text}}>{u.rank}</td>
-              <td style={{padding:"10px",color:"#B88BFF",fontWeight:700}}>{u.e_money}</td>
+              <td style={{padding:"10px",color:"#B88BFF",fontWeight:700}}>{u.usd_balance}</td>
               <td style={{padding:"10px",color:"#9a95b0"}}>{u.created_at?.slice(0,10)}</td>
             </tr>
           ))}

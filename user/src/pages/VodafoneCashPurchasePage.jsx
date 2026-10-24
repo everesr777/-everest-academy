@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useTheme } from "../ThemeContext";
@@ -89,7 +89,7 @@ export default function VodafoneCashPurchasePage() {
 
           <div style={{background:c.bgCard,borderRadius:14,padding:20,marginBottom:24}}>
             <p style={{color:c.text,fontWeight:700,fontSize:16,marginBottom:8}}>{course.title_ar || course.title}</p>
-            <p style={{color:"#B88BFF",fontSize:24,fontWeight:800}}>{course.price} E-Money</p>
+            <p style={{color:"#B88BFF",fontSize:24,fontWeight:800}}>{course.price} $</p>
           </div>
 
           <div style={{background:"rgba(254,212,0,.06)",border:"1px solid rgba(254,212,0,.15)",borderRadius:14,padding:16,marginBottom:24}}>

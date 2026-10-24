@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import { api } from "../api";
@@ -78,9 +78,9 @@ export default function ActivityFeedPage() {
 
   const summaryCards = [
     { label: t("إجمالي الأحداث", "Total Events"), value: summary.totalEvents, icon: "🗂️", color: "#6366f1", bg: "#eef2ff" },
-    { label: t("إجمالي العمولات (EM)", "Total Commissions (EM)"), value: summary.totalCommission, icon: "💎", color: "#10b981", bg: "#d1fae5" },
-    { label: t("إيداعات المحفظة (EM)", "Wallet Credits (EM)"), value: summary.totalIn, icon: "➕", color: "#06b6d4", bg: "#cffafe" },
-    { label: t("عمليات الخصم (EM)", "Wallet Debits (EM)"), value: summary.totalOut, icon: "➖", color: "#f59e0b", bg: "#fef3c7" },
+    { label: t("إجمالي العمولات ($)", "Total Commissions ($)"), value: summary.totalCommission, icon: "💎", color: "#10b981", bg: "#d1fae5" },
+    { label: t("إيداعات المحفظة ($)", "Wallet Credits ($)"), value: summary.totalIn, icon: "➕", color: "#06b6d4", bg: "#cffafe" },
+    { label: t("عمليات الخصم ($)", "Wallet Debits ($)"), value: summary.totalOut, icon: "➖", color: "#f59e0b", bg: "#fef3c7" },
     { label: t("تغييرات الرتب", "Rank Changes"), value: summary.rankChanges, icon: "🏅", color: "#8b5cf6", bg: "#ede9fe" },
   ];
 
@@ -186,7 +186,7 @@ export default function ActivityFeedPage() {
                       {ev.to?.rank ? <span className="block text-theme-text-secondary text-[10px]">{t("رتبة", "Rank")}: {ev.to.rank}</span> : null}
                     </td>
                     <td className="table-cell font-bold text-xs" style={{ color: ev.amount != null && ev.amount > 0 ? (ev.type === "wallet_debit" || ev.type === "transfer" ? "#f59e0b" : "#10b981") : "#6b7280" }}>
-                      {ev.amount != null ? `${parseFloat(ev.amount).toLocaleString()} EM` : "—"}
+                      {ev.amount != null ? `${parseFloat(ev.amount).toLocaleString()} $` : "—"}
                     </td>
                     <td className="table-cell">
                       <span className={`badge ${
@@ -280,7 +280,7 @@ export default function ActivityFeedPage() {
                 <div className="bg-theme-secondary rounded-xl p-3">
                   <label className="text-[10px] font-bold text-theme-text-secondary uppercase tracking-wider">{t("المبلغ", "Amount")}</label>
                   <p className="text-lg font-extrabold mt-1" style={{ color: selectedEvent.amount != null && selectedEvent.amount > 0 ? (selectedEvent.type === "wallet_debit" ? "#f59e0b" : "#10b981") : "#6b7280" }}>
-                    {selectedEvent.amount != null ? `${parseFloat(selectedEvent.amount).toLocaleString()} EM` : "—"}
+                    {selectedEvent.amount != null ? `${parseFloat(selectedEvent.amount).toLocaleString()} $` : "—"}
                   </p>
                 </div>
                 <div className="bg-theme-secondary rounded-xl p-3">

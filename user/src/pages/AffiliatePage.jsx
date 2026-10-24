@@ -122,6 +122,9 @@ export default function AffiliatePage() {
   const [dbRanks, setDbRanks] = useState([]);
   const [transferHistory, setTransferHistory] = useState([]);
   const [weekly, setWeekly] = useState(null);
+  const [showPrevWeek, setShowPrevWeek] = useState(false);
+  const [prevWeekly, setPrevWeekly] = useState(null);
+  const [prevWeekLoading, setPrevWeekLoading] = useState(false);
 
   const loadData = () => {
     if (!user) return;

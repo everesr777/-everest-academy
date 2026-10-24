@@ -1,0 +1,114 @@
+{
+  "capturedAt": "2026-10-24T19:38:36.478Z",
+  "week": "2026-10-16",
+  "users": [
+    {
+      "id": "3153084302",
+      "full_name": "Co samah elsayed",
+      "email": "samoha062@gmail.com",
+      "rank": "Executive Star",
+      "e_money": 5500
+    },
+    {
+      "id": "5019097412",
+      "full_name": "Lawrence Abdullah",
+      "email": "loracaca361@gmail.com",
+      "rank": "",
+      "e_money": 1500
+    },
+    {
+      "id": "5151402190",
+      "full_name": "Saeid Nawar",
+      "email": "saeidnawar@gmail.com",
+      "rank": "Team Leader",
+      "e_money": 8000
+    },
+    {
+      "id": "9011611631",
+      "full_name": "Youssef Reda",
+      "email": "yousef.reda6963@gmail.com",
+      "rank": "Team Leader",
+      "e_money": 8000
+    },
+    {
+      "id": "9455643290",
+      "full_name": "Rahma Tharwat",
+      "email": "rtharwat174@gmail.com",
+      "rank": "Executive Star",
+      "e_money": 8500
+    }
+  ],
+  "commissions": [
+    {
+      "user_id": "9455643290",
+      "week_start": "2026-10-16",
+      "rank_name": "Executive Star",
+      "amount": 5500,
+      "status": "paid"
+    },
+    {
+      "user_id": "9011611631",
+      "week_start": "2026-10-16",
+      "rank_name": "Team Leader",
+      "amount": 8000,
+      "status": "paid"
+    },
+    {
+      "user_id": "5151402190",
+      "week_start": "2026-10-16",
+      "rank_name": "Team Leader",
+      "amount": 8000,
+      "status": "paid"
+    },
+    {
+      "user_id": "3153084302",
+      "week_start": "2026-10-16",
+      "rank_name": "Executive Star",
+      "amount": 5500,
+      "status": "paid"
+    },
+    {
+      "user_id": "3153084302",
+      "week_start": "2026-09-18",
+      "rank_name": "Executive Star",
+      "amount": 3000,
+      "status": "paid"
+    },
+    {
+      "user_id": "9455643290",
+      "week_start": "2026-09-04",
+      "rank_name": "Executive",
+      "amount": 1500,
+      "status": "paid"
+    },
+    {
+      "user_id": "3153084302",
+      "week_start": "2026-09-04",
+      "rank_name": "Executive",
+      "amount": 1500,
+      "status": "paid"
+    },
+    {
+      "user_id": "9011611631",
+      "week_start": "2026-08-28",
+      "rank_name": "Executive Star",
+      "amount": 3000,
+      "status": "paid"
+    },
+    {
+      "user_id": "9011611631",
+      "week_start": "2026-08-21",
+      "rank_name": "Executive",
+      "amount": 1500,
+      "status": "paid"
+    },
+    {
+      "user_id": "5019097412",
+      "week_start": "2026-08-07",
+      "rank_name": "Regional Leader",
+      "amount": 12000,
+      "status": "cancelled"
+    }
+  ],
+  "note": "Full backup stored outside the repo at C:/Users/ahmdz/AppData/Local/Temp/opencode/executive-ranks-backup-2026-10-24T19-38-38-390Z.json"
+}

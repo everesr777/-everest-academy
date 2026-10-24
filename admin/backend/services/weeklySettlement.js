@@ -300,13 +300,13 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
 
     const users = scope
       ? await query(
-          `SELECT id, full_name, email, rank, direct_count, e_money, account_type FROM users
+          `SELECT id, full_name, email, rank, direct_count, e_money, account_type, commission_exempt FROM users
             WHERE role IN ('student','registration') AND status = 'active'
               AND id IN (${scope.map(() => "?").join(",")})`,
           scope
         )
       : await query(
-          "SELECT id, full_name, email, rank, direct_count, e_money, account_type FROM users WHERE role IN ('student','registration') AND status = 'active'"
+          "SELECT id, full_name, email, rank, direct_count, e_money, account_type, commission_exempt FROM users WHERE role IN ('student','registration') AND status = 'active'"
         );
 
     // Recompute: drop the previous per-user calculation rows for the members about to be
@@ -490,6 +490,11 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
       let failureReason = null;
       if (!finalRank) {
         failureReason = 'No rank assigned';
+      } else if (Number(user.commission_exempt) === 1) {
+        // Admin exemption: the account keeps ranking up normally but never receives
+        // a weekly rank commission (e.g. staff / executive accounts).
+        commissionStatus = 'not_eligible';
+        failureReason = 'Commission disabled for this account (admin exemption)';
       } else {
         const bonus = bVal(finalRank) || 0;
         if (bonus > 0) {

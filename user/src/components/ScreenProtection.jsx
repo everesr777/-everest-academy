@@ -3,7 +3,7 @@ import { useEffect } from "react";
 export default function ScreenProtection() {
   useEffect(() => {
     const onKey = (e) => {
-      const key = e.key.toLowerCase();
+      const key = String(e.key || "").toLowerCase();
       const ctrl = e.ctrlKey || e.metaKey;
       const shift = e.shiftKey;
 

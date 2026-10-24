@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { api } from "../api.js";
 import { useLang } from "../LangContext.jsx";
 
@@ -64,7 +64,7 @@ export default function PricingSettingsPage() {
         <h3 className="font-bold text-lg border-b pb-3 mb-4">{t("سعر المحتوى (كل الكورسات)", "Content Price (All Courses)")}</h3>
         <p className="text-xs text-gray-400 mb-4">{t("السعر الذي يدفعه الطالب لشراء كل المحتوى التعليمي في المنصة", "The price a student pays to purchase all educational content on the platform")}</p>
         <div className="max-w-md">
-          <label className="text-sm font-bold text-gray-700 mb-2 block">{t("السعر (بالجنيه / E-Money)", "Price (in E-Money)")}</label>
+          <label className="text-sm font-bold text-gray-700 mb-2 block">{t("السعر (بالجنيه / $)", "Price (in $)")}</label>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -72,7 +72,7 @@ export default function PricingSettingsPage() {
               onChange={(e) => handleChange("content_price", e.target.value)}
               className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition"
             />
-            <span className="text-sm font-bold text-gray-400">E-Money</span>
+            <span className="text-sm font-bold text-gray-400">$</span>
           </div>
         </div>
       </div>
@@ -80,7 +80,7 @@ export default function PricingSettingsPage() {
       <div className="bg-white rounded-2xl border p-6">
         <h3 className="font-bold text-lg border-b pb-3 mb-4">{t("تكلفة إنشاء حساب لشخص آخر", "Create Account for Others Cost")}</h3>
         <div className="max-w-md">
-          <label className="text-sm font-bold text-gray-700 mb-2 block">{t("التكلفة (بالجنيه / E-Money)", "Cost (in E-Money)")}</label>
+          <label className="text-sm font-bold text-gray-700 mb-2 block">{t("التكلفة (بالجنيه / $)", "Cost (in $)")}</label>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -88,9 +88,9 @@ export default function PricingSettingsPage() {
               onChange={(e) => handleChange("create_account_cost", e.target.value)}
               className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition"
             />
-            <span className="text-sm font-bold text-gray-400">E-Money</span>
+            <span className="text-sm font-bold text-gray-400">$</span>
           </div>
-          <p className="text-xs text-gray-400 mt-2">{t("القيمة الافتراضية: 5500 E-Money", "Default: 5500 E-Money")}</p>
+          <p className="text-xs text-gray-400 mt-2">{t("القيمة الافتراضية: 5500 $", "Default: 5500 $")}</p>
         </div>
       </div>
 
@@ -98,7 +98,7 @@ export default function PricingSettingsPage() {
         <h3 className="font-bold text-lg border-b pb-3 mb-4">{t("عمولة الإحالة", "Referral Commission")}</h3>
         <p className="text-xs text-gray-400 mb-4">{t("المكافأة التي يحصل عليها المسوق عند تفعيل حساب عضو جديد", "Reward a marketer gets when a new member's account is activated")}</p>
         <div className="max-w-md">
-          <label className="text-sm font-bold text-gray-700 mb-2 block">{t("العمولة (E-Money)", "Commission (E-Money)")}</label>
+          <label className="text-sm font-bold text-gray-700 mb-2 block">{t("العمولة ($)", "Commission ($)")}</label>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -106,9 +106,9 @@ export default function PricingSettingsPage() {
               onChange={(e) => handleChange("referral_commission", e.target.value)}
               className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition"
             />
-            <span className="text-sm font-bold text-gray-400">E-Money</span>
+            <span className="text-sm font-bold text-gray-400">$</span>
           </div>
-          <p className="text-xs text-gray-400 mt-2">{t("القيمة الافتراضية: 1000 E-Money", "Default: 1000 E-Money")}</p>
+          <p className="text-xs text-gray-400 mt-2">{t("القيمة الافتراضية: 1000 $", "Default: 1000 $")}</p>
         </div>
       </div>
 

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { LangProvider, useLang } from "./LangContext";
 import { useTheme } from "./ThemeContext";
 import { api, BACKEND_URL } from "./api.js";
+import ActionGuard from "./ActionGuard.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import RoleManagementPage from "./pages/RoleManagementPage.jsx";
 import TopUpsPage from "./pages/TopUpsPage.jsx";
@@ -55,7 +56,7 @@ function AppInner() {
   const handleLogout = () => { localStorage.removeItem("admin_session"); setCurrentUser(null); };
 
   if (checking) return <div className="min-h-screen bg-theme-primary flex items-center justify-center"><p className="text-theme-text-secondary text-lg animate-pulse">{t("جاري التحقق...", "Checking...")}</p></div>;
-  if (!currentUser) return <LangProvider><AdminLoginPage onLogin={handleLogin} /></LangProvider>;
+  if (!currentUser) return <LangProvider><ActionGuard /><AdminLoginPage onLogin={handleLogin} /></LangProvider>;
 
   const isManager = currentUser.role === "manager";
 
@@ -88,6 +89,7 @@ function AppInner() {
 
   return (
     <div className="flex h-screen bg-theme-primary theme-transition" dir={lang === "ar" ? "rtl" : "ltr"}>
+      <ActionGuard />
       <Sidebar navItems={navItems} current={page} onChange={setPage} />
       <main className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
@@ -99,10 +101,10 @@ function AppInner() {
               <span className="hidden sm:inline">{currentUser.full_name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={toggleTheme} className="w-9 h-9 flex items-center justify-center rounded-lg border border-theme-border bg-theme-surface shadow-card hover:bg-theme-surface-hover text-lg">
+              <button data-no-confirm onClick={toggleTheme} className="w-9 h-9 flex items-center justify-center rounded-lg border border-theme-border bg-theme-surface shadow-card hover:bg-theme-surface-hover text-lg">
                 {theme === "dark" ? "☀️" : "🌙"}
               </button>
-              <button onClick={toggle} className="px-3 py-1.5 text-xs sm:text-sm font-medium bg-theme-surface border border-theme-border rounded-lg shadow-card hover:bg-theme-surface-hover text-theme-text-primary">
+              <button data-no-confirm onClick={toggle} className="px-3 py-1.5 text-xs sm:text-sm font-medium bg-theme-surface border border-theme-border rounded-lg shadow-card hover:bg-theme-surface-hover text-theme-text-primary">
                 {lang === "ar" ? "English" : "العربية"}
               </button>
               <button onClick={handleLogout} className="px-3 py-1.5 text-xs sm:text-sm font-medium bg-theme-surface text-theme-text-secondary border border-theme-border rounded-lg shadow-card hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition">
@@ -149,22 +151,22 @@ function Sidebar({ navItems, current, onChange }) {
   const { theme, toggleTheme } = useTheme();
   return (
     <>
-      <button onClick={() => setOpen(true)} className="lg:hidden fixed top-3 right-3 z-50 bg-everest-950 text-white p-3 rounded-xl shadow-lg text-xl">☰</button>
+      <button data-no-confirm onClick={() => setOpen(true)} className="lg:hidden fixed top-3 right-3 z-50 bg-everest-950 text-white p-3 rounded-xl shadow-lg text-xl">☰</button>
       {open && <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setOpen(false)} />}
       <aside className={`${open ? "translate-x-0" : "translate-x-full"} lg:translate-x-0 transition-transform duration-300 w-64 bg-everest-950 text-white flex flex-col fixed lg:static inset-y-0 right-0 z-40`}>
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <h1 className="text-lg font-bold"><span className="text-everest-400">Everest</span> Admin</h1>
           <div className="flex items-center gap-2">
-            <button onClick={toggleTheme} className="text-white/60 hover:text-white text-sm transition">{theme === "dark" ? "☀️" : "🌙"}</button>
-            <button onClick={() => setOpen(false)} className="lg:hidden text-white/60 hover:text-white">✕</button>
+            <button data-no-confirm onClick={toggleTheme} className="text-white/60 hover:text-white text-sm transition">{theme === "dark" ? "☀️" : "🌙"}</button>
+            <button data-no-confirm onClick={() => setOpen(false)} className="lg:hidden text-white/60 hover:text-white">✕</button>
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto p-3 space-y-1" style={{maxHeight:"calc(100vh - 80px)"}}>
-          {navItems.map((item) => (
-            <button key={item.id} onClick={() => { onChange(item.id); setOpen(false); }}
-              className={`w-full text-right px-4 py-3 rounded-lg text-sm font-medium transition flex items-center gap-3 ${current === item.id ? "bg-everest-600 text-white" : "text-theme-text-secondary hover:bg-white/5"}`}>
-              <span>{item.icon}</span>
-              {item.label}
+          {navItems.map((it$) => (
+            <button data-no-confirm key={it$.id} onClick={() => { onChange(it$.id); setOpen(false); }}
+              className={`w-full text-right px-4 py-3 rounded-lg text-sm font-medium transition flex items-center gap-3 ${current === it$.id ? "bg-everest-600 text-white" : "text-theme-text-secondary hover:bg-white/5"}`}>
+              <span>{it$.icon}</span>
+              {it$.label}
             </button>
           ))}
         </nav>
@@ -251,7 +253,7 @@ function DashboardPage({ stats }) {
   const breakdownCards = [
     { label: t("الحسابات المحظورة", "Blocked Accounts"), value: stats.totalBlocked, icon: "🚫", color: "#ef4444", desc: t("محظورين من المنصة", "Blocked from platform"), type: "blocked" },
     { label: t("حسابات التسجيل المجاني", "Reg Free Accounts"), value: stats.totalRegistration, icon: "🆓", color: "#a855f7", desc: t("حسابات غير مفعلة كطلاب", "Not activated as students"), type: "registration" },
-    { label: t("العمولات المدفوعة", "Commissions Paid"), value: stats.totalCommissions, icon: "💎", color: "#10b981", desc: "EM " + t("إجمالي", "total"), type: "commissions" },
+    { label: t("العمولات المدفوعة", "Commissions Paid"), value: stats.totalCommissions, icon: "💎", color: "#10b981", desc: "$ " + t("إجمالي", "total"), type: "commissions" },
     { label: t("اختبارات ناجحة", "Quizzes Passed"), value: stats.passedQuizzes, icon: "📋", color: "#8b5cf6", desc: `${stats.totalQuizAttempts || 0} ${t("إجمالي محاولات", "total attempts")}`, type: "quizzes-passed" },
   ];
 
@@ -291,7 +293,7 @@ function DashboardPage({ stats }) {
         </div>
         <div className="flex items-center gap-3">
           <div className="text-xs text-theme-text-secondary bg-theme-surface px-3 py-1.5 rounded-lg border border-theme-border">{new Date().toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</div>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 text-sm bg-theme-surface border border-theme-border rounded-xl shadow-card hover:shadow-lg transition flex items-center gap-2 text-theme-text-primary">
+          <button data-no-confirm onClick={() => window.location.reload()} className="px-4 py-2 text-sm bg-theme-surface border border-theme-border rounded-xl shadow-card hover:shadow-lg transition flex items-center gap-2 text-theme-text-primary">
             <span className="text-base">🔄</span> {t("تحديث", "Refresh")}
           </button>
         </div>
@@ -299,7 +301,7 @@ function DashboardPage({ stats }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {mainCards.map((c, i) => (
-          <button key={i} onClick={() => openDetail(c.type)}
+          <button data-no-confirm key={i} onClick={() => openDetail(c.type)}
             className={`relative overflow-hidden bg-theme-surface rounded-2xl shadow-card border border-theme-border p-5 text-left hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${detail === c.type ? 'card-active' : 'border-theme-border'}`}
             style={{animation: `slideUp 0.4s ease ${i * 0.08}s both`}}>
             <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full bg-gradient-to-br ${c.bg} to-white/5 opacity-10`} />
@@ -315,7 +317,7 @@ function DashboardPage({ stats }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
         {ringData.map((r, i) => (
-          <button key={i} onClick={() => openDetail(r.type)}
+          <button data-no-confirm key={i} onClick={() => openDetail(r.type)}
             className={`bg-theme-surface rounded-2xl shadow-card border border-theme-border p-5 flex items-center gap-5 text-left hover:shadow-lg transition-all duration-300 ${detail === r.type ? 'card-active' : 'border-theme-border'}`}
             style={{animation: `slideUp 0.4s ease ${0.4 + i * 0.1}s both`}}>
             <RingChart value={r.value} max={r.max} color={r.color} />
@@ -330,7 +332,7 @@ function DashboardPage({ stats }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {pendingCards.map((c, i) => (
-          <button key={i} onClick={() => openDetail(c.type)}
+          <button data-no-confirm key={i} onClick={() => openDetail(c.type)}
             className={`bg-theme-surface rounded-2xl shadow-card border border-theme-border p-5 flex items-center gap-4 text-left hover:shadow-md transition-all duration-300 ${detail === c.type ? 'card-active' : 'border-theme-border'}`}
             style={{animation: `slideUp 0.4s ease ${0.7 + i * 0.08}s both`}}>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center text-lg" style={{background: c.color + "15"}}>{c.icon}</div>
@@ -345,7 +347,7 @@ function DashboardPage({ stats }) {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {breakdownCards.map((c, i) => (
-          <button key={i} onClick={() => openDetail(c.type)}
+          <button data-no-confirm key={i} onClick={() => openDetail(c.type)}
             className={`relative overflow-hidden bg-theme-surface rounded-2xl shadow-card border border-theme-border p-5 text-left transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${detail === c.type ? 'card-active' : 'border-theme-border'}`}>
             <div className="flex items-center gap-2 mb-1">
               <span>{c.icon}</span>
@@ -373,7 +375,7 @@ function DashboardPage({ stats }) {
                   🗑️ {t("حذف الكل", "Delete All")}
                 </button>
               )}
-              <button onClick={() => { setDetail(null); setDetailData([]); }} className="text-sm text-theme-text-secondary hover:text-theme-text-primary">{t("إغلاق ✕", "Close ✕")}</button>
+              <button data-no-confirm onClick={() => { setDetail(null); setDetailData([]); }} className="text-sm text-theme-text-secondary hover:text-theme-text-primary">{t("إغلاق ✕", "Close ✕")}</button>
             </div>
           </div>
           {detailLoading ? (
@@ -401,26 +403,26 @@ function DashboardPage({ stats }) {
                   )}
                 </tr></thead>
                 <tbody>
-                  {detailData.map((item, idx) => {
+                  {detailData.map((it$, idx) => {
                     if (detail === "courses" || detail === "published-courses") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{item.title_ar || item.title}</td><td className="table-cell text-theme-text-secondary">{item.category_ar || item.category || "–"}</td><td className="table-cell">{item.is_free ? <span className="text-green-600 font-bold">{t("مجاني", "Free")}</span> : `${item.price_egp || item.price} EGP`}</td><td className="table-cell"><span className={`badge ${item.status === 'published' ? 'badge-green' : 'badge-gray'}`}>{item.status}</span></td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.title_ar || it$.title}</td><td className="table-cell text-theme-text-secondary">{it$.category_ar || it$.category || "–"}</td><td className="table-cell">{it$.is_free ? <span className="text-green-600 font-bold">{t("مجاني", "Free")}</span> : `${it$.price_egp || it$.price} EGP`}</td><td className="table-cell"><span className={`badge ${it$.status === 'published' ? 'badge-green' : 'badge-gray'}`}>{it$.status}</span></td></tr>;
                     }
                     if (detail === "commissions") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{item.user_name || item.user_id}</td><td className="table-cell text-theme-text-secondary">{item.rank_name || "–"}</td><td className="table-cell text-green-600 font-bold">{item.amount} EM</td><td className="table-cell text-theme-text-secondary text-xs">{item.created_at ? item.created_at.slice(0,10) : "–"}</td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.user_name || it$.user_id}</td><td className="table-cell text-theme-text-secondary">{it$.rank_name || "–"}</td><td className="table-cell text-green-600 font-bold">{it$.amount} $</td><td className="table-cell text-theme-text-secondary text-xs">{it$.created_at ? it$.created_at.slice(0,10) : "–"}</td></tr>;
                     }
                     if (detail === "feedbacks") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{item.full_name || item.user_name || item.user_id}</td><td className="table-cell text-theme-text-secondary text-xs max-w-xs truncate">{item.comment || "–"}</td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.full_name || it$.user_name || it$.user_id}</td><td className="table-cell text-theme-text-secondary text-xs max-w-xs truncate">{it$.comment || "–"}</td></tr>;
                     }
                     if (detail === "quiz-pass-rate" || detail === "quizzes-passed") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{item.student_name || item.user_name || item.user_id}</td><td className="table-cell text-theme-text-secondary text-xs">{item.quiz_title || item.quiz_id}</td><td className="table-cell"><span className={`badge ${item.result === 'pass' ? 'badge-green' : 'badge-red'}`}>{item.result === 'pass' ? t("ناجح", "Pass") : t("راسب", "Fail")}</span></td><td className="table-cell">{item.correct_answers ?? item.correct}/{item.total_marks ?? item.total}</td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.student_name || it$.user_name || it$.user_id}</td><td className="table-cell text-theme-text-secondary text-xs">{it$.quiz_title || it$.quiz_id}</td><td className="table-cell"><span className={`badge ${it$.result === 'pass' ? 'badge-green' : 'badge-red'}`}>{it$.result === 'pass' ? t("ناجح", "Pass") : t("راسب", "Fail")}</span></td><td className="table-cell">{it$.correct_answers ?? it$.correct}/{it$.total_marks ?? it$.total}</td></tr>;
                     }
                     if (detail.includes("enrollment") || detail === "total-enrollments" || detail === "pending-enrollments2") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{item.student_name || item.user_name || item.user_id}</td><td className="table-cell text-theme-text-secondary text-xs">{item.course_name || item.course_title || item.course_id}</td><td className="table-cell"><span className={`badge ${item.status === 'approved' ? 'badge-green' : item.status === 'pending' ? 'badge-yellow' : 'badge-gray'}`}>{item.status}</span></td><td className="table-cell text-theme-text-secondary text-xs">{item.enrolled_at ? item.enrolled_at.slice(0,10) : "–"}</td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.student_name || it$.user_name || it$.user_id}</td><td className="table-cell text-theme-text-secondary text-xs">{it$.course_name || it$.course_title || it$.course_id}</td><td className="table-cell"><span className={`badge ${it$.status === 'approved' ? 'badge-green' : it$.status === 'pending' ? 'badge-yellow' : 'badge-gray'}`}>{it$.status}</span></td><td className="table-cell text-theme-text-secondary text-xs">{it$.enrolled_at ? it$.enrolled_at.slice(0,10) : "–"}</td></tr>;
                     }
                     if (detail === "pending-topup") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{item.user_name || item.user_id}</td><td className="table-cell font-bold">{item.amount} EGP</td><td className="table-cell"><span className="badge badge-yellow">{item.status}</span></td><td className="table-cell text-theme-text-secondary text-xs">{item.created_at ? item.created_at.slice(0,10) : "–"}</td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.user_name || it$.user_id}</td><td className="table-cell font-bold">{it$.amount} EGP</td><td className="table-cell"><span className="badge badge-yellow">{it$.status}</span></td><td className="table-cell text-theme-text-secondary text-xs">{it$.created_at ? it$.created_at.slice(0,10) : "–"}</td></tr>;
                     }
-                    return <tr key={idx} className="table-row"><td className="table-cell font-medium">{item.full_name || item.name}</td><td className="table-cell text-theme-text-secondary text-xs">{item.email}</td><td className="table-cell"><span className={`badge ${item.role === 'student' ? 'badge-blue' : item.role === 'registration' ? 'badge-yellow' : 'badge-gray'}`}>{item.role || item.account_type}</span></td><td className="table-cell text-theme-text-secondary">{item.rank || "–"}</td><td className="table-cell">{item.blocked ? <span className="text-red-600 font-bold">🚫</span> : <span className={`badge ${item.status === 'active' ? 'badge-green' : item.status === 'pending' ? 'badge-yellow' : 'badge-red'}`}>{item.status}</span>}</td></tr>;
+                    return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.full_name || it$.name}</td><td className="table-cell text-theme-text-secondary text-xs">{it$.email}</td><td className="table-cell"><span className={`badge ${it$.role === 'student' ? 'badge-blue' : it$.role === 'registration' ? 'badge-yellow' : 'badge-gray'}`}>{it$.role || it$.account_type}</span></td><td className="table-cell text-theme-text-secondary">{it$.rank || "–"}</td><td className="table-cell">{it$.blocked ? <span className="text-red-600 font-bold">🚫</span> : <span className={`badge ${it$.status === 'active' ? 'badge-green' : it$.status === 'pending' ? 'badge-yellow' : 'badge-red'}`}>{it$.status}</span>}</td></tr>;
                   })}
                 </tbody>
               </table>
@@ -433,7 +435,7 @@ function DashboardPage({ stats }) {
         <div className="flex items-center gap-2 mb-3"><span className="text-sm">📋</span><span className="text-sm font-bold text-theme-text-primary">{t("ملخص المنصة", "Platform Summary")}</span></div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           {summaryItems.map((s, i) => (
-            <button key={i} onClick={() => openDetail(s.type)}
+            <button data-no-confirm key={i} onClick={() => openDetail(s.type)}
               className={`flex items-center gap-2 bg-theme-secondary rounded-xl px-4 py-3 text-left hover:bg-theme-surface-hover transition ${detail === s.type ? 'ring-2 ring-everest-500' : ''}`}>
               <span>{s.icon}</span>
               <div><p className="text-theme-text-secondary text-xs">{s.label}</p><p className="font-bold text-theme-text-primary">{(s.value || 0).toLocaleString()}</p></div>

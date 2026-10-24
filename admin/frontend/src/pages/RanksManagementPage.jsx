@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
 
@@ -7,7 +7,7 @@ export default function RanksManagementPage() {
   const t = (ar, en) => tFn(ar, en);
   const [ranks, setRanks] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [editItem, setEditItem] = useState(null);
+  const [editIt$, setEditIt$] = useState(null);
   const [form, setForm] = useState({ name: "", sales_required: 0, bonus: 0, is_active: 1, image: "" });
   const [imagePreview, setImagePreview] = useState("");
   const fileRef = useRef(null);
@@ -16,14 +16,14 @@ export default function RanksManagementPage() {
   useEffect(() => { load(); }, []);
 
   const openAdd = () => {
-    setEditItem(null);
+    setEditIt$(null);
     setForm({ name: "", sales_required: 0, bonus: 0, is_active: 1, image: "" });
     setImagePreview("");
     setShowForm(true);
   };
 
   const openEdit = (r) => {
-    setEditItem(r);
+    setEditIt$(r);
     setForm({ name: r.name, sales_required: r.sales_required, bonus: r.bonus, is_active: r.is_active, image: r.image || "" });
     setImagePreview(r.image || "");
     setShowForm(true);
@@ -49,12 +49,12 @@ export default function RanksManagementPage() {
 
   const save = async () => {
     if (!form.name.trim()) return;
-    if (editItem) {
-      await api(`/api/ranks/${editItem.id}`, { method: "PUT", body: JSON.stringify(form) });
+    if (editIt$) {
+      await api(`/api/ranks/${editIt$.id}`, { method: "PUT", body: JSON.stringify(form) });
     } else {
       await api("/api/ranks", { method: "POST", body: JSON.stringify(form) });
     }
-    setShowForm(false); setEditItem(null); load();
+    setShowForm(false); setEditIt$(null); load();
   };
 
   const toggleActive = async (r) => {
@@ -86,7 +86,7 @@ export default function RanksManagementPage() {
           { label: t("إجمالي الرتب", "Total Ranks"), value: ranks.length, icon: "🏅", color: "#6366f1" },
           { label: t("رتب نشطة", "Active Ranks"), value: ranks.filter(r => r.is_active).length, icon: "✅", color: "#10b981" },
           { label: t("رتب معطلة", "Inactive Ranks"), value: ranks.filter(r => !r.is_active).length, icon: "🚫", color: "#ef4444" },
-          { label: t("أعلى مكافأة", "Highest Bonus"), value: Math.max(...ranks.map(r => r.bonus), 0), icon: "🎁", color: "#f59e0b", suffix: " EM" },
+          { label: t("أعلى مكافأة", "Highest Bonus"), value: Math.max(...ranks.map(r => r.bonus), 0), icon: "🎁", color: "#f59e0b", suffix: " $" },
         ].map((s, i) => (
           <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl" style={{ background: s.color + "15" }}>{s.icon}</div>
@@ -131,7 +131,7 @@ export default function RanksManagementPage() {
                       <div className="flex items-center gap-4 mt-1 text-sm">
                         <span className="text-gray-500">🎯 <strong>{r.sales_required}</strong> {r.sales_required === 0 ? t("(بدون شرط)", "(No requirement)") : t("مبيعات", "sales")}</span>
                         <span className="text-gray-300">|</span>
-                        <span className="text-gray-500">🎁 <strong>{r.bonus.toLocaleString()}</strong> {r.bonus > 0 ? "EM" : t("(بدون)", "(None)")}</span>
+                        <span className="text-gray-500">🎁 <strong>{r.bonus.toLocaleString()}</strong> {r.bonus > 0 ? "$" : t("(بدون)", "(None)")}</span>
                         <span className="text-gray-300">|</span>
                         <span className="text-gray-500">📊 {t("الترتيب:", "Order:")} <strong>{r.sort_order}</strong></span>
                         <span className="text-gray-300">|</span>
@@ -159,7 +159,7 @@ export default function RanksManagementPage() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold">{editItem ? t("تعديل الرتبة", "Edit Rank") : t("إضافة رتبة جديدة", "Add New Rank")}</h3>
+              <h3 className="text-lg font-bold">{editIt$ ? t("تعديل الرتبة", "Edit Rank") : t("إضافة رتبة جديدة", "Add New Rank")}</h3>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
 
@@ -197,7 +197,7 @@ export default function RanksManagementPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("المكافأة (E-Money)", "Bonus (E-Money)")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("المكافأة ($)", "Bonus ($)")}</label>
                   <input type="number" min="0" value={form.bonus} onChange={(e) => setForm({ ...form, bonus: parseInt(e.target.value) || 0 })}
                     className="w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-everest-500 focus:border-everest-500 outline-none"
                   />
@@ -224,7 +224,7 @@ export default function RanksManagementPage() {
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowForm(false)} className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl font-medium text-sm">{t("إلغاء", "Cancel")}</button>
               <button onClick={save} className="flex-1 px-4 py-2.5 bg-everest-600 text-white rounded-xl font-medium text-sm hover:bg-everest-700 transition">
-                {editItem ? t("حفظ التعديلات", "Save Changes") : t("إضافة رتبة", "Add Rank")}
+                {editIt$ ? t("حفظ التعديلات", "Save Changes") : t("إضافة رتبة", "Add Rank")}
               </button>
             </div>
           </div>

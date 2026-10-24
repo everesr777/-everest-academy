@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -98,7 +98,7 @@ export default function RankingsPage() {
   const weeklyCommission = rankData ? bonusVal(rankData) : 0;
 
   const statusColors = {
-    paid: "#22c55e", not_eligible: "#ef4444", no_bonus: "#f59e0b", no_change: "#9a9aae",
+    paid: "#22c55e", not_eligible: "#ef4444", no_bonus: "#f59e0b", no_change: "#9a9aae", cancelled: "#f97316",
     promoted: "#22c55e", demoted: "#ef4444"
   };
 
@@ -240,7 +240,7 @@ export default function RankingsPage() {
                       <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: c.text }}>{r.name}</h3>
                       <p style={{ fontSize: 12, color: c.textMuted, marginTop: 3 }}>
                         🎯 {salesReq(r)}+ {t("أعضاء فريقك", "Team Members")}
-                        {bonusVal(r) > 0 && ` · 🎁 ${bonusVal(r).toLocaleString()} EM / ${t("أسبوعياً", "week")}`}
+                        {bonusVal(r) > 0 && ` · 🎁 ${bonusVal(r).toLocaleString()} $ / ${t("أسبوعياً", "week")}`}
                       </p>
                     </div>
                   </div>
@@ -500,7 +500,7 @@ export default function RankingsPage() {
                           <div style={{ fontSize: 11, color: c.textMuted }}>{t("مؤهل:", "Qualified:")} {wh.qualified_direct_sales}</div>
                         </div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: wh.weekly_commission > 0 ? "#22c55e" : c.textMuted }}>
-                          {wh.weekly_commission > 0 ? `${wh.weekly_commission.toLocaleString()} EM` : "—"}
+                          {wh.weekly_commission > 0 ? `${wh.weekly_commission.toLocaleString()} $` : "—"}
                         </div>
                         <div>
                           <span className="rk-badge" style={{
@@ -510,6 +510,7 @@ export default function RankingsPage() {
                             {wh.commission_status === 'paid' ? '✅ ' + t("مدفوع", "Paid") :
                              wh.commission_status === 'not_eligible' ? '❌ ' + t("غير مؤهل", "Not Eligible") :
                              wh.commission_status === 'no_bonus' ? '⚠️ ' + t("بلا مكافأة", "No Bonus") :
+                             wh.commission_status === 'cancelled' ? '↩️ ' + t("ملغاة", "Cancelled") :
                              wh.commission_status}
                           </span>
                         </div>

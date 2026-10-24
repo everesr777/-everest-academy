@@ -49,7 +49,7 @@ export async function resolveUserByEmail(email) {
  */
 export async function resolveDirectUplines(directId) {
   const rows = await query(
-    `SELECT u.id, u.full_name, u.email, u.rank, u.account_type, u.role, u.status
+    `SELECT u.id, u.full_name, u.email, u.rank, u.account_type, u.role, u.status, u.commission_exempt
        FROM user_closure c
        JOIN users u ON u.id = c.ancestor
       WHERE c.descendant = ? AND c.depth = 1 AND c.ancestor != ?
@@ -240,6 +240,8 @@ export async function previewAssignments({ weekStart, emails }) {
       }
     }
     if (projectedRank === (up.rank || "")) projectedBonus = rankBonus(currentRank);
+    const commissionExempt = Number(up.commission_exempt) === 1;
+    if (commissionExempt) projectedBonus = 0;
 
     metrics.set(uplineId, {
       uplineId,
@@ -255,6 +257,7 @@ export async function previewAssignments({ weekStart, emails }) {
       qualifiedTeam,
       projectedRank,
       projectedCommission: projectedBonus,
+      commissionExempt,
       alreadyPaidThisWeek: paidRow ? { amount: paidRow.amount, rank: paidRow.rank_name } : null,
       lastCalculated: historyRow || null,
     });
@@ -278,6 +281,7 @@ export async function previewAssignments({ weekStart, emails }) {
         qualifiedTeam: 0,
         projectedRank: up.rank || "",
         projectedCommission: 0,
+        commissionExempt: Number(up.commission_exempt) === 1,
         alreadyPaidThisWeek: null,
         lastCalculated: null,
       }),

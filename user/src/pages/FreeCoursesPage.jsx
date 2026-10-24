@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
@@ -275,7 +275,7 @@ export default function FreeCoursesPage() {
           <button className="fcp-view-btn" style={{ maxWidth: 600, margin: "0 auto", display: "flex", fontSize: "1.05rem", height: 54 }} onClick={() => {
             window.location.href = "/purchase-all";
           }}>
-            {t(" سعر الباكدج ", "Buy All Content")} — {Number(pricing.content_price || 0).toLocaleString()} E-Money
+            {t(" سعر الباكدج ", "Buy All Content")} — {Number(pricing.content_price || 0).toLocaleString()} $
           </button>
         </div>
       )}
@@ -290,7 +290,7 @@ export default function FreeCoursesPage() {
             <div className="fcp-feature">{t("🎯 مسار تعليمي شخصي", "Personalized Learning Journey")}</div>
             <div className="fcp-feature">{t("🚀 حماس مستمر", "Continuous Motivation")}</div>
             <div className="fcp-feature">{t("📚 محتوى محدث", "Updated Content")}</div>
-            <div className="fcp-feature">{t("💎 نظام E-Money مرن", "Flexible E-Money System")}</div>
+            <div className="fcp-feature">{t("💎 نظام $ مرن", "Flexible $ System")}</div>
             <div className="fcp-feature">{t("🤝 دعم الطلاب", "Student Support")}</div>
             <div className="fcp-feature">{t("🌟 استرداد الأموال خلال 48 ساعة", "Money refund in 48 hours")}</div>
           </div>
@@ -354,7 +354,7 @@ export default function FreeCoursesPage() {
           <div className="fcp-login-modal-body">
             <div className="fcp-login-modal-price">
               <small>{t("سعر الباكدج", "Package Price")}:</small>
-              <span>{loginModalPrice} E-Money</span>
+              <span>{loginModalPrice} $</span>
             </div>
             <div className="fcp-login-modal-btns">
               <Link to="/login" className="fcp-login-go">

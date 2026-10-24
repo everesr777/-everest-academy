@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, getAdminSession } from "../api.js";
 
@@ -7,7 +7,7 @@ export default function AdminsListPage() {
   const t = (ar, en) => tFn(ar, en);
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editItem, setEditItem] = useState(null);
+  const [editIt$, setEditIt$] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ id: "", full_name: "", email: "", password: "", role: "admin" });
   const [msg, setMsg] = useState("");
@@ -39,7 +39,7 @@ export default function AdminsListPage() {
     try {
       await api(`/api/admin-auth/list/${form.id}`, { method: "PUT", body: JSON.stringify(body) });
       setMsg(t("✅ تم تحديث البيانات بنجاح", "✅ Admin updated successfully"));
-      setEditItem(null); load();
+      setEditIt$(null); load();
       setTimeout(() => setMsg(""), 3000);
     } catch (e) { alert("❌ " + e.message); }
   };
@@ -54,7 +54,7 @@ export default function AdminsListPage() {
     } catch (e) { alert("❌ " + e.message); }
   };
 
-  const openEdit = (a) => { setForm({ id: a.id, full_name: a.full_name, email: a.email, password: "", role: a.role }); setEditItem(a); };
+  const openEdit = (a) => { setForm({ id: a.id, full_name: a.full_name, email: a.email, password: "", role: a.role }); setEditIt$(a); };
 
   return (
     <div>
@@ -126,8 +126,8 @@ export default function AdminsListPage() {
       )}
 
       {/* Edit Modal */}
-      {editItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditItem(null)}>
+      {editIt$ && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditIt$(null)}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
             <h3 className="text-xl font-bold mb-4">{t("✏️ تعديل بيانات الأدمن", "✏️ Edit Admin")}</h3>
             <div className="space-y-3">
@@ -142,7 +142,7 @@ export default function AdminsListPage() {
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={handleEdit} className="flex-1 py-2.5 bg-everest-600 text-white rounded-lg font-bold hover:bg-everest-700">{t("حفظ", "Save")}</button>
-              <button onClick={() => setEditItem(null)} className="flex-1 py-2.5 bg-gray-100 rounded-lg font-medium hover:bg-gray-200">{t("إلغاء", "Cancel")}</button>
+              <button onClick={() => setEditIt$(null)} className="flex-1 py-2.5 bg-gray-100 rounded-lg font-medium hover:bg-gray-200">{t("إلغاء", "Cancel")}</button>
             </div>
           </div>
         </div>

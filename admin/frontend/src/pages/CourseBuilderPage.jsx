@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, uploadApi } from "../api.js";
 
@@ -163,8 +163,8 @@ export default function CourseBuilderPage() {
             <h4 className="font-bold mb-3">{t("التسعير", "Pricing")} {req}</h4>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">E-Money {req}</label>
-                <input type="number" value={course.price} onChange={e => { handleChange("price", e.target.value); setErrors(prev => ({...prev, price: false})); }} placeholder={t("السعر بالـ E-Money", "Price in E-Money")} className={`w-full px-3 py-2 border rounded-lg text-sm ${errors.price ? "border-red-500" : ""}`} />
+                <label className="text-xs font-medium text-gray-500 mb-1 block">$ {req}</label>
+                <input type="number" value={course.price} onChange={e => { handleChange("price", e.target.value); setErrors(prev => ({...prev, price: false})); }} placeholder={t("السعر بالـ $", "Price in $")} className={`w-full px-3 py-2 border rounded-lg text-sm ${errors.price ? "border-red-500" : ""}`} />
               </div>
               <p className="text-xs text-gray-400">{t("جميع الكورسات مدفوعة — الدروس المجانية كـ Preview", "All courses are paid — free lessons are Preview only")}</p>
             </div>

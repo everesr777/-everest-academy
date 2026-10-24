@@ -18,7 +18,7 @@ export default function QuizModal({ quiz, onClose, onPassed }) {
     const prevent = (e) => e.preventDefault();
     const blockKey = (e) => {
       const ctrl = e.ctrlKey || e.metaKey;
-      const key = e.key.toLowerCase();
+      const key = String(e.key || "").toLowerCase();
       // Block Ctrl+C (copy), Ctrl+V (paste), Ctrl+A (select all), Ctrl+X (cut)
       if (ctrl && (key === "c" || key === "v" || key === "a" || key === "x")) { e.preventDefault(); return false; }
       // Block Ctrl+Shift+I/C/J (DevTools)

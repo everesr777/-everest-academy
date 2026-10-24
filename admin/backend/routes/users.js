@@ -34,7 +34,7 @@ const logAdminAction = async (req, action, targetId, targetName, details) => {
 };
 
 router.get("/", async (req, res) => {
-  const users = await query("SELECT id, full_name, email, phone, address, role, account_type, referral_code, rank, e_money, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, blocked, status, avatar, created_at FROM users ORDER BY created_at DESC");
+  const users = await query("SELECT id, full_name, email, phone, address, role, account_type, referral_code, rank, e_money, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, commission_exempt, blocked, status, avatar, created_at FROM users ORDER BY created_at DESC");
   res.json(users);
 });
 
@@ -124,7 +124,7 @@ router.put("/:id/id-cards", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const user = await queryOne("SELECT id, full_name, email, phone, address, role, account_type, referral_code, referred_by, created_by_user, rank, e_money, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, blocked, status, bio, avatar, governorate, country, created_at, membership_expires_at FROM users WHERE id = ?", [req.params.id]);
+  const user = await queryOne("SELECT id, full_name, email, phone, address, role, account_type, referral_code, referred_by, created_by_user, rank, e_money, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, commission_exempt, blocked, status, bio, avatar, governorate, country, created_at, membership_expires_at FROM users WHERE id = ?", [req.params.id]);
   if (!user) return res.status(404).json({ error: "User not found" });
   const realDirects = await queryOne("SELECT COUNT(*) as cnt FROM users WHERE referred_by = ? OR (created_by_user = ? AND referred_by IS NULL)", [req.params.id, req.params.id]);
   user.direct_count = realDirects?.cnt || 0;
@@ -212,6 +212,16 @@ router.put("/:id/negative-toggle", async (req, res) => {
   res.json({ success: true, negative_allowed: !!newVal });
 });
 
+// Toggle weekly-commission exemption (staff/executive accounts keep ranking up but are not paid)
+router.put("/:id/commission-exempt-toggle", async (req, res) => {
+  const user = await queryOne("SELECT id, full_name, commission_exempt FROM users WHERE id = ?", [req.params.id]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  const newVal = Number(user.commission_exempt) === 1 ? 0 : 1;
+  await execute("UPDATE users SET commission_exempt = ?, updated_at=datetime('now','localtime') WHERE id=?", [newVal, req.params.id]);
+  await logAdminAction(req, newVal ? "disable weekly commission" : "enable weekly commission", req.params.id, user.full_name, null);
+  res.json({ success: true, commission_exempt: !!newVal });
+});
+
 router.get("/filter/:role", async (req, res) => {
   const role = req.params.role === "all" ? "%" : req.params.role;
   const users = await query("SELECT id, full_name, email, role, rank, e_money, blocked, created_at FROM users WHERE role LIKE ? ORDER BY created_at DESC", [role]);
@@ -265,8 +275,8 @@ async function awardStudentCommissions(user) {
 
   // Commission to the direct referrer ONLY (Level 1)
   if (user.referred_by) {
-    const directReferrer = await queryOne("SELECT id, account_type FROM users WHERE id = ?", [user.referred_by]);
-    if (directReferrer && directReferrer.account_type === "student") {
+    const directReferrer = await queryOne("SELECT id, account_type, commission_exempt FROM users WHERE id = ?", [user.referred_by]);
+    if (directReferrer && directReferrer.account_type === "student" && Number(directReferrer.commission_exempt) !== 1) {
       const existingCommission = await queryOne("SELECT id FROM commissions WHERE from_user_id = ? AND level = 1 AND description IS NULL", [user.id]);
       if (!existingCommission) {
         const comId = uuidv4();
@@ -281,8 +291,8 @@ async function awardStudentCommissions(user) {
 
   // Commission to the creator (created-for-others flow)
   if (user.created_by_user) {
-    const creatorUser = await queryOne("SELECT id, account_type FROM users WHERE id = ?", [user.created_by_user]);
-    if (creatorUser) {
+    const creatorUser = await queryOne("SELECT id, account_type, commission_exempt FROM users WHERE id = ?", [user.created_by_user]);
+    if (creatorUser && Number(creatorUser.commission_exempt) !== 1) {
       const existingCreatorComm = await queryOne("SELECT id FROM commissions WHERE from_user_id = ? AND description LIKE 'create-account%'", [user.id]);
       if (!existingCreatorComm) {
         const comId = uuidv4();

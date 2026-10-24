@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { useTheme } from "../ThemeContext";
 import { api } from "../api";
@@ -132,7 +132,7 @@ export default function TransactionsPage() {
                       </span>
                     </td>
                     <td className="table-cell font-bold" style={{color: tx.amount > 0 ? "#10b981" : "#6b7280"}}>
-                      {tx.amount != null ? `${parseFloat(tx.amount).toLocaleString()} EM` : "—"}
+                      {tx.amount != null ? `${parseFloat(tx.amount).toLocaleString()} $` : "—"}
                     </td>
                     <td className="table-cell">
                       <div className="text-theme-text-primary font-medium text-xs">{tx.from_name || "—"}</div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, BACKEND_URL, uploadApi } from "../api.js";
 import LoadingIndicator from "../components/LoadingIndicator";
@@ -123,7 +123,7 @@ export default function UsersPage() {
         method: "PUT", body: JSON.stringify({ amount: amt, allow_negative: false }),
       });
       loadUsers();
-      alert(`${t("تم إضافة", "Added")} ${amt} E-Money ${t("إلى:", "To:")} ${name}`);
+      alert(`${t("تم إضافة", "Added")} ${amt} $ ${t("إلى:", "To:")} ${name}`);
       setSendAmtModal(null);
     } catch (e) { alert(t("خطأ:", "Error:") + " " + e.message); }
   };
@@ -277,7 +277,7 @@ export default function UsersPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <button onClick={() => openProfile(u)} className="text-blue-600 hover:underline text-sm">{t("عرض", "View")}</button>
                     {u.role !== "admin" && (
-                      <button onClick={() => setSendAmtModal({user: u, amount: ''})} className="text-emerald-600 hover:underline text-sm">{t("💰 إرسال E-Money", "💰 Send E-Money")}</button>
+                      <button onClick={() => setSendAmtModal({user: u, amount: ''})} className="text-emerald-600 hover:underline text-sm">{t("💰 إرسال $", "💰 Send $")}</button>
                     )}
                     <button onClick={() => toggleBlock(u)} className={`text-sm hover:underline ${u.blocked ? "text-green-600" : "text-orange-600"}`}>
                       {u.blocked ? t("فك الحظر", "Unblock") : t("حظر", "Block")}
@@ -294,11 +294,11 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* Send E-Money modal */}
+      {/* Send $ modal */}
       {sendAmtModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSendAmtModal(null)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold mb-1">{t("💰 إرسال E-Money", "💰 Send E-Money")}</h3>
+            <h3 className="font-bold mb-1">{t("💰 إرسال $", "💰 Send $")}</h3>
             <p className="text-sm text-gray-500 mb-4">{t("إلى:", "To:")} <strong>{sendAmtModal.user.full_name}</strong></p>
             <input type="number" value={sendAmtModal.amount} onChange={e => setSendAmtModal({...sendAmtModal, amount: e.target.value})} placeholder={t("المبلغ (مثال: 100)", "Amount (e.g. 100)")} autoFocus
               className="w-full px-4 py-2 border rounded-lg text-sm mb-4" />
@@ -425,10 +425,10 @@ export default function UsersPage() {
                           { label: t("رقم الهاتف", "Phone"), value: selectedUser.phone || "—" },
                           { label: t("العنوان", "Address"), value: selectedUser.address || selectedUser.governorate || "—" },
                           { label: t("الدولة", "Country"), value: selectedUser.country || "—" },
-                        ].map((item, i) => (
+                        ].map((it$, i) => (
                           <div key={i} className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-400">{item.label}</p>
-                            <p className="text-sm font-medium mt-1">{item.value}</p>
+                            <p className="text-xs text-gray-400">{it$.label}</p>
+                            <p className="text-sm font-medium mt-1">{it$.value}</p>
                           </div>
                         ))}
                       </div>
@@ -455,7 +455,7 @@ export default function UsersPage() {
                           <p className="text-sm font-bold mt-1">{selectedUser.total_team_sales || 0}</p>
                         </div>
                         <div className="border rounded-lg p-3">
-                          <p className="text-xs text-gray-400">{t("رصيد E-Money", "E-Money Balance")}</p>
+                          <p className="text-xs text-gray-400">{t("رصيد $", "$ Balance")}</p>
                           <p className="text-sm font-bold text-green-600 mt-1">{selectedUser.e_money}</p>
                         </div>
                       </div>
@@ -579,6 +579,13 @@ export default function UsersPage() {
                         }} className={`px-4 py-2 rounded-lg text-sm font-medium ${selectedUser.negative_allowed ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-600"}`}>
                           {selectedUser.negative_allowed ? "✅ " + t("السماح بالسالب مفعل", "Negative Allowed") : "⛔ " + t("السماح بالسالب", "Allow Negative")}
                         </button>
+                        <button onClick={async () => {
+                          await api(`/api/users/${selectedUser.id}/commission-exempt-toggle`, { method: "PUT" });
+                          const updated = await api(`/api/users/${selectedUser.id}`);
+                          setSelectedUser(updated);
+                        }} className={`px-4 py-2 rounded-lg text-sm font-medium ${selectedUser.commission_exempt ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                          {selectedUser.commission_exempt ? "🚫 " + t("العمولة موقوفة", "Commission Disabled") : "💰 " + t("إيقاف العمولة", "Disable Commission")}
+                        </button>
                         {selectedUser.role !== "admin" && (
                           <button onClick={() => { setConfirmDelete(selectedUser); }} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium">
                             🗑️ {t("حذف المستخدم", "Delete User")}
@@ -699,7 +706,7 @@ export default function UsersPage() {
                                   </div>
                                 </div>
                                 <div className="text-right text-xs">
-                                  <p className="font-bold text-gray-600">{d.e_money ?? 0} EM</p>
+                                  <p className="font-bold text-gray-600">{d.e_money ?? 0} $</p>
                                   <p className={`font-bold ${d.status === 'active' ? 'text-green-500' : 'text-red-500'}`}>{d.status}</p>
                                   <p className="text-gray-400">{new Date(d.created_at).toLocaleDateString()}</p>
                                 </div>
@@ -721,10 +728,10 @@ export default function UsersPage() {
                             { label: t("الأعضاء المؤهلين", "Qualified Members"), value: rankProgress?.qualifiedDirects ?? 0, icon: "👥" },
                             { label: t("التقدم للرتبة التالية", "Progress to Next"), value: `${Math.round(rankProgress?.progressToNext ?? 0)}%`, icon: "📈" },
                             { label: t("الحد الأدنى المبيعات", "Min Direct Sales"), value: rankProgress?.meetsMinDirects ? "✅ 2+" : "❌ < 2", icon: "📏" },
-                          ].map((item, i) => (
+                          ].map((it$, i) => (
                             <div key={i} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg">
-                              <span className="text-sm text-gray-500">{item.icon} {item.label}</span>
-                              <span className="text-sm font-bold">{item.value}</span>
+                              <span className="text-sm text-gray-500">{it$.icon} {it$.label}</span>
+                              <span className="text-sm font-bold">{it$.value}</span>
                             </div>
                           ))}
                         </div>
@@ -777,7 +784,7 @@ export default function UsersPage() {
                                     </div>
                                   </div>
                                   <div className="text-right text-xs">
-                                    <p className="font-bold text-gray-600">{d.e_money ?? 0} EM</p>
+                                    <p className="font-bold text-gray-600">{d.e_money ?? 0} $</p>
                                     {!isActive && <p className="text-red-500 font-bold">❌ {t("غير نشط", "Inactive")}</p>}
                                     {excludedHigher && <p className="text-orange-500 font-bold">⚠️ {t("رتبة أعلى", "Higher rank")}</p>}
                                     {isActive && !excludedHigher && <p className="text-green-500 font-bold">✅ {t("مؤهل", "Qualified")}</p>}
@@ -836,15 +843,17 @@ export default function UsersPage() {
                                 </div>
                                 <div className="text-right">
                                   <p className={`text-sm font-bold ${wh.weekly_commission > 0 ? "text-green-600" : "text-gray-400"}`}>
-                                    {wh.weekly_commission > 0 ? `${wh.weekly_commission.toLocaleString()} EM` : "—"}
+                                    {wh.weekly_commission > 0 ? `${wh.weekly_commission.toLocaleString()} $` : "—"}
                                   </p>
                                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                                     wh.commission_status === 'paid' ? 'bg-green-100 text-green-700' :
                                     wh.commission_status === 'not_eligible' ? 'bg-red-100 text-red-700' :
+                                    wh.commission_status === 'cancelled' ? 'bg-orange-100 text-orange-700' :
                                     'bg-gray-100 text-gray-500'
                                   }`}>
                                     {wh.commission_status === 'paid' ? '✅ Paid' :
                                      wh.commission_status === 'not_eligible' ? '❌ Not Eligible' :
+                                     wh.commission_status === 'cancelled' ? '↩️ Cancelled' :
                                      wh.commission_status}
                                   </span>
                                 </div>
@@ -916,7 +925,7 @@ export default function UsersPage() {
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-sm font-bold text-green-600">{u.e_money} EM</p>
+                                  <p className="text-sm font-bold text-green-600">{u.e_money} $</p>
                                 </div>
                               </div>
                             );

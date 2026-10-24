@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -302,7 +302,7 @@ export default function CourseViewPage() {
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:m?10:14}}>
                 <div style={{display:"flex",gap:m?8:12,justifyContent:"center",flexWrap:"wrap",width:"100%"}}>
                   <Link to="/login" style={{padding:m?"12px 22px":"14px 28px",background:"linear-gradient(135deg,#6E3BF2,#B88BFF)",borderRadius:12,color:"#FFFFFF",fontWeight:800,fontSize:m?13:14,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:8}}>
-                    🔑 {t("سجّل دخولك لشراء الكورس", "Login to Buy")} — {course.price} E-Money
+                    🔑 {t("سجّل دخولك لشراء الكورس", "Login to Buy")} — {course.price} $
                   </Link>
                   <Link to="/register" style={{padding:m?"12px 22px":"14px 28px",background:"transparent",border:`1px solid ${c.borderLight}`,borderRadius:12,color:c.text,fontWeight:700,fontSize:m?13:14,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:8}}>
                     ✨ {t("حساب جديد", "Register")}
@@ -328,14 +328,14 @@ export default function CourseViewPage() {
                 )}
                 <div style={{display:"flex",gap:m?8:12,justifyContent:"center",flexWrap:"wrap"}}>
                   <button onClick={async () => {
-                    if ((user?.e_money || 0) < course.price) { setBalanceError(t("رصيد E-Money غير كافٍ. تواصل مع خدمة العملاء لشحن رصيدك.", "Insufficient E-Money balance. Contact customer service to top up.")); return; }
+                    if ((user?.usd_balance || 0) < course.price) { setBalanceError(t("رصيد $ غير كافٍ. تواصل مع خدمة العملاء لشحن رصيدك.", "Insufficient $ balance. Contact customer service to top up.")); return; }
                     setBalanceError(""); await buyCourse("emoney");
-                  }} disabled={buying || (user?.e_money || 0) < course.price}
-                    style={{padding:m?"12px 18px":"14px 26px",background:(user?.e_money || 0) < course.price ? "#555" : "linear-gradient(135deg,#6E3BF2,#B88BFF)",border:"none",borderRadius:12,color:"#FFFFFF",fontWeight:800,fontSize:m?13:14,cursor:(user?.e_money || 0) < course.price ? "not-allowed" : "pointer",opacity:buying?0.6:1}}>
-                    {buying ? t("جاري الشراء...", "Purchasing...") : `💳 ${t("اشتري بـ", "Buy for")} ${course.price} E-Money`}
+                  }} disabled={buying || (user?.usd_balance || 0) < course.price}
+                    style={{padding:m?"12px 18px":"14px 26px",background:(user?.usd_balance || 0) < course.price ? "#555" : "linear-gradient(135deg,#6E3BF2,#B88BFF)",border:"none",borderRadius:12,color:"#FFFFFF",fontWeight:800,fontSize:m?13:14,cursor:(user?.usd_balance || 0) < course.price ? "not-allowed" : "pointer",opacity:buying?0.6:1}}>
+                    {buying ? t("جاري الشراء...", "Purchasing...") : `💳 ${t("اشتري بـ", "Buy for")} ${course.price} $`}
                   </button>
                 </div>
-                <p style={{color:c.textMuted,fontSize:12,marginTop:8}}>{t("رصيدك الحالي:", "Your current balance:")} {user?.e_money || 0} E-Money</p>
+                <p style={{color:c.textMuted,fontSize:12,marginTop:8}}>{t("رصيدك الحالي:", "Your current balance:")} {user?.usd_balance || 0} $</p>
               </>
             )}
           </div>
@@ -405,7 +405,7 @@ export default function CourseViewPage() {
                 <p style={{fontWeight:700,color:c.text,marginBottom:4,fontSize:m?13:16}}>{t("هذا الدرس مقفل", "This lesson is locked")}</p>
                 <p style={{fontSize:m?11:13,color:c.textMuted,marginBottom:m?10:16}}>{t("اشترِ الكورس للمشاهدة الكاملة", "Buy the course for full access")}</p>
                 <Link to={`/courses/${id}`} style={{display:"inline-flex",alignItems:"center",gap:8,padding:m?"10px 18px":"10px 24px",background:"linear-gradient(135deg,#6E3BF2,#B88BFF)",borderRadius:10,color:"#FFFFFF",fontWeight:800,fontSize:m?12:13,textDecoration:"none"}}>
-                  💳 {t("اشترِ الكورس", "Buy Course")} — {course.price} E-Money
+                  💳 {t("اشترِ الكورس", "Buy Course")} — {course.price} $
                 </Link>
               </div>
             ) : videoSrc ? (

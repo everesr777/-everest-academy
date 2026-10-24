@@ -42,7 +42,7 @@ export async function api(path, opts = {}) {
     let data;
     try { data = JSON.parse(text); } catch { data = null; }
     if (data && data.session_expired) {
-      localStorage.removeIt$("admin_session");
+      localStorage.removeItem("admin_session");
       window.location.reload();
       throw new Error("Session expired");
     }
@@ -86,7 +86,7 @@ function bunnyFileKey(file) {
 
 function getBunnySession(file) {
   try {
-    const raw = localStorage.getIt$(bunnyFileKey(file));
+    const raw = localStorage.getItem(bunnyFileKey(file));
     if (!raw) return null;
     const s = JSON.parse(raw);
     return s && s.videoId ? s : null;
@@ -94,11 +94,11 @@ function getBunnySession(file) {
 }
 
 function setBunnySession(file, videoId) {
-  try { localStorage.setIt$(bunnyFileKey(file), JSON.stringify({ videoId, updatedAt: Date.now() })); } catch {}
+  try { localStorage.setItem(bunnyFileKey(file), JSON.stringify({ videoId, updatedAt: Date.now() })); } catch {}
 }
 
 function clearBunnySession(file) {
-  try { localStorage.removeIt$(bunnyFileKey(file)); } catch {}
+  try { localStorage.removeItem(bunnyFileKey(file)); } catch {}
 }
 
 async function createBunnyVideo(title) {

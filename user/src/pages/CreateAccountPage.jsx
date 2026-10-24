@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { useLang } from "../LangContext";
@@ -102,9 +102,9 @@ export default function CreateAccountPage() {
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setSuccess(""); setLoading(true);
 
-    const balance = profile?.e_money || 0;
+    const balance = profile?.usd_balance || 0;
     if (balance < cost) {
-      setErr(t(`رصيدك غير كافٍ. المطلوب: ${cost} E-Money، المتاح: ${Math.floor(balance)}`, `Insufficient balance. Required: ${cost} E-Money, Available: ${Math.floor(balance)}`));
+      setErr(t(`رصيدك غير كافٍ. المطلوب: ${cost} $، المتاح: ${Math.floor(balance)}`, `Insufficient balance. Required: ${cost} $, Available: ${Math.floor(balance)}`));
       setLoading(false); return;
     }
 
@@ -137,10 +137,10 @@ export default function CreateAccountPage() {
           id_card: idCard,
         }),
       });
-      setSuccess(t(`تم إنشاء الحساب بنجاح! تم خصم ${cost} E-Money`, `Account created! ${cost} E-Money deducted`));
+      setSuccess(t(`تم إنشاء الحساب بنجاح! تم خصم ${cost} $`, `Account created! ${cost} $ deducted`));
       setForm({ full_name: "", email: "", phone: "", password: "", confirm: "", governorate: "", country: "" });
       setIdCard(null);
-      setProfile(p => ({ ...p, e_money: res.creator_balance }));
+      setProfile(p => ({ ...p, usd_balance: res.creator_balance }));
       setCreatedUsers(prev => [res.user, ...prev]);
     } catch (e) { setErr(e.message); }
     setLoading(false);
@@ -171,12 +171,12 @@ export default function CreateAccountPage() {
             {t("إنشاء حساب لشخص آخر", "Create Account for Another User")}
           </h1>
           <p style={{ fontSize: 13, color: c.textMuted }}>
-            {t(`سيتم خصم ${cost} E-Money من رصيدك`, `${cost} E-Money will be deducted from your balance`)}
+            {t(`سيتم خصم ${cost} $ من رصيدك`, `${cost} $ will be deducted from your balance`)}
           </p>
           {profile && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, padding: "8px 16px", borderRadius: 10, background: (profile.e_money || 0) >= cost ? "rgba(34,197,94,.1)" : "rgba(239,68,68,.1)", border: `1px solid ${(profile.e_money || 0) >= cost ? "rgba(34,197,94,.25)" : "rgba(239,68,68,.2)"}` }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: (profile.e_money || 0) >= cost ? "#22c55e" : "#ef4444" }}>
-                {t("رصيدك:", "Your balance:")} {Math.floor(profile.e_money || 0)} E-Money
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, padding: "8px 16px", borderRadius: 10, background: (profile.usd_balance || 0) >= cost ? "rgba(34,197,94,.1)" : "rgba(239,68,68,.1)", border: `1px solid ${(profile.usd_balance || 0) >= cost ? "rgba(34,197,94,.25)" : "rgba(239,68,68,.2)"}` }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: (profile.usd_balance || 0) >= cost ? "#22c55e" : "#ef4444" }}>
+                {t("رصيدك:", "Your balance:")} {Math.floor(profile.usd_balance || 0)} $
               </span>
             </div>
           )}
@@ -297,7 +297,7 @@ export default function CreateAccountPage() {
               display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             }}>
               {loading ? <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
-                : `👤 ${t(`إنشاء حساب (${cost} E-Money)`, `Create Account (${cost} E-Money)`)}`}
+                : `👤 ${t(`إنشاء حساب (${cost} $)`, `Create Account (${cost} $)`)}`}
             </button>
           </form>
         </div>

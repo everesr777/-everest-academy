@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
 
@@ -7,23 +7,23 @@ export default function PaymentGatewayPage() {
   const t = (ar, en) => tFn(ar, en);
   const [gateways, setGateways] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [editItem, setEditItem] = useState(null);
+  const [editIt$, setEditIt$] = useState(null);
   const [form, setForm] = useState({ type: "vodafone", value: "", label: "" });
 
   const load = () => api("/api/payment-gateways").then(setGateways);
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setEditItem(null); setForm({ type: "vodafone", value: "", label: "" }); setShowForm(true); };
-  const openEdit = (g) => { setEditItem(g); setForm({ type: g.type, value: g.value, label: g.label || "" }); setShowForm(true); };
+  const openAdd = () => { setEditIt$(null); setForm({ type: "vodafone", value: "", label: "" }); setShowForm(true); };
+  const openEdit = (g) => { setEditIt$(g); setForm({ type: g.type, value: g.value, label: g.label || "" }); setShowForm(true); };
 
   const save = async () => {
     if (!form.value) return;
-    if (editItem) {
-      await api(`/api/payment-gateways/${editItem.id}`, { method: "PUT", body: JSON.stringify(form) });
+    if (editIt$) {
+      await api(`/api/payment-gateways/${editIt$.id}`, { method: "PUT", body: JSON.stringify(form) });
     } else {
       await api("/api/payment-gateways", { method: "POST", body: JSON.stringify(form) });
     }
-    setShowForm(false); setEditItem(null); load();
+    setShowForm(false); setEditIt$(null); load();
   };
 
   const toggleActive = async (g) => {
@@ -116,7 +116,7 @@ export default function PaymentGatewayPage() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold">{editItem ? t("تعديل وسيلة الدفع", "Edit Payment Method") : t("إضافة وسيلة دفع جديدة", "Add New Payment Method")}</h3>
+              <h3 className="text-lg font-bold">{editIt$ ? t("تعديل وسيلة الدفع", "Edit Payment Method") : t("إضافة وسيلة دفع جديدة", "Add New Payment Method")}</h3>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
 
@@ -162,7 +162,7 @@ export default function PaymentGatewayPage() {
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowForm(false)} className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl font-medium text-sm">{t("إلغاء", "Cancel")}</button>
               <button onClick={save} className="flex-1 px-4 py-2.5 bg-everest-600 text-white rounded-xl font-medium text-sm hover:bg-everest-700 transition">
-                {editItem ? t("حفظ التعديلات", "Save Changes") : t("إضافة", "Add")}
+                {editIt$ ? t("حفظ التعديلات", "Save Changes") : t("إضافة", "Add")}
               </button>
             </div>
           </div>

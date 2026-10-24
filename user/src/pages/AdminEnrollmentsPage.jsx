@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { api } from "../App";
@@ -122,7 +122,7 @@ export default function AdminEnrollmentsPage() {
                         <p style={{color:c.text,fontWeight:700,fontSize:15,marginBottom:4}}>{e.student_name}</p>
                         <p style={{color:"#9a95b0",fontSize:13}}>{e.student_email}</p>
                         <p style={{color:"#B88BFF",fontSize:14,marginTop:4}}>📚 {e.course_name_ar || e.course_name}</p>
-                        <p style={{color:"#666",fontSize:12,marginTop:2}}>{t("طريقة الدفع:","Payment:")} {e.payment_method === "vodafone" ? "📱 " + t("فودافون كاش","Vodafone Cash") : e.payment_method === "cash" ? "💵 " + t("كاش","Cash") : "💳 E-Money"}</p>
+                        <p style={{color:"#666",fontSize:12,marginTop:2}}>{t("طريقة الدفع:","Payment:")} {e.payment_method === "vodafone" ? "📱 " + t("فودافون كاش","Vodafone Cash") : e.payment_method === "cash" ? "💵 " + t("كاش","Cash") : "💳 $"}</p>
                         <p style={{color:"#666",fontSize:12}}>{t("التاريخ:","Date:")} {e.enrolled_at?.slice(0,16) || "—"}</p>
                       </div>
                       <div style={{display:"flex",gap:8}}>

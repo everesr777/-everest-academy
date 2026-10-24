@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, BACKEND_URL } from "../api.js";
 import LoadingIndicator from "../components/LoadingIndicator";
@@ -291,17 +291,17 @@ export default function RegistrationApprovalsPage({ source }) {
                     { label: t("الدور", "Role"), value: viewProfileData?.role || "—" },
                     { label: t("نوع الحساب", "Account Type"), value: viewProfileData?.account_type || "—" },
                     { label: t("الرتبة", "Rank"), value: viewProfileData?.rank || "—" },
-                    { label: t("الرصيد", "E-Money"), value: viewProfileData?.e_money ?? "—" },
+                    { label: t("الرصيد", "$"), value: viewProfileData?.e_money ?? "—" },
                     { label: t("الحالة", "Status"), value: viewProfileData?.status || "—" },
                     { label: t("المحظور", "Blocked"), value: viewProfileData?.blocked ? t("نعم", "Yes") : t("لا", "No") },
                     { label: t("احالة من", "Referred By"), value: viewProfileData?.referred_by || "—" },
                     { label: t("مبيعات الفريق", "Team Sales"), value: viewProfileData?.total_team_sales ?? 0 },
                     { label: t("الأعضاء المباشرين", "Direct Count"), value: viewProfileData?.direct_count ?? 0 },
                     { label: t("تاريخ التسجيل", "Joined"), value: viewProfileData?.created_at ? new Date(viewProfileData.created_at).toLocaleDateString("ar-EG") : "—" },
-                  ].map((item, i) => (
+                  ].map((it$, i) => (
                     <div key={i} style={{ background: "#f9f9fb", borderRadius: 10, padding: "10px 12px" }}>
-                      <p style={{ fontSize: 10, color: "#999", margin: "0 0 3px" }}>{item.label}</p>
-                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0, wordBreak: "break-all" }}>{String(item.value ?? "—")}</p>
+                      <p style={{ fontSize: 10, color: "#999", margin: "0 0 3px" }}>{it$.label}</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0, wordBreak: "break-all" }}>{String(it$.value ?? "—")}</p>
                     </div>
                   ))}
                 </div>

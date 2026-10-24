@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
 import LoadingIndicator from "../components/LoadingIndicator";
@@ -88,7 +88,7 @@ export default function AccountsBySourcePage({ source }) {
                 <th>{t("المحافظة", "Governorate")}</th>
                 <th>{t("نوع الحساب", "Account Type")}</th>
                 <th>{t("الرتبة", "Rank")}</th>
-                <th>{t("الرصيد", "E-Money")}</th>
+                <th>{t("الرصيد", "$")}</th>
                 {isCreated && <th>{t("أنشأه", "Created By")}</th>}
                 <th>{t("تاريخ التسجيل", "Date")}</th>
               </tr>
@@ -112,7 +112,7 @@ export default function AccountsBySourcePage({ source }) {
                     }`}>{u.account_type}</span>
                   </td>
                   <td data-label={t("الرتبة", "Rank")} className="text-xs text-gray-500">{u.rank || "—"}</td>
-                  <td data-label={t("الرصيد", "E-Money")} className="text-xs font-medium text-everest-700">{u.e_money ?? 0}</td>
+                  <td data-label={t("الرصيد", "$")} className="text-xs font-medium text-everest-700">{u.e_money ?? 0}</td>
                   {isCreated && (
                     <td data-label={t("أنشأه", "Created By")} className="text-xs">
                       <button onClick={() => openViewProfile({ id: u.created_by_user, full_name: u.creator_name, email: u.creator_email })}
@@ -172,17 +172,17 @@ export default function AccountsBySourcePage({ source }) {
                     { label: t("الدور", "Role"), value: viewProfileData?.role || "—" },
                     { label: t("نوع الحساب", "Account Type"), value: viewProfileData?.account_type || "—" },
                     { label: t("الرتبة", "Rank"), value: viewProfileData?.rank || "—" },
-                    { label: t("الرصيد", "E-Money"), value: viewProfileData?.e_money ?? "—" },
+                    { label: t("الرصيد", "$"), value: viewProfileData?.e_money ?? "—" },
                     { label: t("الحالة", "Status"), value: viewProfileData?.status || "—" },
                     { label: t("المحظور", "Blocked"), value: viewProfileData?.blocked ? t("نعم", "Yes") : t("لا", "No") },
                     { label: t("احالة من", "Referred By"), value: viewProfileData?.referred_by || "—" },
                     { label: t("مبيعات الفريق", "Team Sales"), value: viewProfileData?.total_team_sales ?? 0 },
                     { label: t("الأعضاء المباشرين", "Direct Count"), value: viewProfileData?.direct_count ?? 0 },
                     { label: t("تاريخ التسجيل", "Joined"), value: viewProfileData?.created_at ? new Date(viewProfileData.created_at).toLocaleDateString("ar-EG") : "—" },
-                  ].map((item, i) => (
+                  ].map((it$, i) => (
                     <div key={i} style={{ background: "#f9f9fb", borderRadius: 10, padding: "10px 12px" }}>
-                      <p style={{ fontSize: 10, color: "#999", margin: "0 0 3px" }}>{item.label}</p>
-                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0, wordBreak: "break-all" }}>{String(item.value ?? "—")}</p>
+                      <p style={{ fontSize: 10, color: "#999", margin: "0 0 3px" }}>{it$.label}</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0, wordBreak: "break-all" }}>{String(it$.value ?? "—")}</p>
                     </div>
                   ))}
                 </div>
