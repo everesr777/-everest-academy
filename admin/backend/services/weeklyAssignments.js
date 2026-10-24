@@ -109,9 +109,17 @@ export async function previewAssignments({ weekStart, emails }) {
         WHERE a.direct_id = ? AND a.week_start = ?`,
       [user.id, ws]
     );
+    const assignedElsewhere = await query(
+      `SELECT a.week_start FROM weekly_direct_assignments a
+        WHERE a.direct_id = ? AND a.week_start <> ?`,
+      [user.id, ws]
+    );
 
+    // An account explicitly assigned to another week must not be counted by this week's
+    // date window either (otherwise it would qualify twice).
     const directInWindow =
       user.created_at >= `${ws} 00:00:00` && user.created_at <= `${weekEnd} 23:59:59`;
+    const countsByWindow = directInWindow && assignedElsewhere.length === 0;
     const blockedReason =
       user.status !== "active"
         ? "account_not_active"
@@ -131,7 +139,9 @@ export async function previewAssignments({ weekStart, emails }) {
       rank: user.rank || null,
       createdAt: user.created_at,
       createdInsideWeek: directInWindow,
-      needsAssignment: !directInWindow,
+      countsByWindow,
+      assignedToOtherWeeks: assignedElsewhere.map(a => a.week_start),
+      needsAssignment: !countsByWindow,
       assignmentsForWeek: assigned,
       blockedReason,
       _uplines: uplines,          // raw rows, replaced by details below
@@ -174,8 +184,15 @@ export async function previewAssignments({ weekStart, emails }) {
       [uplineId]
     );
     const activeStudents = directRows.filter(d => d.status === "active" && d.account_type === "student");
+    const otherAssigned = await query(
+      `SELECT direct_id FROM weekly_direct_assignments
+        WHERE upline_id = ? AND week_start <> ?`,
+      [uplineId, ws]
+    );
+    const otherAssignedIds = new Set(otherAssigned.map(r => r.direct_id));
     const inWindow = activeStudents.filter(d =>
-      d.created_at >= `${ws} 00:00:00` && d.created_at <= `${weekEnd} 23:59:59`
+      d.created_at >= `${ws} 00:00:00` && d.created_at <= `${weekEnd} 23:59:59` &&
+      !otherAssignedIds.has(d.id)
     );
     const assignedRows = await query(
       `SELECT a.direct_id FROM weekly_direct_assignments a
@@ -292,6 +309,16 @@ export async function assignEmailsToWeek({ weekStart, emails, reason, assignedBy
     for (const up of item.uplines) {
       if (up.alreadyAssigned) {
         skipped.push({ email: item.email, uplineId: up.uplineId, reason: "already_assigned" });
+        continue;
+      }
+      // Refuse to attribute the same direct to two different weeks: the admin must remove
+      // the previous assignment first (keeps every move explicit and auditable).
+      const otherWeek = await queryOne(
+        "SELECT week_start FROM weekly_direct_assignments WHERE upline_id = ? AND direct_id = ? AND week_start <> ? LIMIT 1",
+        [up.uplineId, item.userId, preview.weekStart]
+      );
+      if (otherWeek) {
+        skipped.push({ email: item.email, uplineId: up.uplineId, reason: `assigned_to_other_week:${otherWeek.week_start}` });
         continue;
       }
       if (dryRun) {

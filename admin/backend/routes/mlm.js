@@ -5,6 +5,7 @@ import { adminAuth } from "../middleware/sessionAuth.js";
 import { runWeeklySettlement, getSettlementSettings, getCurrentWeek, nextSettlementTime, settlementConfigDisplay, weekStartForDate, weekEndFromStart } from "../services/weeklySettlement.js";
 import { previewAssignments, assignEmailsToWeek, listAssignments, removeAssignment } from "../services/weeklyAssignments.js";
 import { snapshotWeek, startAudit, finishAudit, getAuditById, listAudits } from "../services/weeklyAudit.js";
+import { listWeekDirects } from "../services/weeklyDirects.js";
 
 const router = express.Router();
 
@@ -90,25 +91,16 @@ router.get("/weekly/:userId/history", async (req, res) => {
       "SELECT COUNT(*) AS c FROM enrollments WHERE user_id = ? AND status = 'approved' AND enrolled_at >= ? AND enrolled_at <= ?",
       [uid, from, to]
     );
-    const directs = await query(
-      "SELECT id, referral_code, full_name, rank, account_type, created_at FROM users WHERE (referred_by = ? OR created_by_user = ?) AND account_type = 'student' AND created_at >= ? AND created_at <= ? ORDER BY created_at DESC",
-      [uid, uid, from, to]
-    );
-    const directsRow = await queryOne(
-      "SELECT COUNT(*) AS c FROM users WHERE (referred_by = ? OR created_by_user = ?) AND account_type = 'student' AND created_at >= ? AND created_at <= ?",
-      [uid, uid, from, to]
-    );
+    // Directs attributed to this week (window OR explicit assignment). Assignments moved to
+    // another week are excluded — see services/weeklyDirects.js.
+    const directs = await listWeekDirects(uid, weekStart);
     const allRanks = await query("SELECT id, name, sales_required, min_direct, sort_order FROM ranks WHERE is_active = 1 ORDER BY sort_order ASC");
     const cur = allRanks.find(r => r.name === me.rank);
     const curPos = cur ? cur.sort_order : -1;
     const next = allRanks.find(r => r.sort_order > curPos);
     const myWeeklySales = mySalesRow ? (mySalesRow.c || 0) : 0;
     const reqSales = next ? sReq(next) : null;
-    const wkNew = await query(
-      "SELECT id FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.depth = 1 AND u.account_type = 'student' AND u.status = 'active' AND u.created_at >= ? AND u.created_at <= ?",
-      [uid, from, to]
-    );
-    const weeklyNewStudents = wkNew.length;
+    const weeklyNewStudents = directs.filter(d => d.status === 'active').length;
     const teamLeft = reqSales != null ? Math.max(0, reqSales - weeklyNewStudents) : null;
     res.json({
       weekStart,
@@ -116,8 +108,8 @@ router.get("/weekly/:userId/history", async (req, res) => {
       myWeeklySales,
       weeklyNewStudents,
       currentRank: me.rank || null,
-      directsWeekCount: directsRow ? (directsRow.c || 0) : 0,
-      directs: (directs || []).map(d => ({ id: d.id, referral_code: d.referral_code, full_name: d.full_name, rank: d.rank, createdAt: d.created_at })),
+      directsWeekCount: directs.length,
+      directs: directs.map(d => ({ id: d.id, referral_code: d.referral_code, full_name: d.full_name, rank: d.rank, createdAt: d.created_at, assigned: !!d.assigned })),
       nextRank: next ? { name: next.name, salesRequired: reqSales, teamLeft, remainingSales: reqSales != null ? Math.max(0, reqSales - myWeeklySales) : null } : null,
       isHistory: true,
     });
@@ -140,14 +132,10 @@ router.get("/weekly/:userId", async (req, res) => {
       "SELECT COUNT(*) AS c FROM enrollments WHERE user_id = ? AND status = 'approved' AND enrolled_at >= ? AND enrolled_at <= ?",
       [uid, from, to]
     );
-    const directs = await query(
-      "SELECT id, referral_code, full_name, rank, account_type, created_at FROM users WHERE (referred_by = ? OR created_by_user = ?) AND account_type = 'student' AND created_at >= ? AND created_at <= ? ORDER BY created_at DESC",
-      [uid, uid, from, to]
-    );
-    const directsRow = await queryOne(
-      "SELECT COUNT(*) AS c FROM users WHERE (referred_by = ? OR created_by_user = ?) AND account_type = 'student' AND created_at >= ? AND created_at <= ?",
-      [uid, uid, from, to]
-    );
+    // Directs attributed to the running week (window OR explicit assignment). Accounts that
+    // were retroactively assigned to a previous week are excluded here, so they never show up
+    // (or count) twice. See services/weeklyDirects.js.
+    const directs = await listWeekDirects(uid, weekStart);
 
     const allRanks = await query("SELECT id, name, sales_required, min_direct, sort_order FROM ranks WHERE is_active = 1 ORDER BY sort_order ASC");
     const cur = allRanks.find(r => r.name === me.rank);
@@ -156,12 +144,8 @@ router.get("/weekly/:userId", async (req, res) => {
     const myWeeklySales = mySalesRow.c || 0;
     const reqSales = next ? sReq(next) : null;
 
-    // NEW active STUDENT directs created INSIDE this week (matches settlement STEP 2 gate).
-    const wkNew = await query(
-      "SELECT id FROM user_closure c JOIN users u ON u.id = c.descendant WHERE c.ancestor = ? AND c.depth = 1 AND u.account_type = 'student' AND u.status = 'active' AND u.created_at >= ? AND u.created_at <= ?",
-      [uid, from, to]
-    );
-    const weeklyNewStudents = wkNew.length;
+    // NEW active STUDENT directs attributed to this week (matches settlement STEP 2 gate).
+    const weeklyNewStudents = directs.filter(d => d.status === 'active').length;
     const teamLeft = reqSales != null ? Math.max(0, reqSales - weeklyNewStudents) : null;
 
     res.json({
@@ -170,8 +154,8 @@ router.get("/weekly/:userId", async (req, res) => {
       myWeeklySales,
       weeklyNewStudents,
       currentRank: me.rank || null,
-      directsWeekCount: directsRow.c || 0,
-      directs: directs.map(d => ({ id: d.id, referral_code: d.referral_code, full_name: d.full_name, rank: d.rank, createdAt: d.created_at })),
+      directsWeekCount: directs.length,
+      directs: directs.map(d => ({ id: d.id, referral_code: d.referral_code, full_name: d.full_name, rank: d.rank, createdAt: d.created_at, assigned: !!d.assigned })),
       nextRank: next ? {
         name: next.name,
         salesRequired: reqSales,

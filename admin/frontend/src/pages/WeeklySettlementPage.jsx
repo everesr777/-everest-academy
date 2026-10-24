@@ -390,9 +390,14 @@ export default function WeeklySettlementPage() {
                     {item.found && (
                       <>
                         <span className="text-xs text-gray-500">{item.fullName} • {item.accountType} • {item.status}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.createdInsideWeek ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
-                          {item.createdInsideWeek ? t("داخل الأسبوع أصلاً", "already inside the week") : t("يحتاج تخصيصاً رجعياً", "needs retroactive assignment")}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${item.countsByWindow ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                          {item.countsByWindow ? t("داخل الأسبوع أصلاً", "already inside the week") : t("يحتاج تخصيصاً رجعياً", "needs retroactive assignment")}
                         </span>
+                        {(item.assignedToOtherWeeks || []).length > 0 && (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                            {t(`مخصص لأسبوع آخر: ${item.assignedToOtherWeeks.join(", ")}`, `assigned to another week: ${item.assignedToOtherWeeks.join(", ")}`)}
+                          </span>
+                        )}
                         {item.blockedReason && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{item.blockedReason}</span>}
                       </>
                     )}

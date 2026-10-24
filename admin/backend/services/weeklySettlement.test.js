@@ -140,6 +140,7 @@ const { runWeeklySettlement, getCurrentWeek, getSettlementWeek, getSettlementSet
   await import("./weeklySettlement.js");
 const { previewAssignments, assignEmailsToWeek, listAssignments, removeAssignment } =
   await import("./weeklyAssignments.js");
+const { listWeekDirects } = await import("./weeklyDirects.js");
 const { snapshotWeek, startAudit, finishAudit, getAuditById, listAudits, diffById } =
   await import("./weeklyAudit.js");
 
@@ -197,6 +198,7 @@ function seedSettings(db, overrides = {}) {
 
 const WEEK = "2026-08-02";
 const WEEK_END = "2026-08-08";
+const NEXT = "2026-08-09";              // the week right after WEEK
 const W_IN = `${WEEK} 12:00:00`;        // inside the week window
 const W_PREV = "2026-07-25 12:00:00";   // before the week (old directs)
 
@@ -740,6 +742,85 @@ test("audit snapshot is stored before mutation and completed afterwards", async 
   const listed = await listAudits(WEEK);
   assert.equal(listed.length, 1);
   assert.equal(listed[0].id, id);
+});
+
+// ─── Cross-week attribution (accounts created just before the settlement boundary) ───
+
+test("cross-week: an account assigned to an earlier week never counts for the following week", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "xup", name: "XUpline", email: "xup@t.com", rank: "Executive" });
+  // Created on the Friday that opens the NEXT week (e.g. 20:55 / 21:05) — the real case.
+  insertUser(db, { id: "xd1", name: "XD1", email: "xd1@t.com", rank: "Star", referred_by: "xup", created_at: `${NEXT} 20:55:00` });
+  insertUser(db, { id: "xd2", name: "XD2", email: "xd2@t.com", rank: "Star", referred_by: "xup", created_at: `${NEXT} 21:05:00` });
+  insertDirectClosure(db, "xup", "xd1");
+  insertDirectClosure(db, "xup", "xd2");
+  ctx = apiFor(db);
+
+  const preview = await previewAssignments({ weekStart: WEEK, emails: ["xd1@t.com", "xd2@t.com"] });
+  assert.equal(preview.items[0].createdInsideWeek, false, "created after the week's date window");
+  assert.equal(preview.items[0].needsAssignment, true);
+
+  const assigned = await assignEmailsToWeek({ weekStart: WEEK, emails: ["xd1@t.com", "xd2@t.com"], assignedBy: "test" });
+  assert.equal(assigned.created.length, 2);
+
+  // The earlier week counts them…
+  const earlier = await runWeeklySettlement({ triggeredBy: "manual", weekStart: WEEK });
+  assert.equal(earlier.success, true);
+  const h1 = ctx.q("SELECT qualified_direct_sales, commission_status FROM weekly_history WHERE user_id = 'xup' AND week_start = ?", [WEEK])[0];
+  assert.equal(h1.qualified_direct_sales, 2);
+  assert.equal(h1.commission_status, "paid");
+
+  // …and the week their `created_at` falls in must NOT count them again.
+  const later = await runWeeklySettlement({ triggeredBy: "manual", weekStart: NEXT });
+  assert.equal(later.success, true);
+  const h2 = ctx.q("SELECT qualified_direct_sales, commission_status FROM weekly_history WHERE user_id = 'xup' AND week_start = ?", [NEXT])[0];
+  assert.equal(h2.qualified_direct_sales, 0);
+  assert.equal(h2.commission_status, "not_eligible");
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_commissions WHERE user_id = 'xup' AND week_start = ?", [NEXT])[0].c, 0);
+
+  // created_at is never rewritten by the cross-week attribution
+  assert.equal(ctx.q("SELECT created_at FROM users WHERE id = 'xd1'")[0].created_at, `${NEXT} 20:55:00`);
+});
+
+test("listWeekDirects returns assigned directs for the week and hides ones moved elsewhere", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "lup", name: "LUpline", email: "lup@t.com", rank: "Executive" });
+  insertUser(db, { id: "ld1", name: "LD1", email: "ld1@t.com", rank: "Star", referred_by: "lup", created_at: W_IN });
+  insertUser(db, { id: "ld2", name: "LD2", email: "ld2@t.com", rank: "Star", referred_by: "lup", created_at: `${NEXT} 21:00:00` });
+  insertDirectClosure(db, "lup", "ld1");
+  insertDirectClosure(db, "lup", "ld2");
+  ctx = apiFor(db);
+
+  await assignEmailsToWeek({ weekStart: WEEK, emails: ["ld2@t.com"], assignedBy: "test" });
+
+  const rows = await listWeekDirects("lup", WEEK);
+  assert.deepEqual(rows.map(r => r.id).sort(), ["ld1", "ld2"]);
+  assert.equal(Number(rows.find(r => r.id === "ld2").assigned), 1);
+
+  const nextRows = await listWeekDirects("lup", NEXT);
+  assert.equal(nextRows.length, 0, "ld1 is out of the NEXT window and ld2 was moved to WEEK");
+});
+
+test("assign refuses to attribute the same direct to two different weeks", async () => {
+  const db = createDb();
+  seedRanks(db);
+  seedSettings(db);
+  insertUser(db, { id: "cup", name: "CUpline", email: "cup@t.com", rank: "Executive" });
+  insertUser(db, { id: "cd", name: "CD", email: "cd@t.com", rank: "Star", referred_by: "cup", created_at: W_IN });
+  insertDirectClosure(db, "cup", "cd");
+  ctx = apiFor(db);
+
+  const first = await assignEmailsToWeek({ weekStart: WEEK, emails: ["cd@t.com"], assignedBy: "test" });
+  assert.equal(first.created.length, 1);
+
+  const second = await assignEmailsToWeek({ weekStart: NEXT, emails: ["cd@t.com"], assignedBy: "test" });
+  assert.equal(second.created.length, 0);
+  assert.ok(second.skipped.some(s => String(s.reason).startsWith("assigned_to_other_week")));
+  assert.equal(ctx.q("SELECT COUNT(*) AS c FROM weekly_direct_assignments")[0].c, 1);
 });
 
 

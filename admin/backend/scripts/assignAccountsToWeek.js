@@ -9,9 +9,9 @@
  *   • weekly_commissions already paid for that week are never duplicated
  *
  * USAGE
- *   node scripts/assignAccountsToWeek.js --week=2025-10-17 --emails=a@x.com,b@x.com
- *   node scripts/assignAccountsToWeek.js --week=2025-10-17 --emails=... --apply
- *   node scripts/assignAccountsToWeek.js --week=2025-10-17 --emails=... --apply --resettle
+ *   node scripts/assignAccountsToWeek.js --week=2026-10-16 --emails=a@x.com,b@x.com
+ *   node scripts/assignAccountsToWeek.js --week=2026-10-16 --emails=... --apply
+ *   node scripts/assignAccountsToWeek.js --week=2026-10-16 --emails=... --apply --resettle
  *
  * FLAGS
  *   --week=YYYY-MM-DD   settlement week start (required)
@@ -85,7 +85,8 @@ function printPreview(preview) {
     if (!item.found) { out.push("  ✗ NOT FOUND in database"); continue; }
     out.push(`  user      : ${item.fullName} (${item.userId})`);
     out.push(`  type/stats: ${item.accountType} / ${item.status} / rank=${item.rank || "—"}`);
-    out.push(`  created_at: ${item.createdAt}  → inside week? ${item.createdInsideWeek ? "YES" : "NO"}`);
+    out.push(`  created_at: ${item.createdAt}  → inside week? ${item.countsByWindow ? "YES" : "NO"}`);
+    if ((item.assignedToOtherWeeks || []).length) out.push(`  ⚠ assigned to another week: ${item.assignedToOtherWeeks.join(", ")}`);
     if (item.blockedReason) out.push(`  ✗ BLOCKED: ${item.blockedReason}`);
     if (item.uplines.length === 0) out.push("  ✗ no direct upline found in user_closure");
     for (const up of item.uplines) {

@@ -16,8 +16,13 @@ UNIQUE(upline_id, direct_id, week_start)
 ```
 عدد المبيعات المباشرة المؤهلة =
     directs نشِطة (student) تاريخ إنشائها داخل الأسبوع
+    — باستثناء من نُقل صراحةً إلى أسبوع آخر —
   ∪ directs مخصّصة صراحةً لهذا الأسبوع في weekly_direct_assignments
 ```
+
+قاعدة منع العدّ المزدوج: الحساب المخصّص لأسبوع معيّن **يُستبعد** من نافذة الأسبوع
+التالي، فلا يمكن أن يحتسب (ويُدفع له) في أسبوعين. ولذلك يرفض التخصيص إن كان
+الحساب مخصّصاً بالفعل لأسبوع آخر حتى يُزال التخصيص القديم أولاً.
 
 ## الضمانات
 - `created_at` الأصلي لا يُعدّل أبداً.
@@ -43,16 +48,16 @@ UNIQUE(upline_id, direct_id, week_start)
 cd admin/backend
 
 # 1) معاينة فقط (لا كتابة)
-node scripts/assignAccountsToWeek.js --week=2025-10-17
+node scripts/assignAccountsToWeek.js --week=2026-10-16
 
 # 2) معاينة بريدات محددة
-node scripts/assignAccountsToWeek.js --week=2025-10-17 --emails=a@x.com,b@x.com
+node scripts/assignAccountsToWeek.js --week=2026-10-16 --emails=a@x.com,b@x.com
 
 # 3) تنفيذ فعلي بدون إعادة تسوية
-node scripts/assignAccountsToWeek.js --week=2025-10-17 --emails=a@x.com,b@x.com --apply
+node scripts/assignAccountsToWeek.js --week=2026-10-16 --emails=a@x.com,b@x.com --apply
 
 # 4) تنفيذ + إعادة تسوية الرعاة المتأثرين فقط
-node scripts/assignAccountsToWeek.js --week=2025-10-17 --emails=a@x.com,b@x.com --apply --resettle
+node scripts/assignAccountsToWeek.js --week=2026-10-16 --emails=a@x.com,b@x.com --apply --resettle
 ```
 
 > يجب ضبط `TURSO_URL` و `TURSO_TOKEN` في البيئة، وإلا سيعمل السكربت على قاعدة
@@ -68,8 +73,8 @@ node scripts/rollbackWeekChange.js --audit-id=<auditId> --dry-run
 node scripts/rollbackWeekChange.js --audit-id=<auditId> --apply
 
 # أو من ملف التدقيق
-node scripts/rollbackWeekChange.js --audit=audit/week-2025-10-17-....json --dry-run
-node scripts/rollbackWeekChange.js --audit=audit/week-2025-10-17-....json --apply
+node scripts/rollbackWeekChange.js --audit=audit/week-2026-10-16-....json --dry-run
+node scripts/rollbackWeekChange.js --audit=audit/week-2026-10-16-....json --apply
 ```
 
 يسترجع: الرتب والرصيد، `weekly_history`، `weekly_commissions`/`wallet_transactions`

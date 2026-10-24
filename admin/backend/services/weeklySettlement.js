@@ -373,21 +373,30 @@ export async function runWeeklySettlement({ triggeredBy = "auto", weekStart: for
 
       // Weekly Direct Sales = qualified (active STUDENT) directs created INSIDE this settlement week
       // OR retroactively assigned via weekly_direct_assignments for this week.
+      // A direct assigned to a DIFFERENT week is excluded from the date window so the same
+      // account can never satisfy the gate of two consecutive weeks.
       // Eligibility for the weekly rank commission requires minDirectSales NEW direct sales this week.
       // Registration Free never qualifies for commission — only Student directs count here.
-      // Note: the week window is [weekStart 00:00, weekEnd 23:59:59].
+      // Note: the week window is [weekStart 00:00, weekEnd 23:59:59], EXCEPT for directs
+      // that were explicitly assigned to a different week — those must never be counted
+      // (and paid) twice across two weeks.
       let assignedDirectIds = new Set();
+      let assignedElsewhereIds = new Set();
       try {
         const assigns = await query(
-          "SELECT direct_id FROM weekly_direct_assignments WHERE upline_id = ? AND week_start = ?",
-          [user.id, weekStart]
+          "SELECT direct_id, week_start FROM weekly_direct_assignments WHERE upline_id = ?",
+          [user.id]
         );
-        for (const a of assigns) assignedDirectIds.add(a.direct_id);
+        for (const a of assigns) {
+          if (a.week_start === weekStart) assignedDirectIds.add(a.direct_id);
+          else assignedElsewhereIds.add(a.direct_id);
+        }
       } catch (e) {}
       const weeklyDirects = activeDirects.filter(d =>
         d.account_type === 'student' &&
         (assignedDirectIds.has(d.id) ||
-         (d.created_at >= `${weekStart} 00:00:00` && d.created_at <= `${weekEnd} 23:59:59`))
+         (!assignedElsewhereIds.has(d.id) &&
+          d.created_at >= `${weekStart} 00:00:00` && d.created_at <= `${weekEnd} 23:59:59`))
       );
       const weeklyDirectSales = weeklyDirects.length;
 
