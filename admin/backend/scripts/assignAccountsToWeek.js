@@ -19,6 +19,7 @@
  *   --reason=text       free text stored on the assignment
  *   --apply             actually write (otherwise dry-run)
  *   --resettle          recompute the week after writing assignments
+ *   --allow-local       allow --apply against the local mock DB (dangerous, dev only)
  *   --json              print machine readable output only
  */
 import fs from "fs";
@@ -48,6 +49,7 @@ function parseArgs(argv) {
   for (const raw of argv.slice(2)) {
     if (raw === "--apply") out.apply = true;
     else if (raw === "--resettle") out.resettle = true;
+    else if (raw === "--allow-local") out.allowLocal = true;
     else if (raw === "--json") out.json = true;
     else if (raw.startsWith("--week=")) out.week = raw.slice(7).trim();
     else if (raw.startsWith("--emails=")) out.emails = raw.slice(9).split(",").map(s => s.trim()).filter(Boolean);
@@ -112,6 +114,20 @@ async function main() {
   }
   const emails = (args.emails && args.emails.length ? args.emails : DEFAULT_EMAILS).map(e => e.toLowerCase());
   const weekStart = args.week;
+
+  // ── Production guard ──
+  // Without Turso credentials `initDb()` silently falls back to the local mock SQLite file.
+  // Writing financial/historical data there would be meaningless (and could "succeed" while
+  // production stays untouched), so --apply is refused unless the caller opts in explicitly.
+  const usingTurso = !!(process.env.TURSO_URL && process.env.TURSO_TOKEN);
+  if (args.apply && !usingTurso && !args.allowLocal) {
+    console.error("REFUSED: TURSO_URL/TURSO_TOKEN are not set — this would write to the LOCAL mock database.");
+    console.error("Run with the production environment (e.g. `railway run ...`) or pass --allow-local for dev data only.");
+    process.exit(2);
+  }
+  if (!usingTurso) {
+    console.warn("⚠️  TURSO vars NOT set — connected to the LOCAL mock database, NOT production.");
+  }
 
   await initDb();
 
