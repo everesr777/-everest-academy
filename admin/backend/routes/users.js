@@ -175,33 +175,43 @@ router.put("/:id/role", async (req, res) => {
   res.json({ success: true });
 });
 
-router.put("/:id/e-money", async (req, res) => {
+// Manual balance adjustment (deposit / withdraw).
+// The `id` comes from req.params.id, or req.params[0] when hit through the
+// legacy regex alias below.
+const adjustEMoney = async (req, res) => {
+  const userId = req.params.id || req.params[0];
   const { amount, allow_negative } = req.body;
-  const user = await queryOne("SELECT * FROM users WHERE id = ?", [req.params.id]);
+  const user = await queryOne("SELECT * FROM users WHERE id = ?", [userId]);
   if (!user) return res.status(404).json({ error: "User not found" });
 
   const newBalance = (user.e_money || 0) + amount;
   if (newBalance < 0 && !user.negative_allowed && !allow_negative)
     return res.status(400).json({ error: `Cannot go negative. Current balance: ${user.e_money}. Enable negative balance first.` });
 
-  await execute("UPDATE users SET e_money = e_money + ?, updated_at=datetime('now','localtime') WHERE id=?", [amount, req.params.id]);
+  await execute("UPDATE users SET e_money = e_money + ?, updated_at=datetime('now','localtime') WHERE id=?", [amount, userId]);
   const tid = uuidv4();
   const type = amount >= 0 ? "credit" : "debit";
   await execute("INSERT INTO wallet_transactions (id, user_id, amount, type, description, status) VALUES (?, ?, ?, ?, ?, 'completed')",
-    [tid, req.params.id, Math.abs(amount), type, "Manual adjustment by admin"]);
-  await logAdminAction(req, `e-money ${type}`, req.params.id, user.full_name, `${Math.abs(amount)} E-Money`);
+    [tid, userId, Math.abs(amount), type, "Manual adjustment by admin"]);
+  await logAdminAction(req, `e-money ${type}`, userId, user.full_name, `${Math.abs(amount)} E-Money`);
 
   const nid = uuidv4();
   if (amount >= 0) {
     await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'wallet')",
-      [nid, req.params.id, "💰 إضافة رصيد", `تم إضافة ${Math.abs(amount)} E-Money إلى حسابك من الإدارة`]);
+      [nid, userId, "💰 إضافة رصيد", `تم إضافة ${Math.abs(amount)} E-Money إلى حسابك من الإدارة`]);
   } else {
     await execute("INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'wallet')",
-      [nid, req.params.id, "💸 خصم رصيد", `تم خصم ${Math.abs(amount)} E-Money من حسابك من الإدارة`]);
+      [nid, userId, "💸 خصم رصيد", `تم خصم ${Math.abs(amount)} E-Money من حسابك من الإدارة`]);
   }
-  const updated = await queryOne("SELECT id, full_name, email, e_money, negative_allowed FROM users WHERE id = ?", [req.params.id]);
+  const updated = await queryOne("SELECT id, full_name, email, e_money, negative_allowed FROM users WHERE id = ?", [userId]);
   res.json(updated);
-});
+};
+
+router.put("/:id/e-money", adjustEMoney);
+// Legacy alias: the older admin bundle still hosted on the main domain calls
+// `PUT /api/users/:id/$` (a `$` that used to interpolate the amount). Without
+// this alias the deposit/withdraw action fails with 404.
+router.put(/^\/([^/]+)\/\$$/, adjustEMoney);
 
 // Toggle negative balance permission
 router.put("/:id/negative-toggle", async (req, res) => {

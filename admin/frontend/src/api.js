@@ -48,7 +48,11 @@ export async function api(path, opts = {}) {
     }
     if (!r.ok) {
       const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
-      throw new Error(msg);
+      const err = new Error(msg);
+      // Keep the parsed body so callers can use extra fields (e.g. candidates).
+      if (data) err.data = data;
+      err.status = r.status;
+      throw err;
     }
     return data;
   } finally {

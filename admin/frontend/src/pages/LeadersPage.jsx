@@ -9,6 +9,10 @@ export default function LeadersPage() {
   const t = (ar, en) => tFn(ar, en);
   const [leaders, setLeaders] = useState([]);
   const [userId, setUserId] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const [heroImage, setHeroImage] = useState(DEFAULT_HERO_IMAGE);
   const [heroUploading, setHeroUploading] = useState(false);
@@ -17,6 +21,21 @@ export default function LeadersPage() {
   const getAdminId = () => { try { return JSON.parse(localStorage.getItem("admin_session") || "{}").userId; } catch { return null; } };
 
   useEffect(() => { fetchLeaders(); fetchHeroImage(); }, []);
+
+  // Live user search: admins know names, not IDs. Type a name / email / phone
+  // and pick the right account from the list.
+  useEffect(() => {
+    const q = userId.trim();
+    if (!q || selected) { setResults([]); setSearching(false); return; }
+    setSearching(true);
+    const timer = setTimeout(() => {
+      api(`/api/leaders/search?q=${encodeURIComponent(q)}`)
+        .then((rows) => { setResults(Array.isArray(rows) ? rows : []); setShowResults(true); })
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [userId, selected]);
 
   const fetchLeaders = () => api("/api/leaders").then(setLeaders).catch(() => {});
 
@@ -58,14 +77,24 @@ export default function LeadersPage() {
     setLoading(false);
   };
 
-  const addLeader = async () => {
-    if (!userId.trim()) return;
+  const resetPicker = () => { setUserId(""); setSelected(null); setResults([]); setShowResults(false); };
+
+  const addLeader = async (explicitId) => {
+    const value = explicitId || (selected ? selected.id : userId.trim());
+    if (!value) return;
     try {
-      const res = await api("/api/leaders/add", { method: "POST", body: JSON.stringify({ userId: userId.trim() }) });
-      if (res.error) return alert(res.error);
-      setUserId("");
+      const res = await api("/api/leaders/add", { method: "POST", body: JSON.stringify({ userId: value }) });
+      if (res && res.error) return alert(lang === "ar" ? res.error : (res.error_en || res.error));
+      resetPicker();
       fetchLeaders();
-    } catch (e) { alert(e.message); }
+    } catch (e) {
+      const candidates = e && e.data && e.data.candidates;
+      if (candidates && candidates.length) {
+        setResults(candidates);
+        setShowResults(true);
+      }
+      alert(lang === "ar" ? e.message : ((e.data && e.data.error_en) || e.message));
+    }
   };
 
   const removeLeader = async (id) => {
@@ -109,10 +138,40 @@ export default function LeadersPage() {
 
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="flex gap-2 flex-1 min-w-[280px]">
-          <input placeholder={t("معرف المستخدم (UUID)", "User ID (UUID)")} value={userId} onChange={(e) => setUserId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addLeader()}
-            className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-everest-500 flex-1" />
-          <button onClick={addLeader} disabled={leaders.length >= 10}
+          <div className="relative flex-1">
+            <input
+              placeholder={t("ابحث بالاسم أو الإيميل أو رقم الموبايل أو الـ ID", "Search by name, email, phone or ID")}
+              value={userId}
+              onChange={(e) => { setSelected(null); setUserId(e.target.value); }}
+              onFocus={() => setShowResults(true)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                if (!selected && results.length === 1) addLeader(results[0].id);
+                else addLeader();
+              }}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-everest-500" />
+            {searching && (
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{t("بحث...", "Searching...")}</span>
+            )}
+            {showResults && userId.trim() && !selected && results.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg max-h-72 overflow-auto">
+                {results.map((u) => (
+                  <button key={u.id} type="button"
+                    onClick={() => { setSelected(u); setUserId(u.name || u.id); setShowResults(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-right transition">
+                    {u.avatar ? (
+                      <img src={u.avatar} alt="" className="w-8 h-8 rounded-lg object-cover bg-gray-100" onError={(e) => { e.target.style.display = "none" }} />
+                    ) : (
+                      <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-everest-400 to-everest-600 text-white text-sm font-bold flex items-center justify-center">{(u.name || "?")[0]}</span>
+                    )}
+                    <span className="flex-1 text-sm text-gray-800 truncate">{u.name}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{u.rank || t("بدون رتبة", "no rank")}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button onClick={() => addLeader()} disabled={leaders.length >= 10 || (!selected && !userId.trim())}
             className="px-5 py-2.5 bg-everest-600 text-white rounded-xl font-medium text-sm hover:bg-everest-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
             ➕ {t("اضافة", "Add")}
           </button>
@@ -122,6 +181,14 @@ export default function LeadersPage() {
           {loading ? t("جاري...", "...Loading") : "🔄 " + t("تحديث تلقائي", "Auto Refresh")}
         </button>
       </div>
+
+      {selected && (
+        <p className="text-xs text-gray-500 -mt-2 mb-4">
+          ✅ {t("المحدد:", "Selected:")} <span className="font-semibold text-gray-700">{selected.name}</span>
+          {selected.rank ? ` — ${selected.rank}` : ""}{" "}
+          <button onClick={resetPicker} className="text-red-500 underline">{t("إلغاء", "Cancel")}</button>
+        </p>
+      )}
 
       {leaders.length >= 10 && (
         <p className="text-xs text-orange-500 mb-4">⚠️ {t("الحد الأقصى 10 أعضاء — أزل عضو أولاً قبل الإضافة", "Max 10 members — remove one before adding")}</p>
