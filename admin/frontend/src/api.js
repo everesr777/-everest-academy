@@ -30,6 +30,42 @@ export function subscribePending(fn) {
   return () => pendingListeners.delete(fn);
 }
 
+// ─── Loading feedback for every button ───
+// ActionGuard calls markUserAction() on each click. Any request that starts
+// shortly after that click counts as "the action the admin just triggered", so
+// the global loading overlay can stay visible until that request finishes.
+// Background refetches (cache revalidation, keep-alive pages) do NOT count.
+const ACTION_WINDOW_MS = 1500;
+let lastActionAt = 0;
+let activeActionRequests = 0;
+const actionListeners = new Set();
+
+export function markUserAction() { lastActionAt = Date.now(); }
+
+export function getActionRequestCount() { return activeActionRequests; }
+
+export function subscribeAction(fn) {
+  actionListeners.add(fn);
+  return () => actionListeners.delete(fn);
+}
+
+function emitAction() {
+  actionListeners.forEach((fn) => { try { fn(activeActionRequests); } catch { /* ignore */ } });
+}
+
+function beginActionRequest() {
+  if (Date.now() - lastActionAt > ACTION_WINDOW_MS) return false;
+  activeActionRequests++;
+  emitAction();
+  return true;
+}
+
+function endActionRequest(tracked) {
+  if (!tracked) return;
+  activeActionRequests = Math.max(0, activeActionRequests - 1);
+  emitAction();
+}
+
 // ─── GET cache ───
 // Every page used to refetch all of its data from Railway on each visit, which
 // made moving between admin pages feel slow. GET responses are now memoised:
@@ -57,24 +93,29 @@ export function clearApiCache() { GET_CACHE.clear(); }
 
 async function rawApi(url, opts, method) {
   const headers = { ...getAdminHeaders(), ...(opts.headers || {}) };
-  const r = await fetch(url, { headers, ...opts });
-  const text = await r.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = null; }
-  if (data && data.session_expired) {
-    localStorage.removeItem("admin_session");
-    window.location.reload();
-    throw new Error("Session expired");
+  const tracked = beginActionRequest();
+  try {
+    const r = await fetch(url, { headers, ...opts });
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = null; }
+    if (data && data.session_expired) {
+      localStorage.removeItem("admin_session");
+      window.location.reload();
+      throw new Error("Session expired");
+    }
+    if (!r.ok) {
+      const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
+      const err = new Error(msg);
+      // Keep the parsed body so callers can use extra fields (e.g. candidates).
+      if (data) err.data = data;
+      err.status = r.status;
+      throw err;
+    }
+    return data;
+  } finally {
+    endActionRequest(tracked);
   }
-  if (!r.ok) {
-    const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
-    const err = new Error(msg);
-    // Keep the parsed body so callers can use extra fields (e.g. candidates).
-    if (data) err.data = data;
-    err.status = r.status;
-    throw err;
-  }
-  return data;
 }
 
 export async function api(path, opts = {}) {
@@ -127,11 +168,13 @@ export async function uploadApi(formData) {
   if (s.userId) headers["x-user-id"] = s.userId;
   if (s.token) headers["x-session-token"] = s.token;
   beginMutation();
+  const tracked = beginActionRequest();
   let r;
   try {
     r = await fetch(uploadUrl, { method: "POST", headers, body: formData });
   } finally {
     endMutation();
+    endActionRequest(tracked);
   }
   if (!r.ok) throw new Error("Upload failed");
   return r.json();

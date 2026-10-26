@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLang } from "./LangContext";
-import { getPendingCount } from "./api.js";
+import { markUserAction, subscribeAction } from "./api.js";
 
 const SKIP = new Set(["", "x", "+", "-", "cancel", "close", "back", "prev", "next", "previous", "إلغاء", "رجوع", "إغلاق", "تم", "موافق"]);
 
@@ -52,11 +52,38 @@ export default function ActionGuard() {
   pendingRef.current = pending;
   busyRef.current = busy;
 
+  // Loading overlay for EVERY action (not just the sensitive ones):
+  // a click marks a user action, and any request that starts right after it
+  // keeps the spinner on screen until it finishes. Requests triggered in the
+  // background (cache revalidation) never open it, so pages stay instant.
+  const shownAtRef = useRef(0);
+  const hideTimerRef = useRef(null);
+  useEffect(() => {
+    const unsub = subscribeAction((count) => {
+      if (count > 0) {
+        if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
+        setBusy((prev) => { if (!prev) shownAtRef.current = Date.now(); return true; });
+      } else {
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        // Keep it visible long enough to be noticed even for very fast requests.
+        const elapsed = Date.now() - shownAtRef.current;
+        const wait = Math.max(0, 500 - elapsed);
+        hideTimerRef.current = setTimeout(() => { hideTimerRef.current = null; setBusy(false); }, wait);
+      }
+    });
+    return () => {
+      unsub();
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const onClick = (e) => {
       if (e.button !== 0) return;
       const el = e.target.closest("button, [role='button']");
       if (!el) return;
+      // Mark the click so the loading overlay can follow the request it starts.
+      markUserAction();
       if (bypass.current === el) { bypass.current = null; return; }
       if (el.closest("[data-guard-ignore]")) return;
       if (busyRef.current || pendingRef.current) { e.preventDefault(); e.stopPropagation(); return; }
@@ -71,20 +98,11 @@ export default function ActionGuard() {
     return () => document.removeEventListener("click", onClick, true);
   }, []);
 
-  useEffect(() => {
-    if (!busy) return;
-    const id = setInterval(() => {
-      if (getPendingCount() === 0) setBusy(false);
-    }, 200);
-    const timeout = setTimeout(() => setBusy(false), 300000);
-    return () => { clearInterval(id); clearTimeout(timeout); };
-  }, [busy]);
-
   const confirm = () => {
     const cur = pendingRef.current;
     if (!cur) return;
     setPending(null);
-    setBusy(true);
+    markUserAction();
     bypass.current = cur.el;
     setTimeout(() => {
       try { cur.el.click(); } catch {}
