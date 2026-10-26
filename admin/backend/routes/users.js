@@ -34,7 +34,9 @@ const logAdminAction = async (req, action, targetId, targetName, details) => {
 };
 
 router.get("/", async (req, res) => {
-  const users = await query("SELECT id, full_name, email, phone, address, role, account_type, referral_code, rank, e_money, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, commission_exempt, blocked, status, avatar, created_at FROM users ORDER BY created_at DESC");
+  // `usd_balance` is the field name the user app renders (it has no `e_money`),
+  // so every user payload exposes the same balance under both names.
+  const users = await query("SELECT id, full_name, email, phone, address, role, account_type, referral_code, rank, e_money, e_money AS usd_balance, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, commission_exempt, blocked, status, avatar, created_at FROM users ORDER BY created_at DESC");
   res.json(users);
 });
 
@@ -124,7 +126,7 @@ router.put("/:id/id-cards", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const user = await queryOne("SELECT id, full_name, email, phone, address, role, account_type, referral_code, referred_by, created_by_user, rank, e_money, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, commission_exempt, blocked, status, bio, avatar, governorate, country, created_at, membership_expires_at FROM users WHERE id = ?", [req.params.id]);
+  const user = await queryOne("SELECT id, full_name, email, phone, address, role, account_type, referral_code, referred_by, created_by_user, rank, e_money, e_money AS usd_balance, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, commission_exempt, blocked, status, bio, avatar, governorate, country, created_at, membership_expires_at FROM users WHERE id = ?", [req.params.id]);
   if (!user) return res.status(404).json({ error: "User not found" });
   const realDirects = await queryOne("SELECT COUNT(*) as cnt FROM users WHERE referred_by = ? OR (created_by_user = ? AND referred_by IS NULL)", [req.params.id, req.params.id]);
   user.direct_count = realDirects?.cnt || 0;

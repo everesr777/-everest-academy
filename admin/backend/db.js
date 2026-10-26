@@ -67,7 +67,8 @@ function createSchema(driver, isTursoDb) {
       id TEXT PRIMARY KEY, full_name TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
       phone TEXT, address TEXT, password TEXT NOT NULL, role TEXT DEFAULT 'registration',
       avatar TEXT, bio TEXT, referral_code TEXT UNIQUE, referred_by TEXT,
-      rank TEXT DEFAULT '', e_money REAL DEFAULT 0, academic_points REAL DEFAULT 0,
+      rank TEXT DEFAULT '', e_money REAL DEFAULT 0,
+      usd_balance REAL GENERATED ALWAYS AS (e_money) VIRTUAL, academic_points REAL DEFAULT 0,
       total_team_sales REAL DEFAULT 0, direct_count INTEGER DEFAULT 0,
       blocked INTEGER DEFAULT 0, status TEXT DEFAULT 'active',
       membership_expires_at TEXT, commission_exempt INTEGER DEFAULT 0,
@@ -394,6 +395,9 @@ function createSchema(driver, isTursoDb) {
       try { await driver.execute("ALTER TABLE commissions ADD COLUMN description TEXT"); } catch(e) {}
       try { await driver.execute("ALTER TABLE enrollments ADD COLUMN sales_counted INTEGER DEFAULT 0"); } catch(e) {}
       try { await driver.execute("ALTER TABLE users ADD COLUMN commission_exempt INTEGER DEFAULT 0"); } catch(e) {}
+      // The user app reads `usd_balance` while the backend stores `e_money`.
+      // A virtual generated column keeps both names in sync for every query.
+      try { await driver.execute("ALTER TABLE users ADD COLUMN usd_balance REAL GENERATED ALWAYS AS (e_money) VIRTUAL"); } catch(e) {}
       try {
         await driver.execute("UPDATE users SET account_type = 'registration', role = 'registration' WHERE account_type = 'registration_sponsor'");
         await driver.execute("UPDATE users SET account_type = 'registration' WHERE role = 'registration' AND account_type = 'student'");
@@ -435,6 +439,7 @@ function createSchema(driver, isTursoDb) {
   try { driver.run("ALTER TABLE commissions ADD COLUMN description TEXT"); } catch(e) {}
   try { driver.run("ALTER TABLE enrollments ADD COLUMN sales_counted INTEGER DEFAULT 0"); } catch(e) {}
   try { driver.run("ALTER TABLE users ADD COLUMN commission_exempt INTEGER DEFAULT 0"); } catch(e) {}
+  try { driver.run("ALTER TABLE users ADD COLUMN usd_balance REAL GENERATED ALWAYS AS (e_money) VIRTUAL"); } catch(e) {}
   try { driver.run("ALTER TABLE users ADD COLUMN account_type TEXT DEFAULT 'student'"); } catch(e) {}
   try { driver.run("ALTER TABLE courses ADD COLUMN is_show_free INTEGER DEFAULT 0"); } catch(e) {}
   try { driver.run("ALTER TABLE courses ADD COLUMN is_show_homepage INTEGER DEFAULT 1"); } catch(e) {}
