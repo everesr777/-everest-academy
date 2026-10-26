@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { api } from "../api.js";
+import PageLoading from "../components/PageLoading";
 import { useLang } from "../LangContext.jsx";
 
 export default function CustomerServicePage() {
@@ -61,7 +62,11 @@ export default function CustomerServicePage() {
     setSaving(false);
   };
 
-  if (loading) return <p className="text-gray-400 animate-pulse">{t("جاري التحميل...", "Loading...")}</p>;
+  if (loading) return (
+    <PageLoading>
+      <p className="text-gray-400 animate-pulse">{t("جاري التحميل...", "Loading...")}</p>
+    </PageLoading>
+  );
 
   return (
     <div className="space-y-6">

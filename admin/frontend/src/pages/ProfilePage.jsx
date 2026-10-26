@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PageLoading from "../components/PageLoading";
 import { useLang } from "../LangContext";
 import { api, getAdminHeaders } from "../api.js";
 
@@ -39,7 +40,11 @@ export default function ProfilePage() {
     setSaving(false);
   };
 
-  if (loading) return <p className="text-center py-20 text-gray-400">{t("جاري التحميل...", "Loading...")}</p>;
+  if (loading) return (
+    <PageLoading>
+      <p className="text-center py-20 text-gray-400">{t("جاري التحميل...", "Loading...")}</p>
+    </PageLoading>
+  );
   if (!profile) return <p className="text-center py-20 text-red-400">{t("فشل تحميل البيانات", "Failed to load data")}</p>;
 
   return (

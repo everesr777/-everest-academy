@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, BACKEND_URL, uploadApi } from "../api.js";
-import LoadingIndicator from "../components/LoadingIndicator";
+import PageLoading from "../components/PageLoading";
 
 export default function UsersPage() {
   const { t } = useLang();
@@ -269,7 +269,7 @@ export default function UsersPage() {
             className="w-full max-w-md px-4 py-2 border rounded-lg text-sm"
           />
         </div>
-        {loading ? <LoadingIndicator /> : (
+        {loading ? <PageLoading /> : (
         <table className="w-full table-data mobile-card-table">
           <thead>
             <tr className="bg-gray-50 text-gray-600 text-xs uppercase">

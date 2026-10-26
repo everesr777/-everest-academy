@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api } from "../api.js";
-import LoadingIndicator from "../components/LoadingIndicator";
+import PageLoading from "../components/PageLoading";
 
 export default function AccountsBySourcePage({ source }) {
   const { lang, t: tFn } = useLang();
@@ -70,7 +70,7 @@ export default function AccountsBySourcePage({ source }) {
       </div>
 
       {loading ? (
-        <LoadingIndicator full />
+        <PageLoading full />
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
           <p className="text-4xl mb-3">📭</p>
@@ -141,7 +141,9 @@ export default function AccountsBySourcePage({ source }) {
             </div>
 
             {loadingProfile ? (
-              <p style={{ color: "#999", textAlign: "center", padding: 20 }}>{t("جارٍ التحميل...", "Loading...")}</p>
+              <PageLoading>
+                <p style={{ color: "#999", textAlign: "center", padding: 20 }}>{t("جارٍ التحميل...", "Loading...")}</p>
+              </PageLoading>
             ) : (
               <>
                 {profileError && (

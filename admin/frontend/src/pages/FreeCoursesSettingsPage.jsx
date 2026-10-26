@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { api } from "../api.js";
+import PageLoading from "../components/PageLoading";
 import { useLang } from "../LangContext.jsx";
 
 export default function FreeCoursesSettingsPage() {
@@ -96,7 +97,11 @@ export default function FreeCoursesSettingsPage() {
   );
 
   if (loading)
-    return <p className="text-gray-400 animate-pulse">{t("جاري التحميل...", "Loading...")}</p>;
+    return (
+      <PageLoading>
+        <p className="text-gray-400 animate-pulse">{t("جاري التحميل...", "Loading...")}</p>
+      </PageLoading>
+    );
 
   return (
     <div className="space-y-6">

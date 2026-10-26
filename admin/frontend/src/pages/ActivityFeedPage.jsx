@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
+import PageLoading from "../components/PageLoading";
 import { useTheme } from "../ThemeContext";
 import { api } from "../api";
 
@@ -150,7 +151,9 @@ export default function ActivityFeedPage() {
       {/* Timeline / Table */}
       <div className="bg-theme-surface rounded-2xl shadow-card border border-theme-border overflow-hidden">
         {loading ? (
-          <p className="text-center py-12 text-theme-text-secondary">{t("جاري التحميل...", "Loading...")}</p>
+          <PageLoading>
+            <p className="text-center py-12 text-theme-text-secondary">{t("جاري التحميل...", "Loading...")}</p>
+          </PageLoading>
         ) : events.length === 0 ? (
           <p className="text-center py-12 text-theme-text-secondary">{t("لا توجد أحداث", "No events found")}</p>
         ) : (

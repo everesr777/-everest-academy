@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
 import { LangProvider, useLang } from "./LangContext";
+import PageLoading from "./components/PageLoading.jsx";
 import { useTheme } from "./ThemeContext";
 import { api, BACKEND_URL, clearApiCache } from "./api.js";
 import ActionGuard from "./ActionGuard.jsx";
@@ -413,7 +414,9 @@ function DashboardPage({ stats }) {
             </div>
           </div>
           {detailLoading ? (
-            <p className="text-theme-text-secondary text-center py-8">{t("جاري التحميل...", "Loading...")}</p>
+            <PageLoading>
+              <p className="text-theme-text-secondary text-center py-8">{t("جاري التحميل...", "Loading...")}</p>
+            </PageLoading>
           ) : detailData.length === 0 ? (
             <p className="text-theme-text-secondary text-center py-8">{t("لا يوجد بيانات", "No data")}</p>
           ) : (

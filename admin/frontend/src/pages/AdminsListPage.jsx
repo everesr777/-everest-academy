@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
+import PageLoading from "../components/PageLoading";
 import { api, getAdminSession } from "../api.js";
 
 export default function AdminsListPage() {
@@ -68,7 +69,9 @@ export default function AdminsListPage() {
       {msg && <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 mb-4 text-center text-sm font-medium">{msg}</div>}
 
       {loading ? (
-        <p className="text-center py-20 text-gray-400">{t("جاري التحميل...", "Loading...")}</p>
+        <PageLoading>
+          <p className="text-center py-20 text-gray-400">{t("جاري التحميل...", "Loading...")}</p>
+        </PageLoading>
       ) : admins.length === 0 ? (
         <p className="text-center py-20 text-gray-400">{t("لا يوجد أدمنز", "No admins found")}</p>
       ) : (

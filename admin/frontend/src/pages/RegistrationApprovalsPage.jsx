@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
 import { api, BACKEND_URL } from "../api.js";
-import LoadingIndicator from "../components/LoadingIndicator";
+import PageLoading from "../components/PageLoading";
 
 export default function RegistrationApprovalsPage({ source }) {
   const { lang, t: tFn } = useLang();
@@ -97,7 +97,7 @@ export default function RegistrationApprovalsPage({ source }) {
       </div>
 
       {loading ? (
-        <LoadingIndicator full />
+        <PageLoading full />
       ) : pending.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
           <p className="text-4xl mb-3">✅</p>
@@ -260,7 +260,9 @@ export default function RegistrationApprovalsPage({ source }) {
             </div>
 
             {loadingProfile ? (
-              <p style={{ color: "#999", textAlign: "center", padding: 20 }}>{t("جارٍ التحميل...", "Loading...")}</p>
+              <PageLoading>
+                <p style={{ color: "#999", textAlign: "center", padding: 20 }}>{t("جارٍ التحميل...", "Loading...")}</p>
+              </PageLoading>
             ) : (
               <>
                 {profileError && (

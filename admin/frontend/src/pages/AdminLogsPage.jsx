@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
+import PageLoading from "../components/PageLoading";
 import { api } from "../api.js";
 
 export default function AdminLogsPage() {
@@ -81,7 +82,9 @@ export default function AdminLogsPage() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400 text-center py-10">{t("جاري التحميل...", "Loading...")}</p>
+        <PageLoading>
+          <p className="text-gray-400 text-center py-10">{t("جاري التحميل...", "Loading...")}</p>
+        </PageLoading>
       ) : filtered.length === 0 ? (
         <p className="text-gray-400 text-center py-10">{t("لا توجد إجراءات مسجلة", "No logs recorded")}</p>
       ) : (

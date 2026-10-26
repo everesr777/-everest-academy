@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useLang } from "../LangContext";
+import PageLoading from "../components/PageLoading";
 import { api, uploadApi, uploadVideoToBunny } from "../api.js";
 
 const statusOpts = [
@@ -896,7 +897,9 @@ export default function CoursesListPage() {
                 <tr><td colSpan={7} className="p-0">
                       <div className="bg-gray-50 p-4 border-t">
                     {loadingStudents ? (
-                      <p className="text-sm text-gray-400">{t("جاري التحميل...", "Loading...")}</p>
+                      <PageLoading>
+                        <p className="text-sm text-gray-400">{t("جاري التحميل...", "Loading...")}</p>
+                      </PageLoading>
                     ) : students.length === 0 ? (
                       <p className="text-sm text-gray-400">{t("لا يوجد طلاب مسجلين في هذا الكورس", "No students enrolled in this course")}</p>
                     ) : (

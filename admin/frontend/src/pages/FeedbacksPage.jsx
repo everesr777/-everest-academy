@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PageLoading from "../components/PageLoading";
 import { useLang } from "../LangContext";
 import { api, getAdminSession, BACKEND_URL } from "../api.js";
 
@@ -108,7 +109,9 @@ export default function FeedbacksPage() {
             </div>
           </div>
           {loading ? (
-            <p className="text-gray-400 text-center py-10">{t("جاري التحميل...", "Loading...")}</p>
+            <PageLoading>
+              <p className="text-gray-400 text-center py-10">{t("جاري التحميل...", "Loading...")}</p>
+            </PageLoading>
           ) : feedbacks.length === 0 ? (
             <p className="text-gray-400 text-center py-10">{t("لا توجد تقييمات", "No feedbacks yet")}</p>
           ) : (
@@ -187,7 +190,9 @@ export default function FeedbacksPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {proofLoading ? (
-              <p className="text-gray-400 text-center py-10 col-span-full">{t("جاري التحميل...", "Loading...")}</p>
+              <PageLoading>
+                <p className="text-gray-400 text-center py-10 col-span-full">{t("جاري التحميل...", "Loading...")}</p>
+              </PageLoading>
             ) : proofs.length === 0 ? (
               <p className="text-gray-400 text-center py-10 col-span-full">{t("لا توجد صور", "No images yet")}</p>
             ) : proofs.map(p => (
