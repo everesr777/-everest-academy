@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
 import { LangProvider, useLang } from "./LangContext";
 import { useTheme } from "./ThemeContext";
-import { api, BACKEND_URL } from "./api.js";
+import { api, BACKEND_URL, clearApiCache } from "./api.js";
 import ActionGuard from "./ActionGuard.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import RoleManagementPage from "./pages/RoleManagementPage.jsx";
@@ -70,7 +70,14 @@ function AppInner() {
   }, [currentUser]);
 
   const handleLogin = (user) => { setCurrentUser(user); setPage("dashboard"); };
-  const handleLogout = () => { localStorage.removeItem("admin_session"); setCurrentUser(null); };
+  const handleLogout = () => {
+    localStorage.removeItem("admin_session");
+    clearApiCache();
+    setCurrentUser(null);
+    setRenderedPages(["dashboard"]);
+    setPageKeys({});
+    lastVisitRef.current = { dashboard: Date.now() };
+  };
 
   if (checking) return <div className="min-h-screen bg-theme-primary flex items-center justify-center"><p className="text-theme-text-secondary text-lg animate-pulse">{t("جاري التحقق...", "Checking...")}</p></div>;
   if (!currentUser) return <LangProvider><ActionGuard /><AdminLoginPage onLogin={handleLogin} /></LangProvider>;
