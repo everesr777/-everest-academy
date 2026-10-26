@@ -37,7 +37,14 @@ const logAdminAction = async (req, action, targetId, targetName, details) => {
 router.get("/", async (req, res) => {
   // `usd_balance` is the field name the user app renders (it has no `e_money`),
   // so every user payload exposes the same balance under both names.
-  const users = await query("SELECT id, full_name, email, phone, address, role, account_type, referral_code, rank, e_money, e_money AS usd_balance, academic_points, total_team_sales, direct_count, qualified_direct_count, negative_allowed, commission_exempt, blocked, status, avatar, created_at FROM users ORDER BY created_at DESC");
+  // Base64 avatars are stripped from the list: 147 of them added ~4.5 MB to this
+  // response and made the user-management page take many seconds to open. The
+  // full avatar is still returned by GET /api/users/:id.
+  const users = await query(`SELECT id, full_name, email, phone, address, role, account_type, referral_code, rank,
+    e_money, e_money AS usd_balance, academic_points, total_team_sales, direct_count, qualified_direct_count,
+    negative_allowed, commission_exempt, blocked, status,
+    CASE WHEN avatar LIKE 'data:%' THEN NULL ELSE avatar END AS avatar,
+    created_at FROM users ORDER BY created_at DESC`);
   res.json(users);
 });
 
