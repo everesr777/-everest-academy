@@ -38,6 +38,23 @@ function AppInner() {
   const { lang, toggle, t } = useLang();
   const { theme, toggleTheme } = useTheme();
 
+  // Keep visited pages mounted so going back to them is instant (no refetch,
+  // no scroll/state reset). A page is force-remounted only if it has been left
+  // untouched for more than 2 minutes, so its data can never go badly stale.
+  const [renderedPages, setRenderedPages] = useState(["dashboard"]);
+  const [pageKeys, setPageKeys] = useState({});
+  const lastVisitRef = useRef({ dashboard: Date.now() });
+
+  useEffect(() => {
+    const now = Date.now();
+    const prev = lastVisitRef.current[page];
+    lastVisitRef.current[page] = now;
+    setRenderedPages((list) => (list.includes(page) ? list : [...list, page]));
+    if (prev && now - prev > 2 * 60 * 1000) {
+      setPageKeys((k) => ({ ...k, [page]: (k[page] || 0) + 1 }));
+    }
+  }, [page]);
+
   useEffect(() => {
     const s = JSON.parse(localStorage.getItem("admin_session") || "{}");
     if (!s.userId || !s.token) { setChecking(false); return; }
@@ -87,6 +104,35 @@ function AppInner() {
     { id: "profile-settings", label: lang === "ar" ? "الإعدادات الشخصية" : "Settings", icon: "⚙️" },
   ];
 
+  const renderPage = (id) => {
+    switch (id) {
+      case "dashboard": return <DashboardPage stats={stats} />;
+      case "approvals-external": return <RegistrationApprovalsPage source="external" />;
+      case "approvals-created": return <RegistrationApprovalsPage source="created" />;
+      case "users": return <UsersPage />;
+      case "role-mgmt": return <RoleManagementPage />;
+      case "external-accounts": return <AccountsBySourcePage source="external" />;
+      case "created-accounts": return <AccountsBySourcePage source="created" />;
+      case "course-builder": return <CourseBuilderPage />;
+      case "courses": return <CoursesListPage />;
+      case "free-courses": return <FreeCoursesSettingsPage />;
+      case "quiz-attempts": return <QuizAttemptsPage />;
+      case "ranks-mgmt": return <RanksManagementPage />;
+      case "settlement-settings": return <WeeklySettlementPage />;
+      case "leaders": return <LeadersPage />;
+      case "feedbacks": return <FeedbacksPage />;
+      case "cs": return <CustomerServicePage />;
+      case "pricing": return <PricingSettingsPage />;
+      case "transactions": return <TransactionsPage />;
+      case "activity-feed": return <ActivityFeedPage />;
+      case "admin-logs": return <AdminLogsPage />;
+      case "membership-settings": return <MembershipSettingsPage />;
+      case "admins-mgmt": return isManager ? <AdminsListPage /> : null;
+      case "profile-settings": return <ProfilePage />;
+      default: return null;
+    }
+  };
+
   return (
     <div className="flex h-screen bg-theme-primary theme-transition" dir={lang === "ar" ? "rtl" : "ltr"}>
       <ActionGuard />
@@ -112,30 +158,11 @@ function AppInner() {
               </button>
             </div>
           </div>
-          {page === "dashboard" && <DashboardPage stats={stats} />}
-          {page === "approvals-external" && <RegistrationApprovalsPage source="external" />}
-          {page === "approvals-created" && <RegistrationApprovalsPage source="created" />}
-          {page === "users" && <UsersPage />}
-          {page === "role-mgmt" && <RoleManagementPage />}
-          {page === "external-accounts" && <AccountsBySourcePage source="external" />}
-          {page === "created-accounts" && <AccountsBySourcePage source="created" />}
-          {page === "course-builder" && <CourseBuilderPage />}
-          {page === "courses" && <CoursesListPage />}
-          {page === "free-courses" && <FreeCoursesSettingsPage />}
-          {page === "quiz-attempts" && <QuizAttemptsPage />}
-          {page === "ranks-mgmt" && <RanksManagementPage />}
-          {page === "settlement-settings" && <WeeklySettlementPage />}
-          {page === "leaders" && <LeadersPage />}
-          {page === "feedbacks" && <FeedbacksPage />}
-          {page === "cs" && <CustomerServicePage />}
-          {page === "pricing" && <PricingSettingsPage />}
-          {page === "transactions" && <TransactionsPage />}
-          {page === "activity-feed" && <ActivityFeedPage />}
-
-          {page === "admin-logs" && <AdminLogsPage />}
-          {page === "membership-settings" && <MembershipSettingsPage />}
-          {page === "admins-mgmt" && isManager && <AdminsListPage />}
-          {page === "profile-settings" && <ProfilePage />}
+          {renderedPages.map((p) => (
+            <div key={`${p}:${pageKeys[p] || 0}`} style={{ display: p === page ? undefined : "none" }}>
+              {renderPage(p)}
+            </div>
+          ))}
         </div>
       </main>
     </div>

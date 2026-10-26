@@ -29,6 +29,9 @@ export default function UsersPage() {
   const [userCards, setUserCards] = useState(null);
   const [settlementWeeks, setSettlementWeeks] = useState([]);
   const [settlementWeek, setSettlementWeek] = useState("");
+  const [rankDraft, setRankDraft] = useState("");
+  const [rankModal, setRankModal] = useState(null);
+  const [rankSaving, setRankSaving] = useState(false);
 
   const loadUsers = () => {
     setLoading(true);
@@ -68,6 +71,8 @@ export default function UsersPage() {
     setUserCards(null);
     setSettlementWeeks([]);
     setSettlementWeek("");
+    setRankDraft(data.rank || "");
+    setRankModal(null);
     api(`/api/mlm/rank-progress/${data.id}`).then(setRankProgress).catch(() => {});
     api(`/api/mlm/directs/${data.id}`).then(d => setDirectMembers(Array.isArray(d) ? d : [])).catch(() => {});
     api(`/api/mlm/weekly-history/${data.id}`).then(d => setWeeklyHistory(Array.isArray(d) ? d : [])).catch(() => {});
@@ -126,6 +131,49 @@ export default function UsersPage() {
       alert(`${t("تم إضافة", "Added")} ${amt} $ ${t("إلى:", "To:")} ${name}`);
       setSendAmtModal(null);
     } catch (e) { alert(t("خطأ:", "Error:") + " " + e.message); }
+  };
+
+  // ─── Manual rank change (asks about the rank commission first) ───
+  const openRankChange = () => {
+    if (!selectedUser) return;
+    const target = dbRanks.find(r => r.name === rankDraft);
+    if (!target) return;
+    if ((selectedUser.rank || "") === rankDraft) {
+      alert(t("هذه هي الرتبة الحالية بالفعل.", "This is already the current rank."));
+      return;
+    }
+    const current = dbRanks.find(r => r.name === selectedUser.rank);
+    const up = Number(target.sort_order) > Number(current?.sort_order ?? -1);
+    const amount = up
+      ? (Number(target.weekly_bonus ?? target.bonus ?? 0) || 0)
+      : (Number(current?.weekly_bonus ?? current?.bonus ?? 0) || 0);
+    setRankModal({ target: rankDraft, up, amount, oldRank: selectedUser.rank || "" });
+  };
+
+  const applyRankChange = async (mode) => {
+    if (!rankModal || !selectedUser) return;
+    setRankSaving(true);
+    try {
+      const res = await api(`/api/users/${selectedUser.id}/rank`, {
+        method: "PUT",
+        body: JSON.stringify({ rank: rankModal.target, apply_bonus: mode }),
+      });
+      const updated = await api(`/api/users/${selectedUser.id}`);
+      setSelectedUser(updated);
+      setRankDraft(updated.rank || "");
+      setRankModal(null);
+      loadUsers();
+      const money = Number(res?.bonus_applied) || 0;
+      const msg = money > 0
+        ? t(`تم تغيير الرتبة إلى ${res.rank} وتم صرف ${money} $ له.`, `Rank changed to ${res.rank} and ${money} $ was paid.`)
+        : money < 0
+          ? t(`تم تغيير الرتبة إلى ${res.rank} وتم خصم ${Math.abs(money)} $ من رصيده.`, `Rank changed to ${res.rank} and ${Math.abs(money)} $ was deducted.`)
+          : t(`تم تغيير الرتبة إلى ${res.rank} بدون حركة مالية.`, `Rank changed to ${res.rank} with no money movement.`);
+      alert(msg);
+    } catch (e) {
+      alert(t("خطأ:", "Error:") + " " + e.message);
+    }
+    setRankSaving(false);
   };
 
   const uploadIdCard = async (side) => {
@@ -205,7 +253,7 @@ export default function UsersPage() {
         <h2 className="text-2xl font-bold">{t("👤 إدارة المستخدمين", "👤 User Management")}</h2>
         <div className="flex items-center gap-3">
           {selectedIds.length > 0 && (
-            <button onClick={bulkDelete} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
+            <button data-no-confirm onClick={bulkDelete} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
               🗑️ {t("حذف المحدد", "Delete Selected")} ({selectedIds.length})
             </button>
           )}
@@ -310,6 +358,61 @@ export default function UsersPage() {
         </div>
       )}
 
+      {/* Rank change — asks about the rank commission before applying */}
+      {rankModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => !rankSaving && setRankModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">{rankModal.up ? "🎉" : "⬇️"}</div>
+              <h3 className="text-lg font-bold mb-2">
+                {rankModal.up ? t("ترقية الرتبة", "Promote Rank") : t("تخفيض الرتبة", "Demote Rank")}
+              </h3>
+              <p className="text-sm text-gray-600 mb-3">
+                {t("سيتم تغيير رتبة", "Changing rank of")} <b>{selectedUser?.full_name}</b>{" "}
+                {t("من", "from")} <b>{rankModal.oldRank || "—"}</b> {t("إلى", "to")} <b>{rankModal.target}</b>
+              </p>
+              <p className="text-sm font-medium text-gray-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                {rankModal.up
+                  ? t(`هل تريد صرف كوميشن الرتبة (${rankModal.amount} $) له؟`, `Do you want to pay the rank commission (${rankModal.amount} $)?`)
+                  : t(`هل تريد خصم مبلغ رتبة ${rankModal.oldRank} (${rankModal.amount} $) من رصيده؟`, `Do you want to deduct the ${rankModal.oldRank} rank amount (${rankModal.amount} $)?`)}
+              </p>
+              {!rankModal.up && (
+                <p className="text-[11px] text-gray-400 mt-2">
+                  {t("لن ينزل الرصيد تحت صفر — لو رصيده أقل سيتم خصم المتاح فقط.",
+                     "The balance never goes below zero — only the available amount is deducted.")}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                data-no-confirm
+                disabled={rankSaving}
+                onClick={() => applyRankChange(rankModal.up ? "pay" : "deduct")}
+                className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:opacity-60"
+              >
+                {rankModal.up ? t("نعم، اصرف الكوميشن", "Yes, pay commission") : t("نعم، اخصم المبلغ", "Yes, deduct amount")}
+              </button>
+              <button
+                data-no-confirm
+                disabled={rankSaving}
+                onClick={() => applyRankChange("none")}
+                className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 disabled:opacity-60"
+              >
+                {rankModal.up ? t("تغيير الرتبة بدون صرف", "Change rank without paying") : t("تغيير الرتبة بدون خصم", "Change rank without deducting")}
+              </button>
+              <button
+                data-no-confirm
+                disabled={rankSaving}
+                onClick={() => setRankModal(null)}
+                className="w-full px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                {t("إلغاء", "Cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
@@ -318,8 +421,8 @@ export default function UsersPage() {
             <h3 className="text-lg font-bold mb-2">{t("حذف المستخدم", "Delete User")}</h3>
             <p className="text-gray-500 text-sm mb-6">{t("هل أنت متأكد من حذف", "Are you sure you want to delete")} <strong>{confirmDelete.full_name}</strong>{t("؟ لا يمكن التراجع عن هذا الإجراء.", " This action cannot be undone.")}</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setConfirmDelete(null)} className="px-6 py-2 bg-gray-100 rounded-lg font-medium text-sm">{t("إلغاء", "Cancel")}</button>
-              <button onClick={() => handleDelete(confirmDelete.id)} className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700">{t("حذف نهائياً", "Delete permanently")}</button>
+              <button data-no-confirm onClick={() => setConfirmDelete(null)} className="px-6 py-2 bg-gray-100 rounded-lg font-medium text-sm">{t("إلغاء", "Cancel")}</button>
+              <button data-no-confirm onClick={() => handleDelete(confirmDelete.id)} className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700">{t("حذف نهائياً", "Delete permanently")}</button>
             </div>
           </div>
         </div>
@@ -529,6 +632,39 @@ export default function UsersPage() {
                                 → {newType === "student" ? "🎓 Student" : "🆓 Reg Free"}
                               </button>
                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rank Quick Change */}
+                      {selectedUser.role !== "admin" && dbRanks.length > 0 && (
+                        <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                          <h4 className="font-bold mb-3">{t("🏅 تغيير الرتبة", "🏅 Change Rank")}</h4>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <select
+                              data-no-confirm
+                              value={rankDraft}
+                              onChange={(e) => setRankDraft(e.target.value)}
+                              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                            >
+                              <option value="">{t("اختر الرتبة", "Select rank")}</option>
+                              {dbRanks.map(r => (
+                                <option key={r.id} value={r.name}>
+                                  {r.name} — {Number(r.weekly_bonus ?? r.bonus ?? 0).toLocaleString()} $
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              data-no-confirm
+                              onClick={openRankChange}
+                              disabled={!rankDraft}
+                              className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
+                            >
+                              {t("تغيير الرتبة", "Change Rank")}
+                            </button>
+                            <span className="text-xs text-gray-500">
+                              {t("الرتبة الحالية:", "Current:")} <b>{selectedUser.rank || "—"}</b>
+                            </span>
                           </div>
                         </div>
                       )}

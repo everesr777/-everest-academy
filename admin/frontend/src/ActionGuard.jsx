@@ -2,13 +2,27 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLang } from "./LangContext";
 import { getPendingCount } from "./api.js";
 
-const SKIP = new Set(["", "x", "+", "-", "cancel", "close", "back", "prev", "next", "previous"]);
+const SKIP = new Set(["", "x", "+", "-", "cancel", "close", "back", "prev", "next", "previous", "إلغاء", "رجوع", "إغلاق", "تم", "موافق"]);
+
+// Only destructive / money-related actions need the extra "are you sure?" step.
+// Everything else (open, save, edit, add, filter, tab, pagination…) must run
+// immediately — confirming every single click made the panel feel broken.
+const SENSITIVE = [
+  /حذف/, /مسح/, /إزالة/, /ازالة/, /حظر/, /إيقاف/, /ايقاف/, /تعطيل/,
+  /تحويل/, /سحب/, /خصم/, /رفض/, /استرداد/, /تصفير/, /إعادة تعيين/,
+  /\b(delete|remove|block|unblock|ban|transfer|withdraw|deduct|reject|refund|reset|deactivate|disable|purge)\b/i,
+];
 
 function norm(s) {
   return String(s || "").replace(/[\u{1F000}-\u{1FAFF}]/gu, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function isPag(l) { return /^(\d+|\d+\s*\/\s*\d+)$/.test(l); }
+
+function isSensitive(el, label) {
+  if (el.hasAttribute("data-confirm")) return true;
+  return SENSITIVE.some((re) => re.test(label));
+}
 
 function skipEl(el) {
   if (!el) return true;
@@ -47,9 +61,11 @@ export default function ActionGuard() {
       if (el.closest("[data-guard-ignore]")) return;
       if (busyRef.current || pendingRef.current) { e.preventDefault(); e.stopPropagation(); return; }
       if (skipEl(el)) return;
+      const label = getLabel(el);
+      if (!isSensitive(el, norm(label))) return;
       e.preventDefault();
       e.stopPropagation();
-      setPending({ el, label: getLabel(el) });
+      setPending({ el, label });
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);

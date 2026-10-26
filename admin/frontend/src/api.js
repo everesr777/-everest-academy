@@ -30,33 +30,91 @@ export function subscribePending(fn) {
   return () => pendingListeners.delete(fn);
 }
 
-export async function api(path, opts = {}) {
+// ─── GET cache ───
+// Every page used to refetch all of its data from Railway on each visit, which
+// made moving between admin pages feel slow. GET responses are now memoised:
+//  • FRESH_MS  → served straight from memory, no network at all.
+//  • STALE_MS  → served instantly while a silent refresh runs in the background,
+//                so the next visit already has up-to-date data.
+// Any mutation (POST/PUT/DELETE) wipes the cache so admins always see their own
+// changes immediately.
+const GET_CACHE = new Map();
+const INFLIGHT = new Map();
+const FRESH_MS = 20 * 1000;
+const STALE_MS = 5 * 60 * 1000;
+
+function cacheKey(url) {
+  const s = getAdminSession();
+  return `${s.userId || "anon"}|${url}`;
+}
+
+function cloneData(data) {
+  if (data === null || typeof data !== "object") return data;
+  try { return structuredClone(data); } catch { try { return JSON.parse(JSON.stringify(data)); } catch { return data; } }
+}
+
+export function clearApiCache() { GET_CACHE.clear(); }
+
+async function rawApi(url, opts, method) {
   const headers = { ...getAdminHeaders(), ...(opts.headers || {}) };
+  const r = await fetch(url, { headers, ...opts });
+  const text = await r.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = null; }
+  if (data && data.session_expired) {
+    localStorage.removeItem("admin_session");
+    window.location.reload();
+    throw new Error("Session expired");
+  }
+  if (!r.ok) {
+    const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
+    const err = new Error(msg);
+    // Keep the parsed body so callers can use extra fields (e.g. candidates).
+    if (data) err.data = data;
+    err.status = r.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function api(path, opts = {}) {
   const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
   const method = String(opts.method || "GET").toUpperCase();
   const isMutation = method !== "GET" && method !== "HEAD";
+  const useCache = method === "GET" && opts.cache !== false;
   if (isMutation) beginMutation();
   try {
-    const r = await fetch(url, { headers, ...opts });
-    const text = await r.text();
-    let data;
-    try { data = JSON.parse(text); } catch { data = null; }
-    if (data && data.session_expired) {
-      localStorage.removeItem("admin_session");
-      window.location.reload();
-      throw new Error("Session expired");
+    if (!useCache) return await rawApi(url, opts, method);
+
+    const key = cacheKey(url);
+    const hit = GET_CACHE.get(key);
+    const age = hit ? Date.now() - hit.ts : Infinity;
+
+    if (hit && age < FRESH_MS) return cloneData(hit.data);
+
+    if (hit && age < STALE_MS) {
+      if (!INFLIGHT.has(key)) {
+        const p = rawApi(url, opts, method)
+          .then((d) => { GET_CACHE.set(key, { data: d, ts: Date.now() }); return d; })
+          .catch(() => hit.data)
+          .finally(() => INFLIGHT.delete(key));
+        INFLIGHT.set(key, p);
+      }
+      return cloneData(hit.data);
     }
-    if (!r.ok) {
-      const msg = (data && data.error) ? data.error : `Request failed (${r.status})`;
-      const err = new Error(msg);
-      // Keep the parsed body so callers can use extra fields (e.g. candidates).
-      if (data) err.data = data;
-      err.status = r.status;
-      throw err;
-    }
-    return data;
+
+    if (INFLIGHT.has(key)) return cloneData(await INFLIGHT.get(key));
+
+    const p = rawApi(url, opts, method)
+      .then((d) => { GET_CACHE.set(key, { data: d, ts: Date.now() }); return d; })
+      .finally(() => INFLIGHT.delete(key));
+    INFLIGHT.set(key, p);
+    return cloneData(await p);
   } finally {
-    if (isMutation) endMutation();
+    if (isMutation) {
+      endMutation();
+      clearApiCache();
+    }
   }
 }
 

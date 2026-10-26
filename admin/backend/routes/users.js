@@ -4,6 +4,7 @@ import { query, queryOne, execute } from "../db.js";
 import { v4 as uuidv4 } from "uuid";
 import { sendOTPEmail, sendRejectionEmail } from "../services/emailService.js";
 import { adminAuth } from "../middleware/sessionAuth.js";
+import { LEADER_RANK_ICONS } from "../services/weeklySettlement.js";
 
 const router = express.Router();
 
@@ -214,6 +215,99 @@ router.put("/:id/e-money", adjustEMoney);
 // `PUT /api/users/:id/$` (a `$` that used to interpolate the amount). Without
 // this alias the deposit/withdraw action fails with 404.
 router.put(/^\/([^/]+)\/\$$/, adjustEMoney);
+
+// ─── Manual rank change ───
+// Body: { rank: "Executive Star", apply_bonus: "pay" | "deduct" | "none" }
+//  • promotion   → "pay"    adds the new rank's bonus to the wallet
+//  • demotion    → "deduct" takes back the rank bonus (never below 0)
+// The admin panel always asks the admin first, so this endpoint only executes
+// the decision it receives.
+router.put("/:id/rank", adminAuth, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { rank } = req.body || {};
+    const applyBonus = ["pay", "deduct", "none"].includes(req.body?.apply_bonus) ? req.body.apply_bonus : "none";
+
+    if (!rank) return res.status(400).json({ error: "الرتبة مطلوبة", error_en: "rank is required" });
+
+    const target = await queryOne("SELECT * FROM ranks WHERE name = ? AND is_active = 1", [rank]);
+    if (!target) return res.status(400).json({ error: "الرتبة غير موجودة", error_en: "Unknown rank" });
+
+    const user = await queryOne("SELECT id, full_name, rank, e_money FROM users WHERE id = ?", [userId]);
+    if (!user) return res.status(404).json({ error: "المستخدم غير موجود", error_en: "User not found" });
+
+    const oldRank = user.rank || "";
+    if (oldRank === rank) {
+      return res.json({ success: true, unchanged: true, rank, old_rank: oldRank, bonus_applied: 0 });
+    }
+
+    const current = oldRank ? await queryOne("SELECT * FROM ranks WHERE name = ?", [oldRank]) : null;
+    const oldOrder = current ? Number(current.sort_order) : -1;
+    const newOrder = Number(target.sort_order);
+    const direction = newOrder >= oldOrder ? "up" : "down";
+    const newBonus = Number(target.weekly_bonus ?? target.bonus ?? 0) || 0;
+    const oldBonus = current ? (Number(current.weekly_bonus ?? current.bonus ?? 0) || 0) : 0;
+
+    let balanceChange = 0;
+    let moneyNote = "";
+
+    if (direction === "up" && applyBonus === "pay" && newBonus > 0) {
+      balanceChange = newBonus;
+      moneyNote = `تم صرف كوميشن رتبة ${rank} (${newBonus})`;
+    } else if (direction === "down" && applyBonus === "deduct" && oldBonus > 0) {
+      const balance = Number(user.e_money) || 0;
+      const deduct = Math.min(Math.max(balance, 0), oldBonus);
+      if (deduct > 0) {
+        balanceChange = -deduct;
+        moneyNote = `تم خصم مبلغ رتبة ${oldRank} (${deduct})`;
+      }
+    }
+
+    await execute("UPDATE users SET rank = ?, updated_at = datetime('now','localtime') WHERE id = ?", [rank, userId]);
+
+    if (balanceChange !== 0) {
+      await execute("UPDATE users SET e_money = e_money + ? WHERE id = ?", [balanceChange, userId]);
+      await execute(
+        "INSERT INTO wallet_transactions (id, user_id, amount, type, description, status) VALUES (?, ?, ?, ?, ?, 'completed')",
+        [uuidv4(), userId, Math.abs(balanceChange), balanceChange > 0 ? "credit" : "debit", `تغيير الرتبة يدويًا: ${oldRank || "—"} → ${rank}`]
+      );
+      if (balanceChange > 0) {
+        await execute("INSERT INTO rank_bonuses (id, user_id, rank_name, amount) VALUES (?, ?, ?, ?)",
+          [uuidv4(), userId, rank, balanceChange]);
+      }
+      await execute(
+        "INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'success')",
+        [uuidv4(), userId,
+          balanceChange > 0 ? "🎉 ترقية ورتبة جديدة" : "🔄 تحديث الرتبة",
+          balanceChange > 0
+            ? `تمت ترقيتك إلى ${rank} وتمت إضافة ${balanceChange} $ إلى رصيدك`
+            : `تم تغيير رتبتك إلى ${rank} وتم خصم ${Math.abs(balanceChange)} $ من رصيدك`]
+      );
+    } else {
+      await execute(
+        "INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'info')",
+        [uuidv4(), userId, "🔄 تحديث الرتبة", `تم تغيير رتبتك من ${oldRank || "—"} إلى ${rank}`]
+      );
+    }
+
+    // Keep the homepage leaders snapshot in sync: Star members are not eligible.
+    const leaderRow = await queryOne("SELECT id FROM leaders WHERE id = ?", [userId]);
+    if (leaderRow) {
+      if (rank === "Star") await execute("DELETE FROM leaders WHERE id = ?", [userId]);
+      else await execute("UPDATE leaders SET rank = ?, icon = ? WHERE id = ?", [rank, LEADER_RANK_ICONS[rank] || "🏆", userId]);
+    }
+
+    await logAdminAction(req, "rank change", userId, user.full_name,
+      `${oldRank || "—"} -> ${rank} | ${moneyNote || "بدون حركة مالية"}`);
+
+    const updated = await queryOne(
+      "SELECT id, full_name, email, rank, e_money, e_money AS usd_balance FROM users WHERE id = ?", [userId]);
+    res.json({ success: true, ...updated, direction, old_rank: oldRank, bonus_applied: balanceChange });
+  } catch (err) {
+    console.error("Rank change error:", err);
+    res.status(500).json({ error: err.message, error_en: err.message });
+  }
+});
 
 // Toggle negative balance permission
 router.put("/:id/negative-toggle", async (req, res) => {
