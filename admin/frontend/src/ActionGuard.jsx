@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLang } from "./LangContext";
-import { markUserAction, subscribeAction } from "./api.js";
+import { markUserAction, subscribeAction, getPendingCount, subscribePending } from "./api.js";
 
 const SKIP = new Set(["", "x", "+", "-", "cancel", "close", "back", "prev", "next", "previous", "إلغاء", "رجوع", "إغلاق", "تم", "موافق"]);
 
@@ -46,11 +46,19 @@ export default function ActionGuard() {
   const t = (ar, en) => (lang === "ar" ? ar : en);
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [mutating, setMutating] = useState(false);
   const bypass = useRef(null);
-  const busyRef = useRef(false);
   const pendingRef = useRef(null);
   pendingRef.current = pending;
-  busyRef.current = busy;
+
+  // A real write (POST/PUT/DELETE) must lock the screen so the same action can
+  // never be submitted twice. Plain reads only show the spinner: the admin can
+  // still navigate while a slow list is loading instead of being frozen.
+  useEffect(() => {
+    const onChange = (count) => setMutating(count > 0);
+    onChange(getPendingCount());
+    return subscribePending(onChange);
+  }, []);
 
   // Loading overlay for EVERY action (not just the sensitive ones):
   // a click marks a user action, and any request that starts right after it
@@ -86,7 +94,7 @@ export default function ActionGuard() {
       markUserAction();
       if (bypass.current === el) { bypass.current = null; return; }
       if (el.closest("[data-guard-ignore]")) return;
-      if (busyRef.current || pendingRef.current) { e.preventDefault(); e.stopPropagation(); return; }
+      if (pendingRef.current || getPendingCount() > 0) { e.preventDefault(); e.stopPropagation(); return; }
       if (skipEl(el)) return;
       const label = getLabel(el);
       if (!isSensitive(el, norm(label))) return;
@@ -135,12 +143,20 @@ export default function ActionGuard() {
           </div>
         </div>
       )}
-      {busy && (
-        <div data-guard-ignore dir={lang === "ar" ? "rtl" : "ltr"} className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center">
+      {busy && !pending && (
+        <div
+          data-guard-ignore
+          dir={lang === "ar" ? "rtl" : "ltr"}
+          className={`fixed inset-0 z-[9990] bg-black/40 flex items-center justify-center ${mutating ? "" : "pointer-events-none"}`}
+        >
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl px-8 py-6 flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
             <p className="text-gray-900 dark:text-white font-medium">{t("جاري التنفيذ...", "Processing...")}</p>
-            <p className="text-gray-500 text-xs">{t("يرجى الانتظار وعدم الضغط مرة أخرى", "Please wait, do not click again")}</p>
+            <p className="text-gray-500 text-xs">
+              {mutating
+                ? t("يرجى الانتظار وعدم الضغط مرة أخرى", "Please wait, do not click again")
+                : t("يمكنك التنقل أثناء التحميل", "You can keep navigating while it loads")}
+            </p>
           </div>
         </div>
       )}
