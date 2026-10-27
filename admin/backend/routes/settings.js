@@ -187,24 +187,33 @@ router.put("/:key", async (req, res) => {
       [logId, admin_id, adminName, "Update Setting", details]
     );
 
-    if (req.params.key === "membership_duration") {
-      const users = await query("SELECT id, full_name FROM users WHERE role != 'admin'");
+    if (req.params.key === "membership_duration" && (!oldRow || String(oldRow.value) !== String(value))) {
+      const users = await query("SELECT id FROM users WHERE role != 'admin'");
       console.log(`📢 Sending membership duration change notification to ${users.length} users...`);
-      let sent = 0, failed = 0;
-      for (const user of users) {
+      // Insert in chunks with one multi-row statement per chunk instead of one
+      // round-trip per user: 500 users used to take several minutes and the
+      // admin's Save button stayed on "Saving..." the whole time.
+      const CHUNK = 100;
+      let sent = 0;
+      for (let i = 0; i < users.length; i += CHUNK) {
+        const chunk = users.slice(i, i + CHUNK);
+        const placeholders = [];
+        const params = [];
+        for (const user of chunk) {
+          placeholders.push("(?, ?, ?, ?, 'info')");
+          params.push(uuidv4(), user.id, "تحديث مدة العضوية", `تم تغيير مدة العضوية إلى ${String(value)} يوماً`);
+        }
         try {
-          const nid = uuidv4();
           await execute(
-            "INSERT INTO notifications (id, user_id, title, message, type) VALUES (?, ?, ?, ?, 'info')",
-            [nid, user.id, "تحديث مدة العضوية", `تم تغيير مدة العضوية إلى ${String(value)} يوماً`]
+            `INSERT INTO notifications (id, user_id, title, message, type) VALUES ${placeholders.join(",")}`,
+            params
           );
-          sent++;
+          sent += chunk.length;
         } catch (nErr) {
-          console.error(`❌ Failed to notify ${user.full_name} (${user.id}):`, nErr.message);
-          failed++;
+          console.error(`❌ Failed to notify chunk ${i / CHUNK}:`, nErr.message);
         }
       }
-      console.log(`📢 Notifications done: ${sent} sent, ${failed} failed`);
+      console.log(`📢 Notifications done: ${sent} sent`);
     }
 
     res.json({ success: true, key: req.params.key, value });
