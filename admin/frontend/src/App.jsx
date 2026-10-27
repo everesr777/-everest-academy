@@ -426,7 +426,7 @@ function DashboardPage({ stats }) {
                   {detail === "courses" || detail === "published-courses" ? (
                     <><th className="table-header">{t("الكورس", "Course")}</th><th className="table-header">{t("الفئة", "Category")}</th><th className="table-header">{t("السعر", "Price")}</th><th className="table-header">{t("الحالة", "Status")}</th></>
                   ) : detail === "commissions" ? (
-                    <><th className="table-header">{t("العضو", "Member")}</th><th className="table-header">{t("الرتبة", "Rank")}</th><th className="table-header">{t("المبلغ", "Amount")}</th><th className="table-header">{t("التاريخ", "Date")}</th></>
+                    <><th className="table-header">{t("العضو", "Member")}</th><th className="table-header">{t("من", "From")}</th><th className="table-header">{t("المبلغ", "Amount")}</th><th className="table-header">{t("التاريخ", "Date")}</th></>
                   ) : detail === "feedbacks" ? (
                     <><th className="table-header">{t("العضو", "Member")}</th><th className="table-header">{t("التقييم", "Rating")}</th><th className="table-header">{t("التعليق", "Comment")}</th></>
                   ) : detail === "quiz-pass-rate" || detail === "quizzes-passed" ? (
@@ -445,10 +445,10 @@ function DashboardPage({ stats }) {
                       return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.title_ar || it$.title}</td><td className="table-cell text-theme-text-secondary">{it$.category_ar || it$.category || "–"}</td><td className="table-cell">{it$.is_free ? <span className="text-green-600 font-bold">{t("مجاني", "Free")}</span> : `${it$.price_egp || it$.price} EGP`}</td><td className="table-cell"><span className={`badge ${it$.status === 'published' ? 'badge-green' : 'badge-gray'}`}>{it$.status}</span></td></tr>;
                     }
                     if (detail === "commissions") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.user_name || it$.user_id}</td><td className="table-cell text-theme-text-secondary">{it$.rank_name || "–"}</td><td className="table-cell text-green-600 font-bold">{it$.amount} $</td><td className="table-cell text-theme-text-secondary text-xs">{it$.created_at ? it$.created_at.slice(0,10) : "–"}</td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.to_name || it$.user_name || it$.to_user_id || it$.user_id}</td><td className="table-cell text-theme-text-secondary">{it$.from_name || it$.from_user_id || it$.rank_name || "–"}</td><td className="table-cell text-green-600 font-bold">{it$.amount} $</td><td className="table-cell text-theme-text-secondary text-xs">{it$.created_at ? it$.created_at.slice(0,10) : "–"}</td></tr>;
                     }
                     if (detail === "feedbacks") {
-                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.full_name || it$.user_name || it$.user_id}</td><td className="table-cell text-theme-text-secondary text-xs max-w-xs truncate">{it$.comment || "–"}</td></tr>;
+                      return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.full_name || it$.user_name || it$.user_id}</td><td className="table-cell text-amber-500">{"★".repeat(Math.max(0, Math.min(5, Number(it$.rating) || 0))) || "–"}</td><td className="table-cell text-theme-text-secondary text-xs max-w-xs truncate">{it$.message || it$.comment || "–"}</td></tr>;
                     }
                     if (detail === "quiz-pass-rate" || detail === "quizzes-passed") {
                       return <tr key={idx} className="table-row"><td className="table-cell font-medium">{it$.student_name || it$.user_name || it$.user_id}</td><td className="table-cell text-theme-text-secondary text-xs">{it$.quiz_title || it$.quiz_id}</td><td className="table-cell"><span className={`badge ${it$.result === 'pass' ? 'badge-green' : 'badge-red'}`}>{it$.result === 'pass' ? t("ناجح", "Pass") : t("راسب", "Fail")}</span></td><td className="table-cell">{it$.correct_answers ?? it$.correct}/{it$.total_marks ?? it$.total}</td></tr>;
