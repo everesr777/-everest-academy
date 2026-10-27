@@ -145,7 +145,7 @@ export default function RanksManagementPage() {
                       {r.is_active ? t("🔴 تعطيل", "🔴 Deactivate") : t("🟢 تفعيل", "🟢 Activate")}
                     </button>
                     <button onClick={() => openEdit(r)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100">{t("✏️ تعديل", "✏️ Edit")}</button>
-                    <button onClick={() => remove(r.id, r.name)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100">{t("🗑️ حذف", "🗑️ Delete")}</button>
+                    <button data-no-confirm onClick={() => remove(r.id, r.name)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100">{t("🗑️ حذف", "🗑️ Delete")}</button>
                   </div>
                 </div>
               </div>

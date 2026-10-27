@@ -446,7 +446,7 @@ export default function WeeklySettlementPage() {
                   <span className="text-gray-400">→</span>
                   <span className="text-gray-700">{a.upline_email}</span>
                   <span className="text-gray-400">• {a.assigned_at}</span>
-                  <button onClick={() => removeRetro(a.id)} disabled={!!retroBusy}
+                  <button data-no-confirm onClick={() => removeRetro(a.id)} disabled={!!retroBusy}
                     className="ml-auto px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50">
                     {retroBusy === a.id ? t("جاري...", "Working...") : t("إزالة", "Remove")}
                   </button>
@@ -517,7 +517,7 @@ export default function WeeklySettlementPage() {
                     </div>
                     <span className={`text-sm font-bold ${c.status === "cancelled" ? "text-gray-400 line-through" : "text-everest-600"}`}>{c.amount} $</span>
                     {c.status === "paid" && (
-                      <button onClick={() => reverseCommission(c)} disabled={reversing === c.id}
+                      <button data-no-confirm onClick={() => reverseCommission(c)} disabled={reversing === c.id}
                         className="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50">
                         {reversing === c.id ? t("جاري...", "Working...") : t("خصم العمولة", "Deduct")}
                       </button>

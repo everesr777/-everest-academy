@@ -191,7 +191,7 @@ export default function CourseBuilderPage() {
               </div>
             )}
             {course.category_ar && (() => { const cc = categories.find((x) => x.name_ar === course.category_ar); return cc ? (
-              <button onClick={() => deleteCategory(cc.id)} className="text-xs text-red-500">🗑 {t("حذف هذا التصنيف", "Delete this category")}</button>
+              <button data-no-confirm onClick={() => deleteCategory(cc.id)} className="text-xs text-red-500">🗑 {t("حذف هذا التصنيف", "Delete this category")}</button>
             ) : null; })()}
           </div>
           <div className="bg-white rounded-xl shadow-sm border p-4">

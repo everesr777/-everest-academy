@@ -161,7 +161,7 @@ export default function QuizAttemptsPage() {
                 <span>📥</span>
                 <span>{t("تنزيل PDF", "Download PDF")}</span>
               </button>
-              <button onClick={deleteAll} className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition">
+              <button data-no-confirm onClick={deleteAll} className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition">
                 <span>🗑️</span>
                 <span>{t("حذف الكل", "Delete All")}</span>
               </button>

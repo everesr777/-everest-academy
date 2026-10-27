@@ -96,7 +96,7 @@ export default function AdminsListPage() {
                 {isManager && <button onClick={() => openEdit(a)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition">
                   ✏️ {t("تعديل", "Edit")}
                 </button>}
-                {isManager && <button onClick={() => handleDelete(a.id, a.full_name)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition">
+                {isManager && <button data-no-confirm onClick={() => handleDelete(a.id, a.full_name)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition">
                   🗑️ {t("حذف", "Delete")}
                 </button>}
               </div>

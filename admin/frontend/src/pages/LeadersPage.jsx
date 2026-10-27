@@ -219,7 +219,7 @@ export default function LeadersPage() {
                     <p className="text-sm text-gray-500">{l.icon || "🏆"} {l.rank}</p>
                   </div>
                 </div>
-                <button onClick={() => removeLeader(l.id)}
+                <button data-no-confirm onClick={() => removeLeader(l.id)}
                   className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
                   🗑️ {t("ازالة", "Remove")}
                 </button>

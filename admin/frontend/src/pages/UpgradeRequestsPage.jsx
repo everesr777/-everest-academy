@@ -78,7 +78,7 @@ export default function UpgradeRequestsPage() {
                       <button onClick={() => approve(r.id)} className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700">
                         {t("قبول", "Accept")}
                       </button>
-                      <button onClick={() => reject(r.id)} className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs hover:bg-red-600">
+                      <button data-no-confirm onClick={() => reject(r.id)} className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs hover:bg-red-600">
                         {t("رفض", "Reject")}
                       </button>
                     </div>

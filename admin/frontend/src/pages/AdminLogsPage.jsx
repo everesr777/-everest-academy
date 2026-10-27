@@ -61,7 +61,7 @@ export default function AdminLogsPage() {
         <div className="flex gap-2">
           <button onClick={load} className="px-4 py-2 text-sm bg-white border rounded-xl shadow-sm hover:shadow-md transition">{t("🔄 تحديث", "🔄 Refresh")}</button>
           {logs.length > 0 && (
-            <button onClick={deleteAll} className="px-4 py-2 text-sm bg-gray-800 text-white rounded-xl shadow-sm hover:bg-gray-900 transition">{t("🗑️ حذف الكل", "🗑️ Delete All")}</button>
+            <button data-no-confirm onClick={deleteAll} className="px-4 py-2 text-sm bg-gray-800 text-white rounded-xl shadow-sm hover:bg-gray-900 transition">{t("🗑️ حذف الكل", "🗑️ Delete All")}</button>
           )}
         </div>
       </div>

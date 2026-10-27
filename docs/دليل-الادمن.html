@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دليل لوحة تحكم Everest Academy</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#5b3df5; --brand-soft:#eeeaff; --accent:#0f9d76;
+    --code-bg:#1e2433; --code-ink:#e8ecf5;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI","Tahoma","Noto Naskh Arabic",system-ui,-apple-system,sans-serif;
+    line-height:1.95; font-size:16px;
+  }
+  .layout{display:flex; align-items:flex-start; max-width:1500px; margin:0 auto; gap:26px; padding:26px 22px 90px}
+  /* Sidebar */
+  aside{
+    position:sticky; top:22px; width:330px; flex:0 0 330px;
+    max-height:calc(100vh - 44px); overflow:auto;
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:16px 14px; box-shadow:0 10px 30px rgba(23,25,35,.06);
+  }
+  aside h2{margin:4px 6px 10px; font-size:15px; color:var(--muted); font-weight:700; letter-spacing:.2px}
+  #tocSearch{
+    width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:10px;
+    font:inherit; font-size:13px; margin-bottom:12px; background:#fbfbfe;
+  }
+  #tocSearch:focus{outline:2px solid var(--brand-soft); border-color:var(--brand)}
+  #toc{display:flex; flex-direction:column; gap:2px}
+  #toc a{
+    display:block; text-decoration:none; color:#3b4252; border-radius:9px;
+    padding:6px 10px; font-size:13.5px; line-height:1.5; border-right:3px solid transparent;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  #toc a:hover{background:var(--brand-soft); color:var(--brand)}
+  #toc a.active{background:var(--brand-soft); color:var(--brand); border-right-color:var(--brand); font-weight:700}
+  #toc .toc-l3{padding-right:24px; font-size:12.8px; color:#59606e}
+  /* Content */
+  main{
+    flex:1 1 auto; min-width:0; background:var(--card); border:1px solid var(--line);
+    border-radius:18px; padding:34px 40px 60px; box-shadow:0 10px 30px rgba(23,25,35,.06);
+  }
+  h1{font-size:31px; line-height:1.5; margin:0 0 18px; padding-bottom:16px; border-bottom:3px solid var(--brand)}
+  h2{font-size:24px; margin:44px 0 14px; padding:10px 14px; background:linear-gradient(90deg,var(--brand-soft),transparent); border-radius:10px; border-right:5px solid var(--brand)}
+  h3{font-size:19.5px; margin:32px 0 10px; color:#2b2f3a; border-bottom:1px dashed var(--line); padding-bottom:8px}
+  h4{font-size:16.5px; margin:24px 0 8px; color:#3a3f4b}
+  h5,h6{font-size:15px; margin:18px 0 6px; color:var(--muted)}
+  p{margin:10px 0}
+  a{color:var(--brand)}
+  a.anchor{opacity:0; margin-right:8px; font-size:.7em; text-decoration:none; color:var(--muted)}
+  h1:hover a.anchor,h2:hover a.anchor,h3:hover a.anchor,h4:hover a.anchor{opacity:.6}
+  ul,ol{margin:10px 0; padding-right:26px}
+  li{margin:5px 0}
+  li>ul,li>ol{margin:6px 0}
+  blockquote{
+    margin:16px 0; padding:12px 18px; background:#fbfaff;
+    border-right:4px solid var(--brand); border-radius:0 12px 12px 0; color:#3d4351;
+  }
+  blockquote p{margin:4px 0}
+  hr{border:none; border-top:1px solid var(--line); margin:34px 0}
+  code{
+    background:#f0f1f7; color:#c026d3; padding:2px 6px; border-radius:6px;
+    font-family:"Cascadia Code",Consolas,"Courier New",monospace; font-size:.88em;
+    direction:ltr; unicode-bidi:embed; display:inline-block;
+  }
+  pre.code{
+    background:var(--code-bg); color:var(--code-ink); padding:16px 18px; border-radius:12px;
+    overflow:auto; direction:ltr; text-align:left; margin:16px 0; line-height:1.65;
+    border:1px solid #2c3446;
+  }
+  pre.code code{background:none; color:inherit; padding:0; font-size:13.5px; display:block; white-space:pre}
+  .table-wrap{overflow:auto; margin:16px 0; border:1px solid var(--line); border-radius:12px}
+  table{border-collapse:collapse; width:100%; font-size:14px; background:#fff}
+  th,td{padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; text-align:right}
+  th{background:#f3f2fd; color:#2f2a55; font-weight:700; white-space:nowrap; position:sticky; top:0}
+  tbody tr:nth-child(even){background:#fafaff}
+  tbody tr:hover{background:#f5f3ff}
+  tbody tr:last-child td{border-bottom:none}
+  /* Top bar */
+  .topbar{
+    position:fixed; inset-inline:0; top:0; height:52px; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:0 20px; background:rgba(255,255,255,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .brand{font-weight:800; color:var(--brand); font-size:15px; display:flex; gap:8px; align-items:center}
+  .topbar .actions{display:flex; gap:8px}
+  .btn{
+    border:1px solid var(--line); background:#fff; color:#39404f; border-radius:9px;
+    padding:7px 12px; font:inherit; font-size:13px; cursor:pointer; transition:.15s;
+  }
+  .btn:hover{background:var(--brand-soft); border-color:var(--brand); color:var(--brand)}
+  .spacer{height:52px}
+  #toTop{
+    position:fixed; inset-inline-start:24px; bottom:24px; z-index:60; width:44px; height:44px;
+    border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--brand);
+    font-size:18px; cursor:pointer; box-shadow:0 8px 22px rgba(23,25,35,.14); display:none;
+  }
+  #progress{position:fixed; top:52px; inset-inline-start:0; height:3px; background:var(--brand); width:0; z-index:55; transition:width .1s}
+  @media (max-width:1080px){
+    aside{display:none}
+    main{padding:24px 18px 50px; border-radius:14px}
+    h1{font-size:25px} h2{font-size:20px} h3{font-size:17.5px}
+    .layout{padding:16px 12px 70px}
+  }
+  @media print{
+    body{background:#fff}
+    .topbar,aside,#toTop,#progress{display:none !important}
+    .layout{padding:0; max-width:none}
+    main{border:none; box-shadow:none; padding:0}
+    pre.code{background:#f4f4f7; color:#111; border:1px solid #ddd}
+    a{color:#111; text-decoration:none}
+    h2{page-break-after:avoid}
+    table{page-break-inside:auto}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">📘 دليل لوحة تحكم Everest Academy</div>
+  <div class="actions">
+    <button class="btn" id="printBtn">🖨️ طباعة / PDF</button>
+  </div>
+</div>
+<div class="spacer"></div>
+<div id="progress"></div>
+<div class="layout">
+  <aside>
+    <h2>📑 المحتويات</h2>
+    <input id="tocSearch" type="search" placeholder="ابحث في المحتويات...">
+    <nav id="toc">
+<a class="toc-l2" href="#المحتويات">📑 المحتويات</a>
+<a class="toc-l2" href="#1-نظرة-عامة-على-النظام">1. نظرة عامة على النظام</a>
+<a class="toc-l3" href="#11-المكونات">1.1 المكوّنات</a>
+<a class="toc-l3" href="#12-كيف-تتحرك-البيانات">1.2 كيف تتحرك البيانات</a>
+<a class="toc-l3" href="#13-المصادقة-والصلاحيات">1.3 المصادقة والصلاحيات</a>
+<a class="toc-l3" href="#14-لماذا-الأدمن-سريع">1.4 لماذا الأدمن سريع؟</a>
+<a class="toc-l3" href="#15-تحميل-الأزرار-والتأكيد">1.5 تحميل الأزرار والتأكيد</a>
+<a class="toc-l2" href="#2-تسجيل-الدخول-والشريط-الجانبي-والعناصر-المشتركة">2. تسجيل الدخول والشريط الجانبي والعناصر المشتركة</a>
+<a class="toc-l3" href="#21-شاشة-تسجيل-الدخول">2.1 شاشة تسجيل الدخول</a>
+<a class="toc-l3" href="#22-الشريط-الجانبي">2.2 الشريط الجانبي</a>
+<a class="toc-l3" href="#23-الشريط-العلوي">2.3 الشريط العلوي</a>
+<a class="toc-l3" href="#24-نافذة-التأكيد-actionguard">2.4 نافذة التأكيد (ActionGuard)</a>
+<a class="toc-l2" href="#3-الصفحات-الـ22-في-القائمة-الجانبية">3. الصفحات الـ22 في القائمة الجانبية</a>
+<a class="toc-l3" href="#31-الإحصائيات-dashboard">3.1 الإحصائيات (Dashboard)</a>
+<a class="toc-l3" href="#32-تفعيل-الحسابات--التسجيل-الخارجي">3.2 تفعيل الحسابات — التسجيل الخارجي</a>
+<a class="toc-l3" href="#33-تفعيل-الحسابات--إنشاء-حساب-لآخر">3.3 تفعيل الحسابات — إنشاء حساب لآخر</a>
+<a class="toc-l3" href="#34-إدارة-المستخدمين">3.4 إدارة المستخدمين</a>
+<a class="toc-l3" href="#35-إدارة-الصلاحيات">3.5 إدارة الصلاحيات</a>
+<a class="toc-l3" href="#36-حسابات-التسجيل-الخارجي">3.6 حسابات التسجيل الخارجي</a>
+<a class="toc-l3" href="#37-حسابات-إنشاء-حساب-لآخر">3.7 حسابات إنشاء حساب لآخر</a>
+<a class="toc-l3" href="#38-بناء-الكورس">3.8 بناء الكورس</a>
+<a class="toc-l3" href="#39-قائمة-الكورسات">3.9 قائمة الكورسات</a>
+<a class="toc-l3" href="#310-ظهور-الكورسات">3.10 ظهور الكورسات</a>
+<a class="toc-l3" href="#311-نتائج-الاختبارات">3.11 نتائج الاختبارات</a>
+<a class="toc-l3" href="#312-إدارة-الرتب">3.12 إدارة الرتب</a>
+<a class="toc-l3" href="#313-التسوية-الأسبوعية">3.13 التسوية الأسبوعية</a>
+<a class="toc-l3" href="#314-القادة">3.14 القادة</a>
+<a class="toc-l3" href="#315-سجل-الإجراءات">3.15 سجل الإجراءات</a>
+<a class="toc-l3" href="#316-إعدادات-العضوية">3.16 إعدادات العضوية</a>
+<a class="toc-l3" href="#317-التقييمات">3.17 التقييمات</a>
+<a class="toc-l3" href="#318-خدمة-العملاء">3.18 خدمة العملاء</a>
+<a class="toc-l3" href="#319-إعدادات-الأسعار">3.19 إعدادات الأسعار</a>
+<a class="toc-l3" href="#320-سجل-المعاملات">3.20 سجل المعاملات</a>
+<a class="toc-l3" href="#321-نشاط-الفلوس-والرتب">3.21 نشاط الفلوس والرتب</a>
+<a class="toc-l3" href="#322-إدارة-الأدمنز-manager-فقط">3.22 إدارة الأدمنز (Manager فقط)</a>
+<a class="toc-l3" href="#323-الإعدادات-الشخصية">3.23 الإعدادات الشخصية</a>
+<a class="toc-l2" href="#4-صفحات-موجودة-في-الكود-وغير-ظاهرة-في-القائمة">4. صفحات موجودة في الكود وغير ظاهرة في القائمة</a>
+<a class="toc-l3" href="#41--طلبات-شحن-الرصيد-topupspage">4.1 💰 طلبات شحن الرصيد (TopUpsPage)</a>
+<a class="toc-l3" href="#42--طلبات-الترقية-upgraderequestspage">4.2 ⬆️ طلبات الترقية (UpgradeRequestsPage)</a>
+<a class="toc-l3" href="#43--قائمة-الطلاب-studentlistpage">4.3 🎓 قائمة الطلاب (StudentListPage)</a>
+<a class="toc-l3" href="#44--بوابات-الدفع-paymentgatewaypage">4.4 💳 بوابات الدفع (PaymentGatewayPage)</a>
+<a class="toc-l3" href="#45--مفاتيح-gemini-وgroq-geminikeyspage">4.5 🤖 مفاتيح Gemini وGroq (GeminiKeysPage)</a>
+<a class="toc-l2" href="#5-جداول-مرجعية">5. جداول مرجعية</a>
+<a class="toc-l3" href="#51-كل-نقاط-الـ-api-المستخدمة-في-الأدمن">5.1 كل نقاط الـ API المستخدمة في الأدمن</a>
+<a class="toc-l3" href="#52-حالات-المستخدم">5.2 حالات المستخدم</a>
+<a class="toc-l3" href="#53-أنواع-الحساب">5.3 أنواع الحساب</a>
+<a class="toc-l3" href="#54-حالات-المعاملات">5.4 حالات المعاملات</a>
+<a class="toc-l2" href="#6-الأعطال-الشائعة-وكيفية-علاجها">6. الأعطال الشائعة وكيفية علاجها</a>
+<a class="toc-l2" href="#7-النشر-والنسخ-الاحتياطي">7. النشر والنسخ الاحتياطي</a>
+<a class="toc-l3" href="#71-الباك-إند-railway">7.1 الباك إند (Railway)</a>
+<a class="toc-l3" href="#72-واجهة-الأدمن-hostinger">7.2 واجهة الأدمن (Hostinger)</a>
+<a class="toc-l3" href="#73-النسخ-الاحتياطي-turso">7.3 النسخ الاحتياطي (Turso)</a>
+<a class="toc-l3" href="#74-فحص-سريع-بعد-أي-نشر">7.4 فحص سريع بعد أي نشر</a>
+<a class="toc-l2" href="#خلاصة">✅ خلاصة</a>
+    </nav>
+  </aside>
+  <main id="doc">
+<h1 id="دليل-لوحة-تحكم-everest-academy">📘 دليل لوحة تحكم Everest Academy<a class="anchor" href="#دليل-لوحة-تحكم-everest-academy" aria-label="link">#</a></h1>
+<blockquote><strong>النسخة:</strong> 1.0 — أكتوبر 2026<br><strong>الغرض:</strong> شرح كل صفحة في لوحة التحكم، وكل عنصر داخلها، وماذا يفعل، وكيف يعمل من الداخل.<br><strong>الجمهور:</strong> مدير المنصة، الأدمن، والمطوّر المسؤول عن الصيانة.</blockquote>
+<hr>
+<h2 id="المحتويات">📑 المحتويات<a class="anchor" href="#المحتويات" aria-label="link">#</a></h2>
+<ol><li><a href="#1-نظرة-عامة-على-النظام">نظرة عامة على النظام</a></li><li><a href="#2-تسجيل-الدخول-والشريط-الجانبي-والعناصر-المشتركة">تسجيل الدخول والشريط الجانبي والعناصر المشتركة</a></li><li><a href="#3-الصفحات-الـ22-في-القائمة-الجانبية">الصفحات الـ22 في القائمة الجانبية</a><ul><li><a href="#31-الإحصائيات-dashboard">3.1 الإحصائيات</a></li><li><a href="#32-تفعيل-الحسابات--التسجيل-الخارجي">3.2 تفعيل الحسابات — التسجيل الخارجي</a></li><li><a href="#33-تفعيل-الحسابات--إنشاء-حساب-لآخر">3.3 تفعيل الحسابات — إنشاء حساب لآخر</a></li><li><a href="#34-إدارة-المستخدمين">3.4 إدارة المستخدمين</a></li><li><a href="#35-إدارة-الصلاحيات">3.5 إدارة الصلاحيات</a></li><li><a href="#36-حسابات-التسجيل-الخارجي">3.6 حسابات التسجيل الخارجي</a></li><li><a href="#37-حسابات-إنشاء-حساب-لآخر">3.7 حسابات إنشاء حساب لآخر</a></li><li><a href="#38-بناء-الكورس">3.8 بناء الكورس</a></li><li><a href="#39-قائمة-الكورسات">3.9 قائمة الكورسات</a></li><li><a href="#310-ظهور-الكورسات">3.10 ظهور الكورسات</a></li><li><a href="#311-نتائج-الاختبارات">3.11 نتائج الاختبارات</a></li><li><a href="#312-إدارة-الرتب">3.12 إدارة الرتب</a></li><li><a href="#313-التسوية-الأسبوعية">3.13 التسوية الأسبوعية</a></li><li><a href="#314-القادة">3.14 القادة</a></li><li><a href="#315-سجل-الإجراءات">3.15 سجل الإجراءات</a></li><li><a href="#316-إعدادات-العضوية">3.16 إعدادات العضوية</a></li><li><a href="#317-التقييمات">3.17 التقييمات</a></li><li><a href="#318-خدمة-العملاء">3.18 خدمة العملاء</a></li><li><a href="#319-إعدادات-الأسعار">3.19 إعدادات الأسعار</a></li><li><a href="#320-سجل-المعاملات">3.20 سجل المعاملات</a></li><li><a href="#321-نشاط-الفلوس-والرتب">3.21 نشاط الفلوس والرتب</a></li><li><a href="#322-إدارة-الأدمنز-manager-فقط">3.22 إدارة الأدمنز (Manager فقط)</a></li><li><a href="#323-الإعدادات-الشخصية">3.23 الإعدادات الشخصية</a></li></ul></li><li><a href="#4-صفحات-موجودة-في-الكود-وغير-ظاهرة-في-القائمة">صفحات موجودة في الكود وغير ظاهرة في القائمة</a></li><li><a href="#5-جداول-مرجعية">جداول مرجعية</a></li><li><a href="#6-الأعطال-الشائعة-وكيفية-علاجها">الأعطال الشائعة وكيفية علاجها</a></li><li><a href="#7-النشر-والنسخ-الاحتياطي">النشر والنسخ الاحتياطي</a></li></ol>
+<hr>
+<h2 id="1-نظرة-عامة-على-النظام">1. نظرة عامة على النظام<a class="anchor" href="#1-نظرة-عامة-على-النظام" aria-label="link">#</a></h2>
+<h3 id="11-المكونات">1.1 المكوّنات<a class="anchor" href="#11-المكونات" aria-label="link">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>المكوّن</th><th>التقنية</th><th>المكان</th></tr></thead><tbody><tr><td>واجهة الأدمن</td><td>React + Vite + Tailwind</td><td>تُبنى إلى <code>admin/frontend/dist</code> وتُقدَّم من نفس السيرفر على <code>/admin</code></td></tr><tr><td>الـ API</td><td>Node.js + Express</td><td><code>admin/backend/server.js</code></td></tr><tr><td>قاعدة البيانات</td><td>Turso (LibSQL / SQLite سحابي)</td><td><code>libsql://everest-academy-ziad-assem648.aws-eu-west-1.turso.io</code></td></tr><tr><td>الاستضافة</td><td>Railway (الباك إند + واجهة الأدمن)</td><td><code>everest-academy-production.up.railway.app</code></td></tr><tr><td>موقع المستخدم</td><td>Hostinger</td><td><code>myeverestcompany.com</code></td></tr><tr><td>الفيديوهات</td><td>Bunny.net</td><td>تُرفع من صفحة الكورسات</td></tr></tbody></table></div>
+<h3 id="12-كيف-تتحرك-البيانات">1.2 كيف تتحرك البيانات<a class="anchor" href="#12-كيف-تتحرك-البيانات" aria-label="link">#</a></h3>
+<pre class="code"><code>زر في صفحة الأدمن
+   ↓
+api.js  (يضيف هيدرز الجلسة + كاش GET)
+   ↓  fetch
+Express Route  (adminAuth / sessionAuth)
+   ↓
+db.js  (query / queryOne / execute)
+   ↓
+Turso
+   ↓
+الرد يعود → الصفحة تُحدَّث → الكاش يُمسح عند أي تعديل</code></pre>
+<h3 id="13-المصادقة-والصلاحيات">1.3 المصادقة والصلاحيات<a class="anchor" href="#13-المصادقة-والصلاحيات" aria-label="link">#</a></h3>
+<ul><li>تسجيل الدخول: <code>POST /api/admin-auth/login</code>.</li><li>بعد الدخول يُحفظ في <code>localStorage.admin_session</code>:</li></ul>
+<pre class="code"><code data-lang="json">  { &quot;userId&quot;: &quot;admin-001&quot;, &quot;token&quot;: &quot;…&quot;, &quot;user&quot;: { &quot;full_name&quot;: &quot;Admin&quot;, &quot;role&quot;: &quot;admin&quot; } }</code></pre>
+<ul><li>كل طلب يحمل:<ul><li><code>x-user-id</code></li><li><code>x-session-token</code></li></ul></li><li><strong>حد الجلسات:</strong> أقصى جلستين نشطتين لكل أدمن. الجلسة الثالثة تُلغي الأقدم.</li><li><strong>الأدوار:</strong><ul><li><code>admin</code> — كل الصفحات ما عدا «إدارة الأدمنز».</li><li><code>manager</code> — كل الصفحات + «إدارة الأدمنز».</li></ul></li><li>كلمة المرور مُشفّرة بـ <code>bcrypt</code>.</li><li>تسجيل الخروج يمسح الجلسة من السيرفر والكاش من المتصفح.</li></ul>
+<h3 id="14-لماذا-الأدمن-سريع">1.4 لماذا الأدمن سريع؟<a class="anchor" href="#14-لماذا-الأدمن-سريع" aria-label="link">#</a></h3>
+<p>ثلاث طبقات تعمل معاً:</p>
+<ol><li><strong>Keep-alive للصفحات:</strong> الصفحة التي زرتها تبقى محمّلة ومخفية (<code>display:none</code>) بدل إعادة بنائها. الرجوع إليها فوري. إذا مرّ أكثر من دقيقتين بدون زيارتها تُعاد بناؤها لتحديث البيانات.</li><li><strong>كاش GET في <code>api.js</code>:</strong><ul><li>بيانات «طازجة» لمدة <strong>20 ثانية</strong> → تُعرض فوراً بدون طلب.</li><li>بعد 20 ثانية تُعرض النسخة القديمة وتُحدَّث في الخلفية (stale-while-revalidate) حتى <strong>5 دقائق</strong>.</li><li>أي عملية كتابة (POST/PUT/DELETE) أو تسجيل خروج <strong>يمسح الكاش</strong> بالكامل.</li></ul></li><li><strong>إزالة الصور Base64 من قائمة المستخدمين:</strong> <code>GET /api/users</code> يُرجع البيانات بدون الصور لتقليل الحجم (القائمة ~220 KB بدل عدة ميجابايت). الصورة الكاملة تُجلب عند فتح الملف الشخصي فقط.</li></ol>
+<h3 id="15-تحميل-الأزرار-والتأكيد">1.5 تحميل الأزرار والتأكيد<a class="anchor" href="#15-تحميل-الأزرار-والتأكيد" aria-label="link">#</a></h3>
+<ul><li><strong>كل زر</strong> يُظهر Overlay «جاري التنفيذ...» أثناء الطلب.</li><li><strong>التأكيد يظهر فقط</strong> للإجراءات الحساسة:</li></ul>
+<p>حذف، مسح، إزالة، حظر، إيقاف، تعطيل، تحويل، سحب، خصم، رفض، استرداد، تصفير، إعادة تعيين.</p>
+<ul><li>الأزرار التي عندها تأكيد خاص بها (مثل <code>confirm()</code> الأصلي أو نافذة تأكيد مخصّصة) تحمل <code>data-no-confirm</code> حتى لا يظهر تأكيد مزدوج.</li><li>يوجد <strong>لودر واحد فقط</strong> في الشاشة: لودر الصفحة يُخفى تلقائياً أثناء عمل الـ Overlay.</li></ul>
+<hr>
+<h2 id="2-تسجيل-الدخول-والشريط-الجانبي-والعناصر-المشتركة">2. تسجيل الدخول والشريط الجانبي والعناصر المشتركة<a class="anchor" href="#2-تسجيل-الدخول-والشريط-الجانبي-والعناصر-المشتركة" aria-label="link">#</a></h2>
+<h3 id="21-شاشة-تسجيل-الدخول">2.1 شاشة تسجيل الدخول<a class="anchor" href="#21-شاشة-تسجيل-الدخول" aria-label="link">#</a></h3>
+<p><strong>المسار:</strong> <code>/admin/</code></p>
+<div class="table-wrap"><table><thead><tr><th>العنصر</th><th>الوظيفة</th></tr></thead><tbody><tr><td>شعار Everest + العنوان</td><td>هوية اللوحة</td></tr><tr><td>حقل البريد</td><td>بريد الأدمن</td></tr><tr><td>حقل كلمة المرور</td><td>كلمة المرور</td></tr><tr><td>زر «دخول»</td><td>يرسل البيانات إلى <code>/api/admin-auth/login</code></td></tr><tr><td>زر تبديل الوضع الليلي/النهاري</td><td>يحفظ التفضيل في المتصفح</td></tr><tr><td>رسالة الخطأ</td><td>تظهر أسفل النموذج عند بيانات خاطئة</td></tr></tbody></table></div>
+<p><strong>ملاحظات:</strong></p>
+<ul><li>البريد يُطبَّع (حروف صغيرة، إزالة المسافات) وكلمة المرور تُطبَّع قبل المقارنة.</li><li>عند النجاح تُحفظ الجلسة وتُفتح صفحة الإحصائيات.</li><li>عند فشل الجلسة لاحقاً (401) يعود المستخدم لشاشة الدخول.</li></ul>
+<h3 id="22-الشريط-الجانبي">2.2 الشريط الجانبي<a class="anchor" href="#22-الشريط-الجانبي" aria-label="link">#</a></h3>
+<ul><li>يحتوي <strong>22 صفحة</strong> (23 مع «إدارة الأدمنز» لمدير النظام).</li><li>كل عنصر: أيقونة + اسم الصفحة.</li><li>الصفحة الحالية مميّزة بخلفية بنفسجية.</li><li>على الموبايل: زر ☰ يفتح الشريط، والضغط على أي صفحة يغلقه.</li><li>زر تبديل الوضع الليلي داخل الشريط أيضاً.</li></ul>
+<h3 id="23-الشريط-العلوي">2.3 الشريط العلوي<a class="anchor" href="#23-الشريط-العلوي" aria-label="link">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>العنصر</th><th>الوظيفة</th></tr></thead><tbody><tr><td>شارة الدور</td><td><code>🔧 Admin</code> أو <code>👑 Manager</code></td></tr><tr><td>اسم المستخدم</td><td>اسم الأدمن الحالي</td></tr><tr><td>🌙 / ☀️</td><td>تبديل الوضع الليلي</td></tr><tr><td>English / العربية</td><td>تبديل لغة الواجهة فوراً (كل النصوص لها نسختان)</td></tr><tr><td>🚪 خروج</td><td>إنهاء الجلسة ومسح الكاش</td></tr></tbody></table></div>
+<h3 id="24-نافذة-التأكيد-actionguard">2.4 نافذة التأكيد (ActionGuard)<a class="anchor" href="#24-نافذة-التأكيد-actionguard" aria-label="link">#</a></h3>
+<p>تظهر عند الضغط على زر حساس:</p>
+<pre class="code"><code>⚠️ تأكيد الإجراء
+هل أنت متأكد من حذف؟
+[ إلغاء ]  [ نعم، متأكد ]</code></pre>
+<ul><li>إن كان الزر يملك تأكيداً خاصاً به، لا تظهر هذه النافذة (لتجنّب السؤال مرتين).</li><li>النافذة تظهر <strong>فوق</strong> الـ Overlay.</li><li>الـ Overlay لا يمنع التنقل أثناء القراءة، لكنه يقفل الشاشة أثناء الكتابة.</li></ul>
+<hr>
+<h2 id="3-الصفحات-الـ22-في-القائمة-الجانبية">3. الصفحات الـ22 في القائمة الجانبية<a class="anchor" href="#3-الصفحات-الـ22-في-القائمة-الجانبية" aria-label="link">#</a></h2>
+<blockquote>ترتيب الشرح مطابق لترتيب القائمة من أعلى لأسفل.</blockquote>
+<hr>
+<h3 id="31-الإحصائيات-dashboard">3.1 الإحصائيات (Dashboard)<a class="anchor" href="#31-الإحصائيات-dashboard" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> صورة سريعة عن المنصة، وكل رقم قابل للضغط لعرض تفاصيله.</p>
+<p><strong>البيانات:</strong> <code>GET /api/dashboard/stats</code></p>
+<h4 id="ما-تراه-في-الصفحة">ما تراه في الصفحة<a class="anchor" href="#ما-تراه-في-الصفحة" aria-label="link">#</a></h4>
+<p><strong>أ) 4 بطاقات رئيسية (قابلة للضغط):</strong></p>
+<div class="table-wrap"><table><thead><tr><th>البطاقة</th><th>المعنى</th><th>عند الضغط</th></tr></thead><tbody><tr><td>👥 إجمالي المستخدمين</td><td>كل الحسابات ما عدا الأدمنز والمديرين</td><td>قائمة كل المستخدمين</td></tr><tr><td>🎓 الطلاب</td><td>الحسابات من نوع <code>student</code></td><td>قائمة الطلاب</td></tr><tr><td>📚 الكورسات</td><td>إجمالي الكورسات + عدد المنشور منها</td><td>قائمة الكورسات</td></tr><tr><td>✅ الاشتراكات النشطة</td><td>الاشتراكات المقبولة / الإجمالي</td><td>الاشتراكات المقبولة</td></tr></tbody></table></div>
+<p><strong>ب) 3 دوائر نسب (Ring Charts):</strong></p>
+<div class="table-wrap"><table><thead><tr><th>الدائرة</th><th>البسط / المقام</th></tr></thead><tbody><tr><td>معدل الموافقة على الاشتراكات</td><td>المقبولة / كل الاشتراكات</td></tr><tr><td>معدل نجاح الاختبارات</td><td>المحاولات الناجحة / كل المحاولات</td></tr><tr><td>الكورسات المنشورة</td><td>المنشورة / كل الكورسات</td></tr></tbody></table></div>
+<p><strong>ج) 4 بطاقات «بانتظار الإجراء»:</strong></p>
+<div class="table-wrap"><table><thead><tr><th>البطاقة</th><th>عند الضغط</th></tr></thead><tbody><tr><td>⏳ بانتظار التفعيل</td><td>المستخدمون بحالة <code>pending</code></td></tr><tr><td>🛒 اشتراكات بانتظار المراجعة</td><td>الاشتراكات بحالة <code>pending</code></td></tr><tr><td>💳 شحن معلق</td><td>طلبات شحن المحفظة المعلقة</td></tr><tr><td>⬆️ طلبات ترقية</td><td>طلبات ترقية نوع الحساب المعلقة</td></tr></tbody></table></div>
+<p><strong>د) 4 بطاقات تحليلية:</strong></p>
+<div class="table-wrap"><table><thead><tr><th>البطاقة</th><th>عند الضغط</th></tr></thead><tbody><tr><td>🚫 الحسابات المحظورة</td><td>المستخدمون <code>blocked</code></td></tr><tr><td>🆓 حسابات التسجيل المجاني</td><td><code>role = registration</code></td></tr><tr><td>💎 العمولات المدفوعة</td><td>كل العمولات</td></tr><tr><td>📋 اختبارات ناجحة</td><td>المحاولات بنتيجة <code>pass</code></td></tr></tbody></table></div>
+<p><strong>هـ) 3 عناصر ملخّص:</strong></p>
+<ul><li>إجمالي الاشتراكات</li><li>اشتراكات بانتظار المراجعة</li><li>التقييمات</li></ul>
+<h4 id="كيف-يعمل-drill-down">كيف يعمل drill-down<a class="anchor" href="#كيف-يعمل-drill-down" aria-label="link">#</a></h4>
+<ul><li>الضغط على أي بطاقة يفتح جدولاً أسفلها بعنوان مناسب.</li><li>الصفحة تجلب <strong>القائمة الكاملة</strong> ثم تُصفّيها في المتصفح (مثلاً: كل الكورسات ثم تُبقي <code>status = published</code>).</li><li>الضغط مرة أخرى على نفس البطاقة يغلق الجدول.</li><li>أثناء الجلب يظهر «جاري التحميل...» داخل الجدول فقط.</li></ul>
+<h4 id="ملاحظات">ملاحظات<a class="anchor" href="#ملاحظات" aria-label="link">#</a></h4>
+<ul><li>كل الأرقام تُحدَّث عند إعادة فتح الصفحة (بعد دقيقتين) أو عند مسح الكاش.</li><li>البطاقات لا تعدّل شيئاً؛ هي للعرض فقط.</li></ul>
+<hr>
+<h3 id="32-تفعيل-الحسابات--التسجيل-الخارجي">3.2 تفعيل الحسابات — التسجيل الخارجي<a class="anchor" href="#32-تفعيل-الحسابات--التسجيل-الخارجي" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> مراجعة الحسابات التي سجّلت من موقع المستخدم (تسجيل خارجي) وتفعيلها أو رفضها.</p>
+<p><strong>البيانات:</strong> <code>GET /api/users/pending-registrations?source=external</code></p>
+<h4 id="ما-تراه">ما تراه<a class="anchor" href="#ما-تراه" aria-label="link">#</a></h4>
+<ul><li>عنوان الصفحة + عدّاد «X مستخدمين بانتظار التفعيل».</li><li>جدول بالأعمدة:<ol><li>الاسم</li><li>البريد</li><li>رقم الهاتف</li><li>المحافظة</li><li><strong>أنشأه</strong> — يظهر المُنشئ أو المُحيل كزر؛ الضغط عليه يفتح ملفه الشخصي.</li><li><strong>البطاقة</strong> — زر «عرض» يفتح صور البطاقة/الباسبور.</li><li>تاريخ التسجيل</li><li>أزرار الإجراء.</li></ol></li></ul>
+<h4 id="الأزرار">الأزرار<a class="anchor" href="#الأزرار" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th><th>التأكيد</th></tr></thead><tbody><tr><td>🎓 Student</td><td>تفعيل الحساب كطالب</td><td>لا</td></tr><tr><td>🆓 Reg Free</td><td>تفعيل الحساب كتسجيل مجاني</td><td>لا</td></tr><tr><td>❌ رفض</td><td>يفتح نافذة سبب الرفض</td><td>نافذة مخصّصة</td></tr></tbody></table></div>
+<h4 id="كيف-يعمل-التفعيل">كيف يعمل التفعيل<a class="anchor" href="#كيف-يعمل-التفعيل" aria-label="link">#</a></h4>
+<ol><li><code>PUT /api/users/:id/approve-registration</code> مع <code>{ account_type }</code>.</li><li>يتحقق أن المستخدم ما زال <code>pending</code>.</li><li>يحوّل:<ul><li><code>student</code> → <code>role = student</code></li><li><code>registration_free</code> → <code>role = registration</code></li></ul></li><li>يضبط <code>status = active</code>.</li><li>يحسب انتهاء العضوية = الآن + <code>membership_duration</code> يوم (القيمة من إعدادات العضوية).</li><li>يمنح عمولة الإحالة للراعي (إن وُجد ولم يكن <code>commission_exempt</code>).</li><li>يُرسل إشعاراً للمستخدم.</li><li>يسجّل الإجراء في سجل الأدمن.</li></ol>
+<h4 id="كيف-يعمل-الرفض">كيف يعمل الرفض<a class="anchor" href="#كيف-يعمل-الرفض" aria-label="link">#</a></h4>
+<ol><li><code>PUT /api/users/:id/reject-registration</code> مع <code>{ reason }</code>.</li><li>يتحقق أن الحساب <code>pending</code>.</li><li>يضبط <code>status = rejected</code> ويحفظ سبب الرفض.</li><li>يُرسل بريداً للمستخدم بسبب الرفض (إن كان البريد مضبوطاً).</li><li>يسجّل الإجراء.</li></ol>
+<h4 id="نافذة-البطاقة">نافذة البطاقة<a class="anchor" href="#نافذة-البطاقة" aria-label="link">#</a></h4>
+<ul><li><code>GET /api/users/:id/id-cards</code></li><li>تعرض صورة البطاقة الأمامية (وغيرها إن وُجدت).</li><li>تدعم الروابط النسبية والمطلقة و<code>data:</code>.</li></ul>
+<h4 id="ملاحظات-1">ملاحظات<a class="anchor" href="#ملاحظات-1" aria-label="link">#</a></h4>
+<ul><li>الرفض يتطلب كتابة سبب (الزر معطّل حتى تكتب).</li><li>لا يمكن تفعيل حساب غير <code>pending</code> (يرجع 400).</li><li>الصفحة لا تعرض إلا المصدر المحدد (<code>external</code>).</li></ul>
+<hr>
+<h3 id="33-تفعيل-الحسابات--إنشاء-حساب-لآخر">3.3 تفعيل الحسابات — إنشاء حساب لآخر<a class="anchor" href="#33-تفعيل-الحسابات--إنشاء-حساب-لآخر" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> نفس صفحة 3.2 لكن للحسابات التي أنشأها عضو آخر داخل المنصة.</p>
+<p><strong>الفرق الوحيد:</strong> <code>source=created</code>.</p>
+<ul><li>عمود «أنشأه» يعرض المُنشئ بشارة بنفسجية.</li><li>بقية الأعمدة والأزرار والسلوك مطابق تماماً.</li><li>التفعيل هنا أيضاً يمنح عمولة الإحالة للمُنشئ/الراعي حسب منطق الـ MLM.</li></ul>
+<hr>
+<h3 id="34-إدارة-المستخدمين">3.4 إدارة المستخدمين<a class="anchor" href="#34-إدارة-المستخدمين" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> المركز الرئيسي للتحكم في أي مستخدم: بياناته، رتبته، رصيده، فريقه، وسجله.</p>
+<p><strong>البيانات:</strong> <code>GET /api/users</code> (بدون صور) + <code>GET /api/ranks</code></p>
+<h4 id="أعلى-الصفحة">أعلى الصفحة<a class="anchor" href="#أعلى-الصفحة" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العنصر</th><th>الوظيفة</th></tr></thead><tbody><tr><td>العنوان «👤 إدارة المستخدمين»</td><td>—</td></tr><tr><td>عدّاد المستخدمين</td><td>عدد النتائج بعد البحث</td></tr><tr><td>زر «🗑️ حذف المحدد (X)»</td><td>يظهر عند تحديد مستخدمين</td></tr><tr><td>حقل البحث</td><td>يبحث بالاسم أو البريد أو الهاتف أو ID فوراً</td></tr></tbody></table></div>
+<h4 id="جدول-المستخدمين">جدول المستخدمين<a class="anchor" href="#جدول-المستخدمين" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العمود</th><th>المحتوى</th></tr></thead><tbody><tr><td>☑️</td><td>تحديد فردي</td></tr><tr><td>☑️ (رأس الجدول)</td><td>تحديد الكل / إلغاء الكل</td></tr><tr><td>الاسم</td><td>الاسم + البريد + ID</td></tr><tr><td>الهاتف</td><td>رقم الهاتف</td></tr><tr><td>الدور</td><td><code>student</code> / <code>registration</code> / <code>admin</code></td></tr><tr><td>نوع الحساب</td><td><code>student</code> / <code>registration_free</code></td></tr><tr><td>الرتبة</td><td>اسم الرتبة الحالية</td></tr><tr><td>الرصيد</td><td><code>e_money</code></td></tr><tr><td>الحالة</td><td>نشط / قيد المراجعة / مرفوض / محظور</td></tr><tr><td>الإجراء</td><td>عرض / إرسال $ / حظر أو فك الحظر / حذف</td></tr></tbody></table></div>
+<h4 id="إجراءات-الجدول">إجراءات الجدول<a class="anchor" href="#إجراءات-الجدول" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>عرض</td><td>يفتح الملف الشخصي الكامل (6 تبويبات)</td></tr><tr><td>💰 إرسال $</td><td>نافذة مبلغ → <code>PUT /api/users/:id/e-money</code> بـ <code>allow_negative:false</code></td></tr><tr><td>حظر</td><td><code>PUT /api/users/:id/block</code> — يمنع الدخول للمنصة</td></tr><tr><td>فك الحظر</td><td><code>PUT /api/users/:id/unblock</code></td></tr><tr><td>حذف</td><td>نافذة تأكيد مخصّصة → <code>DELETE /api/users/:id</code></td></tr></tbody></table></div>
+<h4 id="حذف-المحدد">حذف المحدد<a class="anchor" href="#حذف-المحدد" aria-label="link">#</a></h4>
+<ul><li>يظهر فقط عند تحديد مستخدم واحد أو أكثر.</li><li>يسأل <code>confirm()</code> بعدد المستخدمين.</li><li>يحذف كل مستخدم على حدة (لو فشل واحد يكمل الباقي).</li><li>لا يمكن التراجع.</li></ul>
+<h4 id="الملف-الشخصي-النافذة-الكبيرة">الملف الشخصي (النافذة الكبيرة)<a class="anchor" href="#الملف-الشخصي-النافذة-الكبيرة" aria-label="link">#</a></h4>
+<p><strong>الرأس:</strong></p>
+<ul><li>الاسم + شارة «محظور» إن كان محظوراً.</li><li><strong>👤 دخول كـ هذا المستخدم</strong> — <code>POST /api/users/:id/impersonate</code> ثم يفتح موقع المستخدم بجلسة مؤقتة (للتجربة والدعم).</li><li><strong>✏️ تعديل</strong> — يحوّل النافذة لوضع التحرير.</li><li>✕ إغلاق.</li></ul>
+<p><strong>وضع التحرير:</strong></p>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>ملاحظة</th></tr></thead><tbody><tr><td>الاسم</td><td>—</td></tr><tr><td>البريد</td><td>—</td></tr><tr><td>الهاتف</td><td>—</td></tr><tr><td>العنوان</td><td>—</td></tr><tr><td>الدور</td><td><code>registration</code> أو <code>student</code></td></tr><tr><td>نوع الحساب</td><td><code>student</code> أو <code>registration_free</code></td></tr><tr><td>البايو</td><td>نص حر</td></tr></tbody></table></div>
+<ul><li>«حفظ التعديلات» → <code>PUT /api/users/:id</code> ثم <code>PUT /api/users/:id/account-type</code> إن تغيّر النوع.</li></ul>
+<p><strong>التبويبات الستة:</strong></p>
+<p><strong>1) 👤 البيانات:</strong></p>
+<ul><li>بطاقات: المعرف، البريد، الهاتف، العنوان، الدولة.</li><li>كود الإحالة، الرتبة الحالية (بأيقونة أو صورة الرتبة)، مبيعات الفريق، رصيد $.</li><li><strong>👤 تم التسجيل من خلال:</strong> الراعي؛ الضغط عليه يفتح ملفه.</li><li>نوع الحساب + زر تحويل فوري للنوع الآخر.</li><li><strong>🏅 تغيير الرتبة</strong> (انظر أدناه).</li><li><strong>💰 إضافة / خصم رصيد:</strong> حقل رقم (موجب أو سالب) + تنفيذ → <code>PUT /api/users/:id/e-money</code> بـ <code>allow_negative:true</code>.</li><li><strong>🔑 تغيير كلمة المرور:</strong> 4 أحرف على الأقل.</li><li>أزرار: حظر/فك حظر، السماح بالسالب، إيقاف/تفعيل العمولة، حذف المستخدم.</li><li><strong>🏆 الرتب المحققة:</strong> شارات الرتب التي أخذ عليها بونص.</li><li><strong>👥 فريق التسويق:</strong> تبويبات لكل مستوى (Level 1, 2, …) مع جدول (اسم، بريد، ID، رتبة، دور) وعدد كل مستوى.</li></ul>
+<p><strong>2) 📈 النشاط الأسبوعي:</strong></p>
+<ul><li>إجمالي المبيعات المباشرة.</li><li>مبيعات الطلاب.</li><li>مبيعات التسجيل المجاني.</li><li>المبيعات المؤهلة (أخضر إن حقق الحد الأدنى، أحمر إن لا).</li><li>قائمة الأعضاء المباشرين (الاسم، النوع، الرصيد، الحالة، تاريخ التسجيل).</li><li>ملخص الأهلية: الرتبة، الأعضاء المؤهلون، نسبة التقدم للرتبة التالية، تحقق الحد الأدنى.</li></ul>
+<p><strong>3) 🌐 الشبكة المؤهلة:</strong></p>
+<ul><li>أعضاء الفريق المؤهلون.</li><li>أعضاء طلاب / تسجيل مجاني.</li><li>قائمة المباشرين مع وسم: ✅ مؤهل، ❌ غير نشط، ⚠️ رتبة أعلى من رتبتك (لا تُحتسب).</li></ul>
+<p><strong>4) 📜 السجل الأسبوعي:</strong></p>
+<ul><li>أسابيع النشاط مع التفاصيل عند الضغط.</li></ul>
+<p><strong>5) 🏆 لوحة المتصدرين:</strong></p>
+<ul><li>ترتيب أفضل الأعضاء حسب الأداء.</li></ul>
+<p><strong>6) 📊 سجل التسوية الأسبوعية:</strong></p>
+<ul><li>قائمة أسابيع فيها أعضاء مباشرون.</li><li>عند اختيار أسبوع: عدد الطلاب، عدد التسجيل المجاني، الإجمالي، وقائمة الأعضاء المباشرين في هذا الأسبوع.</li></ul>
+<h4 id="تغيير-الرتبة-أهم-جزء">تغيير الرتبة (أهم جزء)<a class="anchor" href="#تغيير-الرتبة-أهم-جزء" aria-label="link">#</a></h4>
+<ol><li>تختار الرتبة الجديدة من القائمة (تعرض الرتبة + مبلغها).</li><li>تضغط «تغيير الرتبة».</li><li>إذا كانت نفس الرتبة → لا يحدث شيء.</li><li>إذا كانت <strong>ترقية</strong> تظهر نافذة:</li></ol>
+<blockquote>🎉 ترقية الرتبة<br>سيتم تغيير رتبة <strong>الاسم</strong> من <strong>القديمة</strong> إلى <strong>الجديدة</strong><br><strong>هل تريد صرف كوميشن الرتبة (X $) له؟</strong></blockquote>
+<ul><li>زر «نعم، اصرف الكوميشن»</li><li>زر «تغيير الرتبة بدون صرف»</li><li>زر «إلغاء»</li></ul>
+<blockquote>⬇️ تخفيض الرتبة<br><strong>هل تريد خصم مبلغ رتبة القديمة (X $) من رصيده؟</strong></blockquote>
+<ul><li>ملاحظة: الرصيد لا ينزل تحت صفر — يُخصم المتاح فقط.</li><li>زر «نعم، اخصم المبلغ»</li><li>زر «تغيير الرتبة بدون خصم»</li><li>زر «إلغاء»</li></ul>
+<pre class="code"><code data-lang="json">   { &quot;rank&quot;: &quot;Executive&quot;, &quot;apply_bonus&quot;: &quot;pay&quot; }</code></pre>
+<p>القيم الممكنة: <code>pay</code> / <code>deduct</code> / <code>none</code>.</p>
+<ol><li>الرد يحمل <code>unchanged</code> إن كانت نفس الرتبة، أو <code>bonus_applied</code> بالمبلغ المصروف/المخصوم.</li><li>تُسجَّل حركة في المعاملات وسجل النشاط، ويُرسل إشعار للمستخدم.</li></ol>
+<h4 id="ملاحظات-2">ملاحظات<a class="anchor" href="#ملاحظات-2" aria-label="link">#</a></h4>
+<ul><li>البحث يعمل على القائمة المحمّلة كاملة (client-side) لذا فوري.</li><li>الصور لا تُحمَّل في القائمة؛ تظهر فقط داخل الملف الشخصي.</li><li>«إيقاف العمولة» يضبط <code>commission_exempt = 1</code>: لا عمولات أسبوعية، لكنه يبقى مؤهلاً للترقية.</li><li>حذف المستخدم يحذف بياناته المرتبطة (اشتراكات، معاملات، إشعارات…) حسب قيود قاعدة البيانات.</li></ul>
+<hr>
+<h3 id="35-إدارة-الصلاحيات">3.5 إدارة الصلاحيات<a class="anchor" href="#35-إدارة-الصلاحيات" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> تحويل نوع الحساب بين طالب وتسجيل مجاني بسرعة، ومراجعة الحسابات المعلّقة.</p>
+<p><strong>البيانات:</strong> <code>GET /api/users</code> ثم تصفية في المتصفح.</p>
+<h4 id="ما-تراه-1">ما تراه<a class="anchor" href="#ما-تراه-1" aria-label="link">#</a></h4>
+<ul><li>عمودان:<ol><li>🎓 <strong>طالب (Student)</strong> — <code>account_type = student</code> و<code>status = active</code>.</li><li>🆓 <strong>تسجيل مجاني (Reg Free)</strong> — <code>account_type = registration_free</code> و<code>status = active</code>.</li></ol></li><li>كل عمود به عدّاد وبحث خاص.</li><li>قسم ثالث أسفل الصفحة: <strong>⏳ في انتظار الموافقة</strong> (كل <code>pending</code> غير الأدمنز).</li></ul>
+<h4 id="بطاقة-المستخدم-داخل-العمود">بطاقة المستخدم داخل العمود<a class="anchor" href="#بطاقة-المستخدم-داخل-العمود" aria-label="link">#</a></h4>
+<ul><li>الحرف الأول من الاسم (أخضر للطالب، بنفسجي للتسجيل المجاني).</li><li>الاسم + البريد.</li><li>زر 👁️ لعرض الملف.</li><li>زر «→ 🎓 Student» أو «→ 🆓 Reg Free» لنقل الحساب للعمود الآخر.</li></ul>
+<h4 id="كيف-يعمل-النقل">كيف يعمل النقل<a class="anchor" href="#كيف-يعمل-النقل" aria-label="link">#</a></h4>
+<ul><li><code>PUT /api/users/:id/account-type</code> مع <code>{ account_type }</code>.</li><li>يغيّر النوع والدور المرتبط.</li><li>يعيد تحميل القوائم.</li><li>الصفحة تُحدّث نفسها تلقائياً عند الرجوع لتبويب المتصفح (visibilitychange).</li></ul>
+<h4 id="ملاحظات-3">ملاحظات<a class="anchor" href="#ملاحظات-3" aria-label="link">#</a></h4>
+<ul><li>هذا ليس تغيير رتبة؛ هو تغيير نوع الحساب فقط.</li><li>المستخدمون المعلّقون يظهرون في القسم السفلي مع أزرار النقل أيضاً.</li></ul>
+<hr>
+<h3 id="36-حسابات-التسجيل-الخارجي">3.6 حسابات التسجيل الخارجي<a class="anchor" href="#36-حسابات-التسجيل-الخارجي" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> أرشيف/قائمة كل الحسابات التي جاءت من التسجيل الخارجي (بعد التفعيل أو الرفض).</p>
+<p><strong>البيانات:</strong> <code>GET /api/users/external-accounts</code></p>
+<h4 id="ما-تراه-2">ما تراه<a class="anchor" href="#ما-تراه-2" aria-label="link">#</a></h4>
+<ul><li>العنوان + عدّاد الحسابات.</li><li>بحث بالاسم أو البريد أو الهاتف أو ID أو المحافظة.</li><li>جدول: ID (كود الإحالة)، الاسم، البريد، الهاتف، المحافظة، نوع الحساب، الرتبة، الرصيد، تاريخ التسجيل.</li></ul>
+<h4 id="التفاعل">التفاعل<a class="anchor" href="#التفاعل" aria-label="link">#</a></h4>
+<ul><li>الضغط على <strong>الاسم</strong> يفتح نافذة «بيانات المستخدم».</li><li>النافذة تجلب <code>GET /api/users/:id</code> وتعرض 17 حقلاً:</li></ul>
+<p>ID، الاسم، البريد، الهاتف، المحافظة، الدولة، العنوان، الدور، نوع الحساب، الرتبة، الرصيد، الحالة، المحظور، احالة من، مبيعات الفريق، الأعضاء المباشرين، تاريخ التسجيل.</p>
+<ul><li>إن فشل الجلب تظهر رسالة «تعذر تحميل التفاصيل الكاملة» مع البيانات المتاحة.</li></ul>
+<h4 id="ملاحظات-4">ملاحظات<a class="anchor" href="#ملاحظات-4" aria-label="link">#</a></h4>
+<ul><li>للعرض فقط؛ لا تعديل من هنا.</li><li>نفس الصفحة تُستخدم للمصدر <code>created</code> في 3.7.</li></ul>
+<hr>
+<h3 id="37-حسابات-إنشاء-حساب-لآخر">3.7 حسابات إنشاء حساب لآخر<a class="anchor" href="#37-حسابات-إنشاء-حساب-لآخر" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> قائمة الحسابات التي أنشأها أعضاء آخرون.</p>
+<p><strong>البيانات:</strong> <code>GET /api/users/created-accounts</code></p>
+<p><strong>الفرق عن 3.6:</strong></p>
+<ul><li>عمود إضافي <strong>«أنشأه»</strong> يعرض المُنشئ كزر بنفسجي؛ الضغط عليه يفتح ملفه.</li><li>بقية الأعمدة والبحث ونافذة التفاصيل مطابقة.</li></ul>
+<hr>
+<h3 id="38-بناء-الكورس">3.8 بناء الكورس<a class="anchor" href="#38-بناء-الكورس" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> إنشاء كورس جديد ببياناته الأساسية (بدون المواضيع والدروس — تُضاف من «قائمة الكورسات»).</p>
+<p><strong>البيانات:</strong> <code>GET /api/categories</code> + <code>POST /api/courses</code></p>
+<h4 id="الحقول">الحقول<a class="anchor" href="#الحقول" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>إلزامي</th><th>ملاحظة</th></tr></thead><tbody><tr><td>عنوان الكورس (عربي/إنجليزي)</td><td>✅</td><td>تبويب لغة للكتابة</td></tr><tr><td>وصف الكورس (عربي/إنجليزي)</td><td>✅</td><td>نص طويل</td></tr><tr><td>مستوى الصعوبة</td><td>—</td><td>مبتدئ / متوسط / متقدم</td></tr><tr><td>صورة الغلاف</td><td>✅</td><td>رفع صورة → <code>POST /api/upload</code></td></tr><tr><td>السعر ($)</td><td>✅</td><td>0 مرفوض</td></tr><tr><td>التصنيف</td><td>✅</td><td>قائمة + إضافة تصنيف جديد</td></tr><tr><td>الوسوم</td><td>—</td><td>مفصولة بفاصلة، تظهر كشارات</td></tr></tbody></table></div>
+<h4 id="الأزرار-1">الأزرار<a class="anchor" href="#الأزرار-1" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>العربية / English</td><td>تبديل لغة حقول العنوان والوصف</td></tr><tr><td>✕ على الصورة</td><td>إزالة الصورة</td></tr><tr><td>اضغط لرفع الصورة</td><td>رفع صورة الغلاف</td></tr><tr><td>＋ إضافة (بجانب التصنيف)</td><td>فتح نموذج تصنيف جديد</td></tr><tr><td>حفظ التصنيف</td><td><code>POST /api/categories</code> ثم إضافته للقائمة واختياره</td></tr><tr><td>🗑 حذف هذا التصنيف</td><td><code>DELETE /api/categories/:id</code> (بتأكيد)</td></tr><tr><td>إنشاء الكورس</td><td>التحقق ثم <code>POST /api/courses</code></td></tr></tbody></table></div>
+<h4 id="التحقق-قبل-الحفظ">التحقق قبل الحفظ<a class="anchor" href="#التحقق-قبل-الحفظ" aria-label="link">#</a></h4>
+<ul><li>عنوان عربي أو إنجليزي موجود.</li><li>وصف عربي أو إنجليزي موجود.</li><li>صورة غلاف موجودة.</li><li>سعر أكبر من صفر.</li><li>تصنيف عربي مختار.</li><li>أي حقل ناقص يُحدَّد بإطار أحمر + تنبيه.</li></ul>
+<h4 id="بعد-الحفظ">بعد الحفظ<a class="anchor" href="#بعد-الحفظ" aria-label="link">#</a></h4>
+<ul><li>تظهر شاشة نجاح: «تم إنشاء الكورس بنجاح!».</li><li>زر «إنشاء كورس آخر» يعيد النموذج فارغاً.</li><li>رسالة إرشاد للانتقال إلى «قائمة الكورسات» لإضافة المواضيع والدروس والاختبارات.</li></ul>
+<h4 id="ملاحظات-5">ملاحظات<a class="anchor" href="#ملاحظات-5" aria-label="link">#</a></h4>
+<ul><li>كل الكورسات مدفوعة؛ الدروس المجانية تكون «Preview» فقط.</li><li>التصنيفات مشتركة مع صفحة قائمة الكورسات.</li></ul>
+<hr>
+<h3 id="39-قائمة-الكورسات">3.9 قائمة الكورسات<a class="anchor" href="#39-قائمة-الكورسات" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> إدارة الكورسات الموجودة: عرض، تعديل، منهج، طلاب، حذف.</p>
+<p><strong>البيانات:</strong> <code>GET /api/courses</code> + <code>GET /api/categories</code></p>
+<h4 id="أعلى-الصفحة-1">أعلى الصفحة<a class="anchor" href="#أعلى-الصفحة-1" aria-label="link">#</a></h4>
+<ul><li>العنوان + زر تحديث.</li><li>بحث بالاسم.</li><li>فلتر بالتصنيف.</li></ul>
+<h4 id="الجدول">الجدول<a class="anchor" href="#الجدول" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العمود</th><th>المحتوى</th></tr></thead><tbody><tr><td>صورة</td><td>الغلاف</td></tr><tr><td>العنوان</td><td>العنوان + عدد المواضيع/الدروس/الاختبارات + العنوان الآخر</td></tr><tr><td>التصنيف</td><td>عربي أو إنجليزي</td></tr><tr><td>السعر</td><td><code>مجاني</code> أو <code>X $</code></td></tr><tr><td>المؤلف</td><td>اسم المؤلف</td></tr><tr><td>الحالة</td><td>قائمة منسدلة: <strong>منشور / مسودة</strong> — التغيير يُحفظ فوراً <code>PUT /api/courses/:id</code></td></tr><tr><td>إجراءات</td><td>عرض / تعديل / الطلاب / حذف</td></tr></tbody></table></div>
+<h4 id="زر-عرض">زر «عرض»<a class="anchor" href="#زر-عرض" aria-label="link">#</a></h4>
+<p>يفتح مشغّل الكورس:</p>
+<ul><li>يعرض الكورس كاملاً كما يراه الطالب.</li><li>قائمة المواضيع والدروس.</li><li>تشغيل فيديو الدرس.</li><li>الدروس المجانية (Preview) متاحة.</li></ul>
+<h4 id="زر-تعديل">زر «تعديل»<a class="anchor" href="#زر-تعديل" aria-label="link">#</a></h4>
+<p>نافذة كبيرة بتبويبين:</p>
+<p><strong>أ) معلومات الكورس:</strong></p>
+<ul><li>العنوان والوصف (عربي/إنجليزي).</li><li>السعر، السعر بالجنيه إن وُجد.</li><li>الصورة، التصنيف (مع إضافة/حذف)، الوسوم.</li><li>الصعوبة، الحالة.</li><li>الحفظ → <code>PUT /api/courses/:id</code>.</li></ul>
+<p><strong>ب) المنهج:</strong></p>
+<ul><li><strong>المواضيع:</strong> إضافة موضوع، تعديل، حذف.</li><li><strong>الدروس داخل كل موضوع:</strong><ul><li>عنوان إنجليزي/عربي.</li><li>محتوى إنجليزي/عربي.</li><li>رابط فيديو YouTube <strong>أو</strong> رفع فيديو إلى Bunny (مع نسبة تقدم).</li><li>خيار «مجاني (Preview)».</li><li>حفظ / إلغاء / حذف.</li></ul></li><li><strong>الاختبارات داخل كل موضوع:</strong><ul><li>إنشاء اختبار: نوع MCQ أو T/F أو مختلط.</li><li>إضافة أسئلة، خيارات (حتى 6)، تحديد الإجابة الصحيحة.</li><li>درجة النجاح.</li><li>تعديل/حذف.</li></ul></li><li><strong>الاختبار النهائي للكورس:</strong> إضافة أو تعديل اختبار نهائي واحد.</li></ul>
+<h4 id="زر-الطلاب">زر «الطلاب»<a class="anchor" href="#زر-الطلاب" aria-label="link">#</a></h4>
+<ul><li>يفتح لوحة أسفل الصف.</li><li><code>GET /api/courses/:id/enrollments</code> (قائمة الطلاب).</li><li>لكل طالب:<ul><li>الاسم، البريد.</li><li>تعديل: الحالة (<code>pending</code> / <code>approved</code> / <code>rejected</code>) وتاريخ الانتهاء.</li><li>حفظ / إلغاء.</li><li>حذف الاشتراك (بتأكيد).</li></ul></li></ul>
+<h4 id="زر-حذف">زر «حذف»<a class="anchor" href="#زر-حذف" aria-label="link">#</a></h4>
+<ul><li><code>DELETE /api/courses/:id</code>.</li><li>يحذف الكورس ومواضيعه ودروسه واختباراته واشتراكاته (حسب قيود القاعدة).</li></ul>
+<h4 id="ملاحظات-6">ملاحظات<a class="anchor" href="#ملاحظات-6" aria-label="link">#</a></h4>
+<ul><li>رفع الفيديو يدعم الاستكمال: لو انقطع الرفع، أعد المحاولة بنفس الملف.</li><li>تغيير نوع الاختبار مع وجود أسئلة يسأل قبل حذفها.</li><li>الحالة الافتراضية للكورس الجديد: <code>published</code> من صفحة البناء.</li></ul>
+<hr>
+<h3 id="310-ظهور-الكورسات">3.10 ظهور الكورسات<a class="anchor" href="#310-ظهور-الكورسات" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> التحكم في أماكن ظهور كل كورس منشور في موقع المستخدم.</p>
+<p><strong>البيانات:</strong> <code>GET /api/courses</code> (يُصفّى للمنشور فقط)</p>
+<h4 id="ما-تراه-3">ما تراه<a class="anchor" href="#ما-تراه-3" aria-label="link">#</a></h4>
+<ul><li>عدّادات: 🆓 عدد الظاهر في المجانيات، 🏠 عدد الظاهر في الهوم، 📚 عدد الظاهر في صفحة الكورسات، وإجمالي المنشور.</li><li>بحث.</li><li>صف لكل كورس: الصورة، العنوان، التصنيف، السعر، وثلاثة مفاتيح:</li></ul>
+<div class="table-wrap"><table><thead><tr><th>المفتاح</th><th>يتحكم في</th><th>الـ API</th></tr></thead><tbody><tr><td>🆓 صفحة المجانيات</td><td><code>is_show_free</code></td><td><code>PUT /api/courses/:id/show-free</code></td></tr><tr><td>🏠 الهوم بيج</td><td><code>is_show_homepage</code></td><td><code>PUT /api/courses/:id/show-homepage</code></td></tr><tr><td>📚 صفحة الكورسات</td><td><code>is_show_courses</code></td><td><code>PUT /api/courses/:id/show-courses</code></td></tr></tbody></table></div>
+<h4 id="كيف-يعمل-المفتاح">كيف يعمل المفتاح<a class="anchor" href="#كيف-يعمل-المفتاح" aria-label="link">#</a></h4>
+<ul><li>الضغط عليه يقلب القيمة (0 ↔ 1) ويحدّث الواجهة فوراً.</li><li>يُحفظ في القاعدة مباشرة.</li><li>الهوم وصفحة الكورسات: <strong>مفعّل افتراضياً</strong> (يظهر ما لم تُضبط القيمة 0).</li><li>المجانيات: <strong>معطّل افتراضياً</strong>.</li></ul>
+<h4 id="ملاحظات-7">ملاحظات<a class="anchor" href="#ملاحظات-7" aria-label="link">#</a></h4>
+<ul><li>لا تظهر الكورسات غير المنشورة هنا.</li><li>تعطيل المفتاح لا يحذف الكورس، فقط يخفيه من ذلك المكان.</li></ul>
+<hr>
+<h3 id="311-نتائج-الاختبارات">3.11 نتائج الاختبارات<a class="anchor" href="#311-نتائج-الاختبارات" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> متابعة كل محاولات الاختبارات، تفاصيل كل محاولة، وتصدير النتائج.</p>
+<p><strong>البيانات:</strong> <code>GET /api/courses/attempts</code></p>
+<h4 id="ما-تراه-4">ما تراه<a class="anchor" href="#ما-تراه-4" aria-label="link">#</a></h4>
+<ul><li>جدول:<ol><li>الاختبار والتاريخ</li><li>الطالب (الاسم، البريد، ID)</li><li>الكورس</li><li>عدد الأسئلة</li><li>إجابات صحيحة (أخضر)</li><li>إجابات خاطئة (أحمر)</li><li>الدرجة (<code>correct / total (percent%)</code>)</li><li>النتيجة (ناجح/راسب)</li><li>زر «تفاصيل»</li></ol></li></ul>
+<h4 id="الأزرار-العلوية">الأزرار العلوية<a class="anchor" href="#الأزرار-العلوية" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>📥 تنزيل PDF</td><td>يصدّر كل المحاولات في جدول PDF أفقي</td></tr><tr><td>🗑️ حذف الكل</td><td><code>DELETE /api/courses/attempts</code> (بتأكيد)</td></tr></tbody></table></div>
+<h4 id="نافذة-التفاصيل">نافذة التفاصيل<a class="anchor" href="#نافذة-التفاصيل" aria-label="link">#</a></h4>
+<ul><li>تجلب <code>GET /api/courses/quizzes/:quiz_id</code>.</li><li>4 بطاقات: صحيحة، خاطئة، الدرجة %، النتيجة + نسبة النجاح.</li><li>قائمة الأسئلة:<ul><li>وسم T/F أو MCQ.</li><li>نص السؤال.</li><li>الخيارات، الصحيح منها مميّز بالأخضر و✓.</li></ul></li><li>زر PDF لتصدير تفاصيل المحاولة.</li></ul>
+<h4 id="ملاحظات-8">ملاحظات<a class="anchor" href="#ملاحظات-8" aria-label="link">#</a></h4>
+<ul><li>«حذف الكل» لا يمكن التراجع عنه.</li><li>المحاولات مرتبطة بالطالب والكورس والاختبار.</li></ul>
+<hr>
+<h3 id="312-إدارة-الرتب">3.12 إدارة الرتب<a class="anchor" href="#312-إدارة-الرتب" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> تعريف سلّم الرتب والمبالغ المترتبة عليها.</p>
+<p><strong>البيانات:</strong> <code>GET /api/ranks?all=true</code> (يشمل المعطّلة)</p>
+<h4 id="ما-تراه-5">ما تراه<a class="anchor" href="#ما-تراه-5" aria-label="link">#</a></h4>
+<ul><li>4 عدّادات: إجمالي الرتب، النشطة، المعطّلة، أعلى مكافأة.</li><li>بطاقة لكل رتبة:<ul><li>صورة/أيقونة الرتبة.</li><li>الاسم.</li><li>المكافأة (<code>bonus</code>) بالدولار.</li><li>المبيعات المطلوبة (<code>sales_required</code>).</li><li>شارة نشط/معطّل.</li><li>أزرار: تعطيل/تفعيل، تعديل، حذف.</li></ul></li></ul>
+<h4 id="إضافةتعديل-رتبة">إضافة/تعديل رتبة<a class="anchor" href="#إضافةتعديل-رتبة" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>المعنى</th></tr></thead><tbody><tr><td>الاسم</td><td>اسم الرتبة (فريد)</td></tr><tr><td>المبيعات المطلوبة</td><td>حد المبيعات للوصول</td></tr><tr><td>المكافأة ($)</td><td>بونص الترقية</td></tr><tr><td>الصورة</td><td>رفع صورة (Base64) أو حذفها</td></tr><tr><td>نشط</td><td>يظهر للمستخدمين أم لا</td></tr></tbody></table></div>
+<ul><li>الحفظ: <code>POST /api/ranks</code> أو <code>PUT /api/ranks/:id</code>.</li></ul>
+<h4 id="الأزرار-2">الأزرار<a class="anchor" href="#الأزرار-2" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>+ إضافة رتبة</td><td>فتح نموذج فارغ</td></tr><tr><td>تعطيل/تفعيل</td><td><code>PUT /api/ranks/:id</code> بـ <code>is_active</code></td></tr><tr><td>تعديل</td><td>فتح النموذج بالقيم الحالية</td></tr><tr><td>حذف</td><td><code>DELETE /api/ranks/:id</code> (بتأكيد)</td></tr></tbody></table></div>
+<h4 id="ملاحظات-9">ملاحظات<a class="anchor" href="#ملاحظات-9" aria-label="link">#</a></h4>
+<ul><li>الرتب النشطة فقط تظهر للمستخدمين.</li><li>حذف رتبة مستخدمة قد يؤثر على عرض رتبة المستخدم؛ يُفضّل التعطيل بدل الحذف.</li><li>قيم البونص الحالية:</li></ul>
+<p>Star 0، Executive 2500، Executive Star 5500، Team Leader 8000، Senior Leader 12000، Regional Leader 18000، Everest Elite 25000، Everest Master 40000، Everest Legend 75000، Everest Ambassador 150000.</p>
+<hr>
+<h3 id="313-التسوية-الأسبوعية">3.13 التسوية الأسبوعية<a class="anchor" href="#313-التسوية-الأسبوعية" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> ضبط موعد التسوية، تشغيلها، مراجعة العمولات، وتصحيح أي أسبوع سابق.</p>
+<p><strong>البيانات:</strong> <code>GET /api/mlm/settlement/status</code> + <code>GET /api/leaders/weekly</code> + <code>GET /api/leaders/history</code></p>
+<h4 id="أ-4-بطاقات-حالة">أ) 4 بطاقات حالة<a class="anchor" href="#أ-4-بطاقات-حالة" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>البطاقة</th><th>المعنى</th></tr></thead><tbody><tr><td>⏰ التسوية التلقائية</td><td>مفعلة/معطلة</td></tr><tr><td>📅 الموعد القادم</td><td>التاريخ القادم للتسوية</td></tr><tr><td>🗓️ الأسبوع الجاري</td><td>بداية الأسبوع الحالي</td></tr><tr><td>🏁 آخر تسوية</td><td>آخر تشغيل</td></tr></tbody></table></div>
+<h4 id="ب-إعدادات-موعد-التسوية">ب) إعدادات موعد التسوية<a class="anchor" href="#ب-إعدادات-موعد-التسوية" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>المعنى</th></tr></thead><tbody><tr><td>تفعيل التسوية التلقائية</td><td>🟢 مفعلة / 🔴 معطلة</td></tr><tr><td>يوم التسوية</td><td>0 = الأحد … 6 = السبت (بداية/نهاية الأسبوع)</td></tr><tr><td>الساعة</td><td>0–23</td></tr><tr><td>الدقيقة</td><td>0–59</td></tr><tr><td>المنطقة الزمنية</td><td>افتراضي <code>Africa/Cairo</code></td></tr><tr><td>الحد الأدنى للمبيعات المباشرة</td><td>افتراضي 2</td></tr></tbody></table></div>
+<ul><li><strong>💾 حفظ الإعدادات</strong> → 6 طلبات <code>PUT /api/settings/&amp;lt;key&amp;gt;</code>.</li><li><strong>▶️ تشغيل التسوية الآن</strong> → <code>POST /api/mlm/settlement</code> مع <code>admin_id</code>.<ul><li>يعمل حتى لو كانت التلقائية معطلة (لأنه يدوي).</li><li>يحسب عمولة واحدة على آخر رتبة مؤهلة.</li><li>يصفّر المبيعات الأسبوعية.</li><li>يحدّث قائمة القادة.</li></ul></li></ul>
+<h4 id="ج--قادة-هذا-الأسبوع-top-10">ج) 🏆 قادة هذا الأسبوع (Top 10)<a class="anchor" href="#ج--قادة-هذا-الأسبوع-top-10" aria-label="link">#</a></h4>
+<ul><li><code>GET /api/leaders/weekly</code>.</li><li>مرتبون حسب المبيعات الأسبوعية ثم الرتبة.</li><li>يعرض الترتيب، الصورة، الاسم، الرتبة، عدد المبيعات.</li></ul>
+<h4 id="د--تضمين-رجعي-في-أسبوع-سابق">د) 🕰️ تضمين رجعي في أسبوع سابق<a class="anchor" href="#د--تضمين-رجعي-في-أسبوع-سابق" aria-label="link">#</a></h4>
+<p>الهدف: اعتبار حساب موجود «بيعة مباشرة» في أسبوع سابق تمت تسويته، دون تغيير تاريخ إنشائه ودون دفع عمولة مرتين.</p>
+<div class="table-wrap"><table><thead><tr><th>العنصر</th><th>الوظيفة</th></tr></thead><tbody><tr><td>بداية الأسبوع (تاريخ)</td><td>اختيار الأسبوع</td></tr><tr><td>أزرار الأسابيع الأخيرة</td><td>اختيار سريع من آخر 6 تسويات</td></tr><tr><td>بريدات الحسابات</td><td>سطر لكل بريد أو مفصولة بفاصلة</td></tr><tr><td>🔍 معاينة الأثر</td><td><code>POST /api/mlm/weekly-assignments/preview</code> — قراءة فقط</td></tr><tr><td>📌 تخصيص فقط</td><td><code>POST /api/mlm/weekly-assignments</code></td></tr><tr><td>♻️ تخصيص + إعادة تسوية المتأثرين</td><td>تخصيص ثم <code>POST /api/mlm/weekly-settlement/recompute</code></td></tr><tr><td>قائمة الارتباطات</td><td><code>GET /api/mlm/weekly-assignments?weekStart=</code></td></tr><tr><td>إزالة</td><td><code>DELETE /api/mlm/weekly-assignments/:id</code></td></tr></tbody></table></div>
+<p><strong>المعاينة تعرض لكل بريد:</strong></p>
+<ul><li>هل وُجد الحساب.</li><li>نوعه وحالته.</li><li>هل داخل الأسبوع أصلاً أم يحتاج تخصيصاً رجعياً.</li><li>هل مخصص لأسبوع آخر.</li><li>سبب المنع إن وُجد.</li><li>لكل راعٍ متأثر: رتبته، الرتبة المتوقعة، بوابة الأسبوع قبل/بعد، العمولة المتوقعة، وهل مدفوع بالفعل.</li></ul>
+<p><strong>ملاحظات مهمة:</strong></p>
+<ul><li>إعادة التسوية تعمل على <strong>الرعاة المتأثرين فقط</strong> (تحديد نطاق) — لا تعيد تقييم كل الأعضاء.</li><li>لا يُدفع لأي مستخدم مرتين.</li><li>إزالة الارتباط لا تعكس العمولات المدفوعة تلقائياً.</li></ul>
+<h4 id="هـ--سجل-التسويات">هـ) 📜 سجل التسويات<a class="anchor" href="#هـ--سجل-التسويات" aria-label="link">#</a></h4>
+<ul><li>جدول: الأسبوع، الحالة (مكتمل/جارٍ/فشل)، المصدر (يدوي/تلقائي)، التاريخ، العمولات.</li><li>زر «💰 العمولات» لكل أسبوع مكتمل:<ul><li><code>GET /api/mlm/settlement/week/:weekStart</code>.</li><li>يعرض كل عمولة: المستخدم، الرتبة، المبلغ، الحالة.</li><li>زر <strong>«خصم العمولة»</strong> → <code>POST /api/mlm/settlement/reverse</code> مع <code>{ user_id, week_start }</code>.</li><li>يخصم المبلغ من رصيد المستخدم (لا ينزل تحت صفر) ويلغي العمولة.</li></ul></li></ul>
+<h4 id="و-سجل-القادة-الأسبوعي">و) سجل القادة الأسبوعي<a class="anchor" href="#و-سجل-القادة-الأسبوعي" aria-label="link">#</a></h4>
+<ul><li><code>GET /api/leaders/history</code> — كل الأسابيع.</li><li>الضغط على أسبوع → <code>GET /api/leaders/history/:weekStart</code> — قائمة القادة في ذلك الأسبوع.</li></ul>
+<hr>
+<h3 id="314-القادة">3.14 القادة<a class="anchor" href="#314-القادة" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> إدارة قائمة «Our Leaders» (أعلى 10 أعضاء) والصورة الترحيبية.</p>
+<p><strong>البيانات:</strong> <code>GET /api/leaders</code> + <code>GET /api/home-hero</code></p>
+<h4 id="أ-الصورة-الترحيبية">أ) الصورة الترحيبية<a class="anchor" href="#أ-الصورة-الترحيبية" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العنصر</th><th>الوظيفة</th></tr></thead><tbody><tr><td>معاينة الصورة</td><td>تعرض الصورة الحالية</td></tr><tr><td>⬆️ تغيير الصورة</td><td>رفع صورة → <code>POST /api/upload</code> ثم حفظ الإعداد <code>home_hero_image</code></td></tr><tr><td>↩️ استعادة الافتراضية</td><td>يحفظ قيمة فارغة → تعود الصورة الافتراضية</td></tr></tbody></table></div>
+<h4 id="ب-إضافة-قائد">ب) إضافة قائد<a class="anchor" href="#ب-إضافة-قائد" aria-label="link">#</a></h4>
+<ul><li>حقل بحث ذكي (اسم / بريد / هاتف / ID).</li><li>بعد 300ms من الكتابة: <code>GET /api/leaders/search?q=</code>.</li><li>قائمة منسدلة بالنتائج (صورة، اسم، رتبة).</li><li>اختيار النتيجة يملأ الحقل.</li><li>زر «➕ اضافة» → <code>POST /api/leaders/add</code> مع <code>{ userId }</code>.</li><li>Enter يضيف: إن كانت نتيجة واحدة يضيفها مباشرة.</li><li>عند الوصول لـ 10 يظهر تحذير ويُعطّل الزر.</li></ul>
+<h4 id="ج-التحديث-التلقائي">ج) التحديث التلقائي<a class="anchor" href="#ج-التحديث-التلقائي" aria-label="link">#</a></h4>
+<ul><li>زر «🔄 تحديث تلقائي» → <code>POST /api/leaders/refresh</code>.</li><li>يعيد بناء القائمة من المبيعات والرتب.</li><li>ملاحظة: القادة جدول Snapshot (<code>leaders.id = users.id</code>)؛ التعديلات تُنسخ، والمحذوف يُسجَّل في <code>excluded_leaders</code> حتى لا يعود تلقائياً.</li></ul>
+<h4 id="د-القائمة">د) القائمة<a class="anchor" href="#د-القائمة" aria-label="link">#</a></h4>
+<ul><li>كل قائد: الترتيب #، الأيقونة، الصورة، الاسم، الرتبة.</li><li>زر «🗑️ ازالة» → <code>DELETE /api/leaders/:id</code> (بتأكيد).</li></ul>
+<h4 id="ملاحظات-10">ملاحظات<a class="anchor" href="#ملاحظات-10" aria-label="link">#</a></h4>
+<ul><li>الحد الأقصى 10.</li><li>الصورة الترحيبية تظهر في موقع المستخدم.</li></ul>
+<hr>
+<h3 id="315-سجل-الإجراءات">3.15 سجل الإجراءات<a class="anchor" href="#315-سجل-الإجراءات" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> تدقيق كل ما فعله الأدمن.</p>
+<p><strong>البيانات:</strong> <code>GET /api/admin-logs</code></p>
+<h4 id="ما-تراه-6">ما تراه<a class="anchor" href="#ما-تراه-6" aria-label="link">#</a></h4>
+<ul><li>عنوان + زر تحديث.</li><li>زر «🗑️ حذف الكل» (يظهر إن وُجدت سجلات).</li><li>فلاتر:<ul><li>نوع الإجراء: الكل / إيداع وسحب / حظر / فك حظر / تفعيل.</li><li>تاريخ محدد.</li><li>«إلغاء التصفية».</li></ul></li><li>السجلات مجمّعة حسب اليوم.</li><li>كل سطر: الحرف الأول للأدمن، اسمه، الإجراء، المستخدم الهدف، التفاصيل، الوقت.</li></ul>
+<h4 id="ترجمة-الإجراءات">ترجمة الإجراءات<a class="anchor" href="#ترجمة-الإجراءات" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>القيمة</th><th>العرض</th></tr></thead><tbody><tr><td><code>$ credit</code></td><td>💰 إضافة رصيد</td></tr><tr><td><code>$ debit</code></td><td>💸 خصم رصيد</td></tr><tr><td><code>block</code></td><td>🔒 حظر</td></tr><tr><td><code>unblock</code></td><td>🔓 فك حظر</td></tr><tr><td><code>approve as student</code></td><td>✅ تفعيل كـ Student</td></tr><tr><td><code>approve as registration_free</code></td><td>✅ تفعيل كـ Reg Free</td></tr><tr><td><code>self-upgrade to student</code></td><td>⬆️ ترقية ذاتية إلى Student</td></tr><tr><td><code>change account_type</code></td><td>🔄 تغيير نوع الحساب</td></tr></tbody></table></div>
+<h4 id="الأزرار-3">الأزرار<a class="anchor" href="#الأزرار-3" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>🔄 تحديث</td><td>إعادة جلب السجلات</td></tr><tr><td>🗑️ حذف الكل</td><td><code>DELETE /api/admin-logs</code> (بتأكيد)</td></tr></tbody></table></div>
+<h4 id="ملاحظات-11">ملاحظات<a class="anchor" href="#ملاحظات-11" aria-label="link">#</a></h4>
+<ul><li>الفلترة على العميل بعد جلب كل السجلات.</li><li>السجل لا يُعدّل، فقط يُقرأ أو يُحذف بالكامل.</li></ul>
+<hr>
+<h3 id="316-إعدادات-العضوية">3.16 إعدادات العضوية<a class="anchor" href="#316-إعدادات-العضوية" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> مدة عضوية الحسابات الجديدة، وتعديل انتهاء عضوية أي مستخدم.</p>
+<p><strong>البيانات:</strong> <code>GET /api/settings/membership_duration</code></p>
+<h4 id="أ-مدة-العضوية">أ) مدة العضوية<a class="anchor" href="#أ-مدة-العضوية" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العنصر</th><th>الوظيفة</th></tr></thead><tbody><tr><td>حقل عدد الأيام</td><td>القيمة الحالية (افتراضي 183)</td></tr><tr><td>زر «حفظ»</td><td><code>PUT /api/settings/membership_duration</code></td></tr><tr><td>رسالة النجاح</td><td>«تم التغيير. تم إرسال إشعار للمستخدمين.»</td></tr></tbody></table></div>
+<p><strong>كيف يعمل الحفظ:</strong></p>
+<ol><li>يتحقق أن الأدمن موجود (من <code>admin_session</code>).</li><li>يتحقق أن الرقم صحيح وأكبر من صفر.</li><li>يحفظ القيمة.</li><li><strong>إن تغيّرت القيمة فقط</strong> يُرسل إشعار «تحديث مدة العضوية» لكل المستخدمين.</li><li>الإشعارات تُدخل على دفعات (100 لكل استعلام) لتفادي تجمّد الصفحة.</li><li>لو كانت القيمة نفسها لا يُرسل أي إشعار.</li></ol>
+<h4 id="ب-البحث-عن-عضوية-مستخدم">ب) البحث عن عضوية مستخدم<a class="anchor" href="#ب-البحث-عن-عضوية-مستخدم" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العنصر</th><th>الوظيفة</th></tr></thead><tbody><tr><td>حقل البحث</td><td>اسم / بريد / ID / هاتف</td></tr><tr><td>زر «بحث»</td><td><code>GET /api/settings/membership-search/:q</code></td></tr><tr><td>Enter</td><td>يبحث أيضاً</td></tr></tbody></table></div>
+<p><strong>نتيجة كل مستخدم:</strong></p>
+<ul><li>الاسم، البريد، الهاتف، ID.</li><li>تاريخ الانتهاء.</li><li>الأيام المتبقية (أحمر إن ≤ 5).</li><li>شارة محظور/نشط.</li><li>زر «✏️ تعديل» أو «🔓 فك الحظر» إن كان محظوراً.</li></ul>
+<h4 id="ج-تعديل-تاريخ-الانتهاء">ج) تعديل تاريخ الانتهاء<a class="anchor" href="#ج-تعديل-تاريخ-الانتهاء" aria-label="link">#</a></h4>
+<ul><li>نافذة: «تاريخ الانتهاء الجديد» + حفظ / إلغاء.</li><li><code>PUT /api/settings/membership-expiry/:id</code> مع <code>{ membership_expires_at, admin_id }</code>.</li><li>إذا كان المستخدم محظوراً وتم تمديد العضوية → يُفك الحظر تلقائياً وتظهر رسالة «تم الحفظ + تم فك الحظر».</li></ul>
+<h4 id="د-فك-الحظر">د) فك الحظر<a class="anchor" href="#د-فك-الحظر" aria-label="link">#</a></h4>
+<ul><li><code>PUT /api/settings/membership-unblock/:id</code>.</li><li>يزيل الحظر ويعرض «تم فك الحظر».</li></ul>
+<h4 id="ملاحظات-12">ملاحظات<a class="anchor" href="#ملاحظات-12" aria-label="link">#</a></h4>
+<ul><li>تغيير المدة يؤثر على الحسابات <strong>الجديدة</strong> فقط، لا على الحالية.</li><li>إشعارات التغيير الجماعي كثيرة؛ لا تكرر الحفظ بنفس القيمة.</li></ul>
+<hr>
+<h3 id="317-التقييمات">3.17 التقييمات<a class="anchor" href="#317-التقييمات" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> إدارة تقييمات المستخدمين وصور الإنجازات التي تظهر في صفحة التقييمات.</p>
+<p><strong>البيانات:</strong> <code>GET /api/feedbacks</code> + <code>GET /api/proofs</code></p>
+<h4 id="التبويب-الأول-التقييمات">التبويب الأول: التقييمات<a class="anchor" href="#التبويب-الأول-التقييمات" aria-label="link">#</a></h4>
+<ul><li>عدّاد الصفحة «صفحة X من Y».</li><li>زر تحديث.</li><li>بطاقة لكل تقييم:<ul><li>الصورة أو الحرف الأول.</li><li>الاسم والبريد.</li><li>النجوم (★/☆).</li><li>التاريخ.</li><li>× للحذف.</li><li>نص التقييم.</li></ul></li><li>ترقيم صفحات أسفل القائمة.</li><li>الحذف: <code>DELETE /api/feedbacks/:id</code> (بتأكيد).</li></ul>
+<h4 id="التبويب-الثاني-صور-الإنجازات">التبويب الثاني: صور الإنجازات<a class="anchor" href="#التبويب-الثاني-صور-الإنجازات" aria-label="link">#</a></h4>
+<p><strong>نموذج الإضافة:</strong></p>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>ملاحظة</th></tr></thead><tbody><tr><td>الصورة</td><td>ملف صورة</td></tr><tr><td>التعليق</td><td>وصف اختياري</td></tr><tr><td>زر «رفع»</td><td><code>POST /api/proofs</code> (multipart)</td></tr></tbody></table></div>
+<ul><li>الرفع يستخدم هيدرز الجلسة يدوياً.</li><li>الزر معطّل حتى تختار صورة.</li></ul>
+<p><strong>شبكة الصور:</strong></p>
+<ul><li>كل صورة مع تعليقها.</li><li>× تظهر عند المرور بالماوس → <code>DELETE /api/proofs/:id</code> (بتأكيد).</li><li>زر تحديث.</li></ul>
+<h4 id="ملاحظات-13">ملاحظات<a class="anchor" href="#ملاحظات-13" aria-label="link">#</a></h4>
+<ul><li>التقييمات للقراءة والحذف فقط (لا تعديل).</li><li>صور الإنجازات تُعرض في موقع المستخدم.</li></ul>
+<hr>
+<h3 id="318-خدمة-العملاء">3.18 خدمة العملاء<a class="anchor" href="#318-خدمة-العملاء" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> بيانات التواصل التي تظهر للمستخدمين في ملفهم وفي الفوتر.</p>
+<p><strong>البيانات:</strong> <code>GET /api/settings</code></p>
+<h4 id="الحقول-1">الحقول<a class="anchor" href="#الحقول-1" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>الإعداد</th></tr></thead><tbody><tr><td>📱 رقم الواتساب</td><td><code>customer_service_whatsapp</code></td></tr><tr><td>📧 البريد الإلكتروني</td><td><code>customer_service_email</code></td></tr><tr><td>📸 رابط انستجرام</td><td><code>social_instagram</code></td></tr><tr><td>✈️ رابط تيليجرام</td><td><code>social_telegram</code></td></tr><tr><td>🎵 رابط تيك توك</td><td><code>social_tiktok</code></td></tr></tbody></table></div>
+<h4 id="الأزرار-4">الأزرار<a class="anchor" href="#الأزرار-4" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>💾 حفظ</td><td>5 طلبات <code>PUT /api/settings/&amp;lt;key&amp;gt;</code> متتالية</td></tr><tr><td>معاينة</td><td>تعرض النتيجة كما ستظهر للمستخدم</td></tr></tbody></table></div>
+<h4 id="كيف-تعمل-المعاينة">كيف تعمل المعاينة<a class="anchor" href="#كيف-تعمل-المعاينة" aria-label="link">#</a></h4>
+<ul><li>واتساب: ينظّف الرقم من غير الأرقام؛ لو يبدأ بـ 0 يُستبدل بـ 20 → رابط <code>wa.me</code>.</li><li>البريد: <code>mailto:</code>.</li><li>الباقي: روابط مباشرة.</li><li>إن لم تُدخل شيئاً: «لم يتم إضافة بيانات بعد».</li></ul>
+<h4 id="ملاحظات-14">ملاحظات<a class="anchor" href="#ملاحظات-14" aria-label="link">#</a></h4>
+<ul><li>الحفظ يرسل <code>admin_id</code> لكل إعداد (للتدقيق).</li><li>هذه البيانات تُقرأ من endpoints عامة للموقع (<code>/api/customer-service</code>).</li></ul>
+<hr>
+<h3 id="319-إعدادات-الأسعار">3.19 إعدادات الأسعار<a class="anchor" href="#319-إعدادات-الأسعار" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> التحكم في أسعار المنصة الأساسية.</p>
+<p><strong>البيانات:</strong> <code>GET /api/settings</code></p>
+<h4 id="الحقول-2">الحقول<a class="anchor" href="#الحقول-2" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>القسم</th><th>الإعداد</th><th>الافتراضي</th></tr></thead><tbody><tr><td>سعر المحتوى (كل الكورسات)</td><td><code>content_price</code></td><td>0</td></tr><tr><td>تكلفة إنشاء حساب لشخص آخر</td><td><code>create_account_cost</code></td><td>5500</td></tr><tr><td>عمولة الإحالة</td><td><code>referral_commission</code></td><td>1000</td></tr></tbody></table></div>
+<h4 id="الأزرار-5">الأزرار<a class="anchor" href="#الأزرار-5" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>حفظ جميع الإعدادات</td><td>3 طلبات <code>PUT /api/settings/&amp;lt;key&amp;gt;</code></td></tr><tr><td>✅ تم الحفظ بنجاح!</td><td>رسالة تأكيد تظهر بعد الحفظ</td></tr></tbody></table></div>
+<h4 id="ملاحظات-15">ملاحظات<a class="anchor" href="#ملاحظات-15" aria-label="link">#</a></h4>
+<ul><li>كل الحقول رقمية بالدولار.</li><li>تغيير عمولة الإحالة يؤثر على التفعيلات الجديدة.</li><li>تغيير سعر المحتوى يؤثر على العرض للطلاب الجدد.</li></ul>
+<hr>
+<h3 id="320-سجل-المعاملات">3.20 سجل المعاملات<a class="anchor" href="#320-سجل-المعاملات" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> كل حركة مالية في المنصة.</p>
+<p><strong>البيانات:</strong> <code>GET /api/transactions/all</code></p>
+<h4 id="الفلاتر">الفلاتر<a class="anchor" href="#الفلاتر" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الفلتر</th><th>القيم</th></tr></thead><tbody><tr><td>النوع</td><td>الكل، عمولة إحالة، تحويل بين المستخدمين، إيداع محفظة، خصم محفظة، شحن رصيد، مكافأة ترقية، عمولة أسبوعية، إجراء مشرف</td></tr><tr><td>معرف المستخدم</td><td>نص اختياري</td></tr><tr><td>من تاريخ</td><td>تاريخ</td></tr><tr><td>إلى تاريخ</td><td>تاريخ</td></tr><tr><td>بحث</td><td>يطبّق الفلاتر</td></tr><tr><td>إعادة تعيين</td><td>يفرّغ الكل</td></tr></tbody></table></div>
+<h4 id="الجدول-1">الجدول<a class="anchor" href="#الجدول-1" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العمود</th><th>المحتوى</th></tr></thead><tbody><tr><td>النوع</td><td>شارة ملوّنة حسب النوع</td></tr><tr><td>المبلغ</td><td><code>X $</code> (أخضر للموجب)</td></tr><tr><td>من</td><td>الاسم + البريد</td></tr><tr><td>إلى</td><td>الاسم + البريد</td></tr><tr><td>الوصف</td><td>نص مختصر</td></tr><tr><td>الحالة</td><td>مكتمل/مدفوع/موافق (أخضر)، معلق (أصفر)، مرفوض/فاشل/ملغي (أحمر)</td></tr><tr><td>التاريخ</td><td><code>YYYY-MM-DD HH:MM:SS</code></td></tr></tbody></table></div>
+<ul><li>ترقيم صفحات (50 لكل صفحة) مع السابق/التالي.</li><li>عدّاد إجمالي المعاملات أعلى الصفحة.</li></ul>
+<h4 id="ملاحظات-16">ملاحظات<a class="anchor" href="#ملاحظات-16" aria-label="link">#</a></h4>
+<ul><li>للقراءة فقط.</li><li>تغيير النوع أو الصفحة يعيد الجلب تلقائياً.</li><li>البحث اليدوي يعيدك للصفحة 1.</li></ul>
+<hr>
+<h3 id="321-نشاط-الفلوس-والرتب">3.21 نشاط الفلوس والرتب<a class="anchor" href="#321-نشاط-الفلوس-والرتب" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> عرض موحّد لكل الأحداث المالية وأحداث الرتب في شكل خط زمني/جدول.</p>
+<p><strong>البيانات:</strong> <code>GET /api/activity-feed</code></p>
+<h4 id="5-بطاقات-ملخص">5 بطاقات ملخّص<a class="anchor" href="#5-بطاقات-ملخص" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>البطاقة</th><th>المعنى</th></tr></thead><tbody><tr><td>🗂️ إجمالي الأحداث</td><td>كل الأحداث</td></tr><tr><td>💎 إجمالي العمولات ($)</td><td>مجموع العمولات</td></tr><tr><td>➕ إيداعات المحفظة ($)</td><td>مجموع الإيداعات</td></tr><tr><td>➖ عمليات الخصم ($)</td><td>مجموع الخصومات</td></tr><tr><td>🏅 تغييرات الرتب</td><td>عدد تغييرات الرتب</td></tr></tbody></table></div>
+<h4 id="الفلاتر-1">الفلاتر<a class="anchor" href="#الفلاتر-1" aria-label="link">#</a></h4>
+<ul><li>النوع: الكل، عمولة إحالة، عمولة أسبوعية، ترقية رتبة، تغيير رتبة، هبوط رتبة، مكافأة ترقية، إيداع محفظة، خصم محفظة، شحن رصيد، تحويل بين المستخدمين، إجراء مشرف.</li><li>معرف المستخدم.</li><li>من/إلى تاريخ.</li><li>بحث / إعادة تعيين.</li></ul>
+<h4 id="الجدول-2">الجدول<a class="anchor" href="#الجدول-2" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>العمود</th><th>المحتوى</th></tr></thead><tbody><tr><td>النوع</td><td>أيقونة + اسم ملوّن</td></tr><tr><td>الوصف</td><td>العنوان + التفاصيل</td></tr><tr><td>من</td><td>الاسم</td></tr><tr><td>إلى</td><td>الاسم + الرتبة</td></tr><tr><td>المبلغ</td><td><code>X $</code></td></tr><tr><td>الحالة</td><td>مترجمة وملوّنة</td></tr><tr><td>التاريخ</td><td>—</td></tr><tr><td>إجراءات</td><td>زر «عرض»</td></tr></tbody></table></div>
+<h4 id="نافذة-التفاصيل-1">نافذة التفاصيل<a class="anchor" href="#نافذة-التفاصيل-1" aria-label="link">#</a></h4>
+<p>تعرض:</p>
+<ul><li>النوع والأيقونة.</li><li>الوصف والتفاصيل.</li><li>من / إلى (الاسم، ID، الرتبة).</li><li>المبلغ والحالة.</li><li>التاريخ والوقت.</li><li><strong>بيانات إضافية</strong> حسب النوع:<ul><li>الرتبة السابقة → الحالية.</li><li>المستوى.</li><li>اسم الرتبة.</li><li>بداية/نهاية الأسبوع.</li><li>حجم الفريق المؤهل.</li><li>المبيعات المباشرة المؤهلة.</li><li>حالة الترقية.</li><li>حالة العمولة.</li><li>سبب الفشل.</li><li>طريقة الدفع.</li><li>الإجراء.</li><li>اسم الأدمن.</li></ul></li><li>ID الحدث.</li></ul>
+<h4 id="ملاحظات-17">ملاحظات<a class="anchor" href="#ملاحظات-17" aria-label="link">#</a></h4>
+<ul><li>للقراءة فقط.</li><li>زر «🔄 تحديث» يعيد الجلب من الصفحة الأولى.</li></ul>
+<hr>
+<h3 id="322-إدارة-الأدمنز-manager-فقط">3.22 إدارة الأدمنز (Manager فقط)<a class="anchor" href="#322-إدارة-الأدمنز-manager-فقط" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> إدارة حسابات الأدمنز والمديرين.</p>
+<p><strong>الظهور:</strong> يظهر في القائمة فقط إذا كان الدور <code>manager</code>.</p>
+<p><strong>البيانات:</strong> <code>GET /api/admin-auth/list</code></p>
+<h4 id="ما-تراه-7">ما تراه<a class="anchor" href="#ما-تراه-7" aria-label="link">#</a></h4>
+<ul><li>شبكة بطاقات: كل أدمن (الحرف الأول، الاسم، البريد، ID، الدور، تاريخ الإنشاء).</li><li>زر «➕ إضافة أدمن» (للمدير فقط).</li><li>أزرار تعديل/حذف (للمدير فقط).</li></ul>
+<h4 id="إضافة-أدمن">إضافة أدمن<a class="anchor" href="#إضافة-أدمن" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>ملاحظة</th></tr></thead><tbody><tr><td>المعرف</td><td>مثل <code>ADM-006</code></td></tr><tr><td>الاسم الكامل</td><td>—</td></tr><tr><td>البريد</td><td>فريد</td></tr><tr><td>كلمة المرور</td><td>تُشفّر</td></tr><tr><td>الدور</td><td><code>admin</code> أو <code>manager</code></td></tr></tbody></table></div>
+<ul><li><code>POST /api/admin-auth/list</code>.</li></ul>
+<h4 id="تعديل-أدمن">تعديل أدمن<a class="anchor" href="#تعديل-أدمن" aria-label="link">#</a></h4>
+<ul><li>نفس الحقول، والمعرف معطّل.</li><li>كلمة المرور اختيارية (اتركها فارغة للإبقاء على الحالية).</li><li><code>PUT /api/admin-auth/list/:id</code>.</li></ul>
+<h4 id="حذف-أدمن">حذف أدمن<a class="anchor" href="#حذف-أدمن" aria-label="link">#</a></h4>
+<ul><li><code>DELETE /api/admin-auth/list/:id</code> (بتأكيد).</li></ul>
+<h4 id="ملاحظات-18">ملاحظات<a class="anchor" href="#ملاحظات-18" aria-label="link">#</a></h4>
+<ul><li>الأدمن العادي يحصل على 403 من هذه الـ endpoints.</li><li>حد الجلسات: جلستان لكل أدمن.</li><li>حذف الأدمن لا يحذف سجلاته في سجل الإجراءات.</li></ul>
+<hr>
+<h3 id="323-الإعدادات-الشخصية">3.23 الإعدادات الشخصية<a class="anchor" href="#323-الإعدادات-الشخصية" aria-label="link">#</a></h3>
+<p><strong>الهدف:</strong> تعديل بيانات الأدمن الحالي وكلمة مروره.</p>
+<p><strong>البيانات:</strong> <code>GET /api/admin-auth/me</code></p>
+<h4 id="الحقول-3">الحقول<a class="anchor" href="#الحقول-3" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الحقل</th><th>قابل للتعديل</th></tr></thead><tbody><tr><td>المعرف (ID)</td><td>❌</td></tr><tr><td>الاسم</td><td>✅</td></tr><tr><td>البريد</td><td>✅</td></tr><tr><td>الهاتف</td><td>✅</td></tr><tr><td>العنوان</td><td>✅</td></tr><tr><td>السيرة الذاتية</td><td>✅</td></tr><tr><td>كلمة مرور جديدة</td><td>✅ (اتركها فارغة لعدم التغيير)</td></tr><tr><td>الدور</td><td>❌</td></tr><tr><td>تاريخ الإنشاء</td><td>❌</td></tr></tbody></table></div>
+<h4 id="الأزرار-6">الأزرار<a class="anchor" href="#الأزرار-6" aria-label="link">#</a></h4>
+<div class="table-wrap"><table><thead><tr><th>الزر</th><th>ماذا يفعل</th></tr></thead><tbody><tr><td>💾 حفظ التغييرات</td><td><code>PUT /api/admin-auth/me</code></td></tr><tr><td>رسالة النجاح</td><td>«✅ تم حفظ التغييرات بنجاح» وتختفي بعد 3 ثوانٍ</td></tr></tbody></table></div>
+<h4 id="ملاحظات-19">ملاحظات<a class="anchor" href="#ملاحظات-19" aria-label="link">#</a></h4>
+<ul><li>تغيير كلمة المرور لا يلغي الجلسة الحالية.</li><li>البريد الجديد يجب ألا يكون مستخدماً لأدمن آخر.</li></ul>
+<hr>
+<h2 id="4-صفحات-موجودة-في-الكود-وغير-ظاهرة-في-القائمة">4. صفحات موجودة في الكود وغير ظاهرة في القائمة<a class="anchor" href="#4-صفحات-موجودة-في-الكود-وغير-ظاهرة-في-القائمة" aria-label="link">#</a></h2>
+<p>هذه الصفحات مبنية وتعمل، لكنها غير مربوطة في <code>navItems</code> ولا في <code>renderPage</code>. يمكن الوصول إليها فقط بإضافتها للقائمة أو بمسار مباشر داخل الكود.</p>
+<h3 id="41--طلبات-شحن-الرصيد-topupspage">4.1 💰 طلبات شحن الرصيد (<code>TopUpsPage</code>)<a class="anchor" href="#41--طلبات-شحن-الرصيد-topupspage" aria-label="link">#</a></h3>
+<ul><li><strong>الهدف:</strong> مراجعة طلبات شحن المحفظة.</li><li><strong>البيانات:</strong> <code>GET /api/wallets/topups?status=</code></li><li><strong>الفلاتر:</strong> بحث بالاسم/البريد، الحالة (معلق/تم الشحن/مرفوض)، زر بحث.</li><li><strong>الجدول:</strong> رقم الطلب، الطالب، المبلغ (EGP)، رقم المحوّل عليه، طريقة الدفع، صورة الإثبات، الحالة، الإجراء.</li><li><strong>الأزرار:</strong><ul><li>«موافقة» → <code>PUT /api/wallets/topups/:id/approve</code> — يضيف الرصيد.</li><li>«رفض» → <code>PUT /api/wallets/topups/:id/reject</code> (بتأكيد).</li></ul></li><li><strong>ملاحظة:</strong> الطلبات المعلقة فقط لها أزرار.</li></ul>
+<h3 id="42--طلبات-الترقية-upgraderequestspage">4.2 ⬆️ طلبات الترقية (<code>UpgradeRequestsPage</code>)<a class="anchor" href="#42--طلبات-الترقية-upgraderequestspage" aria-label="link">#</a></h3>
+<ul><li><strong>الهدف:</strong> قبول/رفض طلبات ترقية نوع الحساب.</li><li><strong>البيانات:</strong> <code>GET /api/users/upgrade-requests/list</code></li><li><strong>الفلاتر:</strong> بحث، الحالة (معلق/تمت الموافقة/مرفوض).</li><li><strong>الجدول:</strong> الطالب، الإيميل، الهاتف، تاريخ الطلب، الحالة، الإجراء.</li><li><strong>الأزرار:</strong><ul><li>«قبول» → <code>PUT /api/users/upgrade-requests/:id/approve</code>.</li><li>«رفض» → <code>PUT /api/users/upgrade-requests/:id/reject</code> (بتأكيد).</li></ul></li></ul>
+<h3 id="43--قائمة-الطلاب-studentlistpage">4.3 🎓 قائمة الطلاب (<code>StudentListPage</code>)<a class="anchor" href="#43--قائمة-الطلاب-studentlistpage" aria-label="link">#</a></h3>
+<ul><li><strong>الهدف:</strong> عرض مبسّط للطلاب في بطاقات.</li><li><strong>البيانات:</strong> <code>GET /api/users</code> ثم تصفية <code>role = student</code>.</li><li><strong>العناصر:</strong> بحث + فلتر رتبة (غير مفعّل فعلياً)، بطاقة لكل طالب (الاسم، البريد، الرتبة، الرصيد، كود الإحالة، عدد المباشرين).</li><li><strong>ملاحظة:</strong> نسخة قديمة/بديلة؛ صفحة «إدارة المستخدمين» تغني عنها.</li></ul>
+<h3 id="44--بوابات-الدفع-paymentgatewaypage">4.4 💳 بوابات الدفع (<code>PaymentGatewayPage</code>)<a class="anchor" href="#44--بوابات-الدفع-paymentgatewaypage" aria-label="link">#</a></h3>
+<ul><li><strong>الهدف:</strong> إدارة أرقام/حسابات الدفع التي يحوّل إليها المستخدمون.</li><li><strong>البيانات:</strong> <code>GET /api/payment-gateways</code></li><li><strong>3 عدّادات:</strong> الإجمالي، فودافون كاش، انستاباي.</li><li><strong>بطاقة لكل وسيلة:</strong> النوع، الرقم/الحساب، التسمية، الحالة، التاريخ.</li><li><strong>الأزرار:</strong><ul><li>«+ إضافة وسيلة دفع» → نموذج (النوع، الرقم، تسمية).</li><li>تعطيل/تفعيل → <code>PUT /api/payment-gateways/:id</code>.</li><li>تعديل → <code>PUT</code>.</li><li>حذف → <code>DELETE</code> (بتأكيد).</li></ul></li><li><strong>ملاحظة:</strong> تظهر للمستخدم في صفحة شحن الرصيد.</li></ul>
+<h3 id="45--مفاتيح-gemini-وgroq-geminikeyspage">4.5 🤖 مفاتيح Gemini وGroq (<code>GeminiKeysPage</code>)<a class="anchor" href="#45--مفاتيح-gemini-وgroq-geminikeyspage" aria-label="link">#</a></h3>
+<ul><li><strong>الهدف:</strong> إدارة مفاتيح الذكاء الاصطناعي.</li><li><strong>البيانات:</strong> <code>GET /api/settings/gemini-keys</code> + <code>GET /api/chat/keys-status</code></li><li><strong>4 عدّادات:</strong> إجمالي المفاتيح، النشطة، المتأخرة (Rate-limited)، المدخلة حالياً.</li><li><strong>حالة المفاتيح الحية:</strong> كل مفتاح مقنّع + حالته + مدة التهدئة.</li><li><strong>مفتاح الشات بوت (Groq):</strong><ul><li>الحالة (مفعّل/غير مفعّل).</li><li>حقل <code>gsk_...</code>.</li><li>حفظ → <code>PUT /api/chat/groq-key</code>.</li></ul></li><li><strong>إدخال مفاتيح Gemini:</strong><ul><li>حقل لكل مفتاح، إضافة/حذف.</li><li>حفظ → <code>PUT /api/settings/gemini-keys</code>.</li></ul></li><li><strong>ملاحظة:</strong> المفاتيح تُخزّن في القاعدة وتُحمّل تلقائياً؛ التبديل تلقائي عند تجاوز الحد.</li></ul>
+<hr>
+<h2 id="5-جداول-مرجعية">5. جداول مرجعية<a class="anchor" href="#5-جداول-مرجعية" aria-label="link">#</a></h2>
+<h3 id="51-كل-نقاط-الـ-api-المستخدمة-في-الأدمن">5.1 كل نقاط الـ API المستخدمة في الأدمن<a class="anchor" href="#51-كل-نقاط-الـ-api-المستخدمة-في-الأدمن" aria-label="link">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>المجال</th><th>الطريقة</th><th>المسار</th><th>الاستخدام</th></tr></thead><tbody><tr><td>دخول</td><td>POST</td><td><code>/api/admin-auth/login</code></td><td>تسجيل دخول الأدمن</td></tr><tr><td>جلسة</td><td>GET</td><td><code>/api/admin-auth/me</code></td><td>بيانات الأدمن الحالي</td></tr><tr><td>جلسة</td><td>PUT</td><td><code>/api/admin-auth/me</code></td><td>تعديل بيانات الأدمن</td></tr><tr><td>أدمنز</td><td>GET/POST</td><td><code>/api/admin-auth/list</code></td><td>قائمة/إضافة أدمن</td></tr><tr><td>أدمنز</td><td>PUT/DELETE</td><td><code>/api/admin-auth/list/:id</code></td><td>تعديل/حذف أدمن</td></tr><tr><td>إحصائيات</td><td>GET</td><td><code>/api/dashboard/stats</code></td><td>أرقام اللوحة</td></tr><tr><td>مستخدمون</td><td>GET</td><td><code>/api/users</code></td><td>القائمة</td></tr><tr><td>مستخدمون</td><td>GET</td><td><code>/api/users/:id</code></td><td>الملف الكامل</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id</code></td><td>تعديل البيانات/كلمة المرور</td></tr><tr><td>مستخدمون</td><td>DELETE</td><td><code>/api/users/:id</code></td><td>حذف</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/role</code></td><td>تغيير الدور</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/e-money</code></td><td>إضافة/خصم رصيد</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/rank</code></td><td>تغيير الرتبة + البونص</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/account-type</code></td><td>تغيير نوع الحساب</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/block</code></td><td>حظر</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/unblock</code></td><td>فك حظر</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/negative-toggle</code></td><td>السماح بالسالب</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/commission-exempt-toggle</code></td><td>إيقاف العمولة</td></tr><tr><td>مستخدمون</td><td>POST</td><td><code>/api/users/:id/impersonate</code></td><td>الدخول كالمستخدم</td></tr><tr><td>مستخدمون</td><td>GET</td><td><code>/api/users/:id/id-cards</code></td><td>صور البطاقة</td></tr><tr><td>مستخدمون</td><td>GET</td><td><code>/api/users/pending-registrations</code></td><td>المعلّقون</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/approve-registration</code></td><td>تفعيل</td></tr><tr><td>مستخدمون</td><td>PUT</td><td><code>/api/users/:id/reject-registration</code></td><td>رفض</td></tr><tr><td>مستخدمون</td><td>GET</td><td><code>/api/users/external-accounts</code></td><td>حسابات خارجية</td></tr><tr><td>مستخدمون</td><td>GET</td><td><code>/api/users/created-accounts</code></td><td>حسابات منشأة</td></tr><tr><td>مستخدمون</td><td>GET</td><td><code>/api/users/filter/:role</code></td><td>تصفية بالدور</td></tr><tr><td>ترقيات</td><td>GET</td><td><code>/api/users/upgrade-requests/list</code></td><td>طلبات الترقية</td></tr><tr><td>ترقيات</td><td>PUT</td><td><code>/api/users/upgrade-requests/:id/approve</code></td><td>قبول</td></tr><tr><td>ترقيات</td><td>PUT</td><td><code>/api/users/upgrade-requests/:id/reject</code></td><td>رفض</td></tr><tr><td>كورسات</td><td>GET/POST</td><td><code>/api/courses</code></td><td>قائمة/إنشاء</td></tr><tr><td>كورسات</td><td>GET/PUT/DELETE</td><td><code>/api/courses/:id</code></td><td>تفاصيل/تعديل/حذف</td></tr><tr><td>كورسات</td><td>PUT</td><td><code>/api/courses/:id/show-free</code></td><td>إظهار في المجانيات</td></tr><tr><td>كورسات</td><td>PUT</td><td><code>/api/courses/:id/show-homepage</code></td><td>إظهار في الهوم</td></tr><tr><td>كورسات</td><td>PUT</td><td><code>/api/courses/:id/show-courses</code></td><td>إظهار في الكورسات</td></tr><tr><td>كورسات</td><td>GET</td><td><code>/api/courses/attempts</code></td><td>محاولات الاختبارات</td></tr><tr><td>كورسات</td><td>DELETE</td><td><code>/api/courses/attempts</code></td><td>حذف كل المحاولات</td></tr><tr><td>كورسات</td><td>GET</td><td><code>/api/courses/quizzes/:id</code></td><td>تفاصيل اختبار</td></tr><tr><td>كورسات</td><td>GET</td><td><code>/api/courses/enrollments/list</code></td><td>كل الاشتراكات</td></tr><tr><td>تصنيفات</td><td>GET/POST</td><td><code>/api/categories</code></td><td>قائمة/إضافة</td></tr><tr><td>تصنيفات</td><td>DELETE</td><td><code>/api/categories/:id</code></td><td>حذف</td></tr><tr><td>رتب</td><td>GET/POST</td><td><code>/api/ranks</code></td><td>قائمة/إضافة</td></tr><tr><td>رتب</td><td>PUT/DELETE</td><td><code>/api/ranks/:id</code></td><td>تعديل/حذف</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/commissions</code></td><td>العمولات</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/rank-progress/:id</code></td><td>تقدم الرتبة</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/directs/:id</code></td><td>المباشرون</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/weekly-history/:id</code></td><td>السجل الأسبوعي</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/leaderboard</code></td><td>المتصدرون</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/settlement-directs/:id</code></td><td>مباشرو التسوية</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/settlement/status</code></td><td>حالة التسوية</td></tr><tr><td>MLM</td><td>POST</td><td><code>/api/mlm/settlement</code></td><td>تشغيل التسوية</td></tr><tr><td>MLM</td><td>GET</td><td><code>/api/mlm/settlement/week/:weekStart</code></td><td>عمولات أسبوع</td></tr><tr><td>MLM</td><td>POST</td><td><code>/api/mlm/settlement/reverse</code></td><td>خصم عمولة</td></tr><tr><td>MLM</td><td>GET/POST</td><td><code>/api/mlm/weekly-assignments</code></td><td>ارتباطات رجعية</td></tr><tr><td>MLM</td><td>POST</td><td><code>/api/mlm/weekly-assignments/preview</code></td><td>معاينة</td></tr><tr><td>MLM</td><td>DELETE</td><td><code>/api/mlm/weekly-assignments/:id</code></td><td>إزالة ارتباط</td></tr><tr><td>MLM</td><td>POST</td><td><code>/api/mlm/weekly-settlement/recompute</code></td><td>إعادة تسوية محددة</td></tr><tr><td>قادة</td><td>GET</td><td><code>/api/leaders</code></td><td>القائمة</td></tr><tr><td>قادة</td><td>GET</td><td><code>/api/leaders/search?q=</code></td><td>بحث</td></tr><tr><td>قادة</td><td>POST</td><td><code>/api/leaders/add</code></td><td>إضافة</td></tr><tr><td>قادة</td><td>DELETE</td><td><code>/api/leaders/:id</code></td><td>إزالة</td></tr><tr><td>قادة</td><td>POST</td><td><code>/api/leaders/refresh</code></td><td>تحديث تلقائي</td></tr><tr><td>قادة</td><td>GET</td><td><code>/api/leaders/weekly</code></td><td>قادة الأسبوع</td></tr><tr><td>قادة</td><td>GET</td><td><code>/api/leaders/history</code></td><td>سجل الأسابيع</td></tr><tr><td>قادة</td><td>GET</td><td><code>/api/leaders/history/:weekStart</code></td><td>قادة أسبوع</td></tr><tr><td>محافظ</td><td>GET</td><td><code>/api/wallets/topups</code></td><td>طلبات الشحن</td></tr><tr><td>محافظ</td><td>PUT</td><td><code>/api/wallets/topups/:id/approve</code></td><td>موافقة</td></tr><tr><td>محافظ</td><td>PUT</td><td><code>/api/wallets/topups/:id/reject</code></td><td>رفض</td></tr><tr><td>معاملات</td><td>GET</td><td><code>/api/transactions/all</code></td><td>السجل المالي</td></tr><tr><td>نشاط</td><td>GET</td><td><code>/api/activity-feed</code></td><td>الأحداث</td></tr><tr><td>إعدادات</td><td>GET</td><td><code>/api/settings</code></td><td>كل الإعدادات</td></tr><tr><td>إعدادات</td><td>GET/PUT</td><td><code>/api/settings/:key</code></td><td>قراءة/حفظ إعداد</td></tr><tr><td>إعدادات</td><td>PUT</td><td><code>/api/settings/membership_duration</code></td><td>مدة العضوية</td></tr><tr><td>إعدادات</td><td>GET</td><td><code>/api/settings/membership-search/:q</code></td><td>بحث عضوية</td></tr><tr><td>إعدادات</td><td>PUT</td><td><code>/api/settings/membership-expiry/:id</code></td><td>تعديل انتهاء</td></tr><tr><td>إعدادات</td><td>PUT</td><td><code>/api/settings/membership-unblock/:id</code></td><td>فك حظر</td></tr><tr><td>إعدادات</td><td>GET/PUT</td><td><code>/api/settings/gemini-keys</code></td><td>مفاتيح Gemini</td></tr><tr><td>تقييمات</td><td>GET</td><td><code>/api/feedbacks</code></td><td>التقييمات</td></tr><tr><td>تقييمات</td><td>DELETE</td><td><code>/api/feedbacks/:id</code></td><td>حذف تقييم</td></tr><tr><td>إنجازات</td><td>GET/POST</td><td><code>/api/proofs</code></td><td>الصور</td></tr><tr><td>إنجازات</td><td>DELETE</td><td><code>/api/proofs/:id</code></td><td>حذف صورة</td></tr><tr><td>سجلات</td><td>GET/DELETE</td><td><code>/api/admin-logs</code></td><td>سجل الإجراءات</td></tr><tr><td>دفع</td><td>GET/POST</td><td><code>/api/payment-gateways</code></td><td>البوابات</td></tr><tr><td>دفع</td><td>PUT/DELETE</td><td><code>/api/payment-gateways/:id</code></td><td>تعديل/حذف</td></tr><tr><td>رفع</td><td>POST</td><td><code>/api/upload</code></td><td>رفع صورة</td></tr><tr><td>بوني</td><td>POST</td><td><code>/api/bunny/*</code></td><td>رفع فيديو</td></tr><tr><td>شات</td><td>GET</td><td><code>/api/chat/keys-status</code></td><td>حالة مفتاح Groq</td></tr><tr><td>شات</td><td>PUT</td><td><code>/api/chat/groq-key</code></td><td>حفظ مفتاح Groq</td></tr><tr><td>رئيسية</td><td>GET</td><td><code>/api/home-hero</code></td><td>الصورة الترحيبية</td></tr></tbody></table></div>
+<h3 id="52-حالات-المستخدم">5.2 حالات المستخدم<a class="anchor" href="#52-حالات-المستخدم" aria-label="link">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>الحالة</th><th>المعنى</th></tr></thead><tbody><tr><td><code>pending</code></td><td>بانتظار التفعيل</td></tr><tr><td><code>active</code></td><td>نشط</td></tr><tr><td><code>rejected</code></td><td>مرفوض</td></tr><tr><td><code>blocked = 1</code></td><td>محظور (لا يدخل)</td></tr></tbody></table></div>
+<h3 id="53-أنواع-الحساب">5.3 أنواع الحساب<a class="anchor" href="#53-أنواع-الحساب" aria-label="link">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>النوع</th><th>الدور</th><th>الوصف</th></tr></thead><tbody><tr><td><code>student</code></td><td><code>student</code></td><td>طالب مدفوع</td></tr><tr><td><code>registration_free</code></td><td><code>registration</code></td><td>تسجيل مجاني</td></tr></tbody></table></div>
+<h3 id="54-حالات-المعاملات">5.4 حالات المعاملات<a class="anchor" href="#54-حالات-المعاملات" aria-label="link">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>الحالة</th><th>اللون</th></tr></thead><tbody><tr><td><code>completed</code> / <code>paid</code> / <code>approved</code></td><td>أخضر</td></tr><tr><td><code>pending</code></td><td>أصفر</td></tr><tr><td><code>rejected</code> / <code>failed</code> / <code>cancelled</code></td><td>أحمر</td></tr><tr><td>غير ذلك</td><td>رمادي</td></tr></tbody></table></div>
+<hr>
+<h2 id="6-الأعطال-الشائعة-وكيفية-علاجها">6. الأعطال الشائعة وكيفية علاجها<a class="anchor" href="#6-الأعطال-الشائعة-وكيفية-علاجها" aria-label="link">#</a></h2>
+<div class="table-wrap"><table><thead><tr><th>المشكلة</th><th>السبب المحتمل</th><th>الحل</th></tr></thead><tbody><tr><td>«جاري التنفيذ...» لا تختفي</td><td>طلب فشل بدون إغلاق</td><td>أعد تحميل الصفحة (F5)</td></tr><tr><td>الصفحة تعرض «جارٍ التحميل» مع الـ Overlay</td><td>نسخة قديمة</td><td>حدّث الواجهة (Ctrl+Shift+R)</td></tr><tr><td>401 عند كل طلب</td><td>الجلسة انتهت أو أُلغيت بجلسة جديدة</td><td>سجّل خروجاً ثم دخولاً</td></tr><tr><td>403 في إدارة الأدمنز</td><td>الحساب <code>admin</code> وليس <code>manager</code></td><td>استخدم حساب مدير</td></tr><tr><td>«الرتبة غير موجودة»</td><td>الرتبة معطّلة أو الاسم مختلف</td><td>فعّل الرتبة من إدارة الرتب</td></tr><tr><td>العمولة لا تُصرف</td><td>المستخدم <code>commission_exempt = 1</code> أو لم يحقق الحد الأدنى</td><td>راجع الملف الشخصي والإعدادات</td></tr><tr><td>بيانات قديمة تظهر</td><td>كاش 20 ثانية</td><td>انتظر 20 ثانية أو نفّذ أي تعديل</td></tr><tr><td>حفظ مدة العضوية بطيء</td><td>إرسال إشعارات لكل المستخدمين</td><td>طبيعي (3–5 ثوانٍ)</td></tr><tr><td>تكرار الإشعارات</td><td>حفظ نفس القيمة أكثر من مرة</td><td>لا يحدث الآن؛ يُرسل عند التغيير فقط</td></tr></tbody></table></div>
+<hr>
+<h2 id="7-النشر-والنسخ-الاحتياطي">7. النشر والنسخ الاحتياطي<a class="anchor" href="#7-النشر-والنسخ-الاحتياطي" aria-label="link">#</a></h2>
+<h3 id="71-الباك-إند-railway">7.1 الباك إند (Railway)<a class="anchor" href="#71-الباك-إند-railway" aria-label="link">#</a></h3>
+<ul><li>المصدر: مستودع <code>everesr777/-everest-academy</code>، فرع <code>main</code>.</li><li>أي <code>git push</code> إلى <code>main</code> → نشر تلقائي.</li><li>تأكد من تغيّر اسم الحزمة في <code>/admin</code> بعد النشر.</li></ul>
+<h3 id="72-واجهة-الأدمن-hostinger">7.2 واجهة الأدمن (Hostinger)<a class="anchor" href="#72-واجهة-الأدمن-hostinger" aria-label="link">#</a></h3>
+<ol><li><code>cd admin/frontend &amp;amp;&amp;amp; npm run build</code></li><li>انسخ محتويات <code>dist</code> إلى <code>hostinger-update/admin</code>.</li><li>ارفع مجلد <code>admin</code> إلى Hostinger يدوياً (لا يوجد وصول FTP من هنا).</li><li>افتح الموقع واضغط <strong>Ctrl + Shift + R</strong> لتحديث الكاش.</li></ol>
+<h3 id="73-النسخ-الاحتياطي-turso">7.3 النسخ الاحتياطي (Turso)<a class="anchor" href="#73-النسخ-الاحتياطي-turso" aria-label="link">#</a></h3>
+<ul><li>نسخة كاملة موثّقة في:</li></ul>
+<p><code>db-backups/turso-2026-10-24T20-53-53/</code> (36 جدولاً / 11,540 صفاً)</p>
+<ul><li>قبل أي تعديل جماعي:<ol><li>خذ نسخة جديدة.</li><li>اختبر على بيانات صغيرة.</li><li>احتفظ بسجل التغييرات.</li></ol></li></ul>
+<h3 id="74-فحص-سريع-بعد-أي-نشر">7.4 فحص سريع بعد أي نشر<a class="anchor" href="#74-فحص-سريع-بعد-أي-نشر" aria-label="link">#</a></h3>
+<ul><li>[ ] تسجيل الدخول يعمل.</li><li>[ ] الإحصائيات تظهر أرقاماً.</li><li>[ ] فتح مستخدم وتغيير رتبته يظهر سؤال العمولة.</li><li>[ ] حذف كورس يظهر تأكيداً واحداً فقط.</li><li>[ ] لا يوجد خطأ Console.</li><li>[ ] لا يوجد أكثر من لودر واحد.</li></ul>
+<hr>
+<h2 id="خلاصة">✅ خلاصة<a class="anchor" href="#خلاصة" aria-label="link">#</a></h2>
+<ul><li><strong>22 صفحة</strong> في القائمة + <strong>5 صفحات</strong> إضافية في الكود.</li><li><strong>كل زر</strong> له لودر، و<strong>الإجراءات الحساسة فقط</strong> لها تأكيد.</li><li><strong>كل صفحة</strong> موثّقة أعلاه بالعناصر والأزرار والـ API والسلوك.</li><li><strong>الأداء</strong> يعتمد على keep-alive + كاش ذكي + إزالة الصور من القوائم.</li><li><strong>الأمان</strong> يعتمد على جلسات محدودة، bcrypt، وفصل أدوار admin/manager.</li></ul>
+<blockquote>لأي إضافة أو تعديل مستقبلي: أضف الصفحة إلى <code>navItems</code> و<code>renderPage</code> في <code>App.jsx</code>، وحدّث هذا الدليل.</blockquote>
+  </main>
+</div>
+<button id="toTop" title="أعلى الصفحة">↑</button>
+<script>
+(function(){
+  const tocLinks = Array.from(document.querySelectorAll('#toc a'));
+  const targets = tocLinks.map(a => document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)))).filter(Boolean);
+  const topBtn = document.getElementById('toTop');
+  const bar = document.getElementById('progress');
+
+  function onScroll(){
+    const y = window.scrollY + 140;
+    let current = null;
+    for (const t of targets){ if (t.offsetTop <= y) current = t; }
+    tocLinks.forEach(a => a.classList.toggle('active', current && a.getAttribute('href').slice(1) === current.id));
+    topBtn.style.display = window.scrollY > 500 ? 'block' : 'none';
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  topBtn.onclick = () => window.scrollTo({top:0, behavior:'smooth'});
+  document.getElementById('printBtn').onclick = () => window.print();
+
+  const search = document.getElementById('tocSearch');
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    tocLinks.forEach(a => { a.style.display = !q || a.textContent.toLowerCase().includes(q) ? 'block' : 'none'; });
+  });
+})();
+</script>
+</body>
+</html>

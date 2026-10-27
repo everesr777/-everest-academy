@@ -376,7 +376,7 @@ export default function CoursesListPage() {
                     </div>
                   )}
                   {cv.category_ar && (() => { const cc = catList.find((x) => x.name_ar === cv.category_ar); return cc ? (
-                    <button onClick={() => deleteCategory(cc.id)} className="mt-2 text-xs text-red-500">🗑 {t("حذف هذا التصنيف", "Delete this category")}</button>
+                    <button data-no-confirm onClick={() => deleteCategory(cc.id)} className="mt-2 text-xs text-red-500">🗑 {t("حذف هذا التصنيف", "Delete this category")}</button>
                   ) : null; })()}
                 </div>
                 <div>
@@ -887,7 +887,7 @@ export default function CoursesListPage() {
                     <button onClick={() => loadStudents(c.id)} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                       {showStudents === c.id ? t("إخفاء", "Hide") : t("الطلاب", "Students")}
                     </button>
-                    <button onClick={() => delCourse(c.id)} className="px-3 py-1.5 text-xs border border-red-300 text-red-500 rounded-lg hover:bg-red-50">
+                    <button data-no-confirm onClick={() => delCourse(c.id)} className="px-3 py-1.5 text-xs border border-red-300 text-red-500 rounded-lg hover:bg-red-50">
                       {t("حذف", "Delete")}
                     </button>
                   </div>
@@ -927,7 +927,7 @@ export default function CoursesListPage() {
                                   ) : (
                                     <>
                                       <button onClick={() => startEditStudent(enr)} className="px-2 py-1 text-xs bg-blue-500 text-white rounded">{t("تعديل", "Edit")}</button>
-                                      <button onClick={() => deleteStudent(enr.id, enr.student_name)} className="px-2 py-1 text-xs bg-red-500 text-white rounded">{t("حذف", "Delete")}</button>
+                                      <button data-no-confirm onClick={() => deleteStudent(enr.id, enr.student_name)} className="px-2 py-1 text-xs bg-red-500 text-white rounded">{t("حذف", "Delete")}</button>
                                     </>
                                   )}
                                 </div>
